@@ -12,8 +12,10 @@ from urban_growth.adapters.wup import (
     read_f34_population_density,
 )
 from urban_growth.forecast import (
+    balanced_origin_cohort,
     build_forecast_intervals,
     cluster_bootstrap_paired_difference,
+    equal_country_forecast_metrics,
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
@@ -80,6 +82,31 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_hierarchy_model_metrics.csv"),
     )
+    parser.add_argument(
+        "--balanced-metrics-output",
+        type=Path,
+        default=Path("outputs/wup_balanced_cohort_metrics.csv"),
+    )
+    parser.add_argument(
+        "--equal-country-output",
+        type=Path,
+        default=Path("outputs/wup_equal_country_metrics.csv"),
+    )
+    parser.add_argument(
+        "--balanced-equal-country-output",
+        type=Path,
+        default=Path("outputs/wup_balanced_equal_country_metrics.csv"),
+    )
+    parser.add_argument(
+        "--pooled-equal-country-output",
+        type=Path,
+        default=Path("outputs/wup_equal_country_pooled_metrics.csv"),
+    )
+    parser.add_argument(
+        "--balanced-pooled-equal-country-output",
+        type=Path,
+        default=Path("outputs/wup_balanced_equal_country_pooled_metrics.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
@@ -113,6 +140,15 @@ def main() -> None:
     )
     gapped_temporal = temporal_reversal_diagnostics(gapped_intervals)
     hierarchy = evaluate_rolling_hierarchy_models(intervals, list(range(1985, 2025, 5)))
+    balanced = balanced_origin_cohort(intervals, list(range(1980, 2025, 5)))
+    balanced_metrics = evaluate_rolling_baselines(balanced, list(range(1985, 2025, 5)))
+    balanced_errors = rolling_baseline_errors(balanced, list(range(1985, 2025, 5)))
+    equal_country = equal_country_forecast_metrics(errors, group_columns=["origin"])
+    balanced_equal_country = equal_country_forecast_metrics(
+        balanced_errors, group_columns=["origin"]
+    )
+    pooled_equal_country = equal_country_forecast_metrics(errors)
+    balanced_pooled_equal_country = equal_country_forecast_metrics(balanced_errors)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(args.output, index=False)
     args.paired_output.parent.mkdir(parents=True, exist_ok=True)
@@ -135,6 +171,18 @@ def main() -> None:
     gapped_temporal.to_csv(args.gapped_temporal_output, index=False)
     args.hierarchy_output.parent.mkdir(parents=True, exist_ok=True)
     hierarchy.to_csv(args.hierarchy_output, index=False)
+    args.balanced_metrics_output.parent.mkdir(parents=True, exist_ok=True)
+    balanced_metrics.to_csv(args.balanced_metrics_output, index=False)
+    args.equal_country_output.parent.mkdir(parents=True, exist_ok=True)
+    equal_country.to_csv(args.equal_country_output, index=False)
+    args.balanced_equal_country_output.parent.mkdir(parents=True, exist_ok=True)
+    balanced_equal_country.to_csv(args.balanced_equal_country_output, index=False)
+    args.pooled_equal_country_output.parent.mkdir(parents=True, exist_ok=True)
+    pooled_equal_country.to_csv(args.pooled_equal_country_output, index=False)
+    args.balanced_pooled_equal_country_output.parent.mkdir(parents=True, exist_ok=True)
+    balanced_pooled_equal_country.to_csv(
+        args.balanced_pooled_equal_country_output, index=False
+    )
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
@@ -146,6 +194,11 @@ def main() -> None:
     print(args.gapped_metrics_output)
     print(args.gapped_temporal_output)
     print(args.hierarchy_output)
+    print(args.balanced_metrics_output)
+    print(args.equal_country_output)
+    print(args.balanced_equal_country_output)
+    print(args.pooled_equal_country_output)
+    print(args.balanced_pooled_equal_country_output)
 
 
 if __name__ == "__main__":

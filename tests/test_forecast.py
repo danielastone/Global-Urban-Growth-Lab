@@ -2,11 +2,13 @@ import pandas as pd
 import pytest
 
 from urban_growth.forecast import (
+    balanced_origin_cohort,
     baseline_predictions,
     build_forecast_intervals,
     build_ghsl_dynamic_forecast_intervals,
     build_ghsl_fixed_forecast_intervals,
     cluster_bootstrap_paired_difference,
+    equal_country_forecast_metrics,
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
@@ -248,6 +250,26 @@ def test_row_errors_support_paired_size_comparison() -> None:
     result = paired_error_comparison(errors)
     assert set(result["size_bin"].astype(str)) == {"50–150k", "2m+"}
     assert result["n"].tolist() == [1, 1]
+
+
+def test_balanced_cohort_and_equal_country_weighting() -> None:
+    panel = pd.DataFrame(
+        {
+            "city_id": [1, 1, 2], "period_start": [2000, 2005, 2005],
+            "period_end": [2005, 2010, 2010],
+        }
+    )
+    balanced = balanced_origin_cohort(panel, [2000, 2005])
+    assert balanced["city_id"].unique().tolist() == [1]
+    errors = pd.DataFrame(
+        {
+            "model": ["m", "m", "m"], "country_code": ["A", "A", "B"],
+            "error": [0.01, 0.03, 0.10], "absolute_error": [0.01, 0.03, 0.10],
+        }
+    )
+    result = equal_country_forecast_metrics(errors)
+    assert result.loc[0, "equal_country_mae"] == pytest.approx(0.06)
+    assert result.loc[0, "countries"] == 2
 
 
 def test_country_cluster_bootstrap_is_reproducible() -> None:

@@ -128,6 +128,23 @@ The paired comparison uses the README's existing size bins and compares persiste
 
 Negative differences favor persistence. The strongest pooled improvement occurs above one million, not among the smallest observed cities. The 250–500k bin has slightly worse mean error under persistence even though its median paired difference favors persistence, indicating a tail-error problem.
 
+## Balanced-entry and equal-country sensitivity
+
+The balanced WUP cohort retains only cities with complete forecast intervals at all nine construction origins from 1980 through 2020. It contains 5,152 cities at each of the eight evaluated origins, compared with a changing sample that grows from 6,147 test rows in 1985 to 10,709 in 2020. The balanced cohort therefore removes later threshold entrants and intermittent coverage, but it selects established cities continuously above the reporting threshold.
+
+| Cohort | Persistence MAE | Leave-city-out country MAE | Persistence RMSE | Leave-city-out country RMSE |
+|---|---:|---:|---:|---:|
+| Changing WUP sample, city weighted | 1.337 pp | 1.466 pp | 2.338 pp | 2.179 pp |
+| Balanced WUP cohort, city weighted | 1.109 pp | 1.332 pp | 1.905 pp | 1.934 pp |
+| Changing WUP sample, countries equal | 1.613 pp | 1.664 pp | 2.964 pp | 2.559 pp |
+| Balanced WUP cohort, countries equal | 1.268 pp | 1.555 pp | 2.337 pp | 2.299 pp |
+
+Balancing materially improves persistence MAE and removes its slight pooled RMSE disadvantage under city weighting. Equal-country scoring increases errors because small, volatile country samples receive the same weight as large national samples; persistence retains the best equal-country MAE but not RMSE.
+
+The period result is more important. Under both equal-country variants, persistence beats leave-city-out country mean at the 2000 origin: by 0.134 pp in the changing cohort and 0.227 pp in the balanced cohort. The earlier city-weighted 2000 reversal is therefore composition-sensitive. At 2020, persistence remains decisively worse: by 0.853 pp with changing coverage and 0.695 pp in the balanced cohort. Selection and India/China observation counts do not explain the 2020 failure.
+
+These are point-estimate weighting sensitivities, not new confidence intervals. The balanced cohort cannot answer the small-city question because continuous eligibility preferentially selects cities already above 50,000 throughout the study period.
+
 More importantly, the 2000 and 2020 persistence failures span every size bin on mean error. In 2020, persistence loses even for cities above two million. Size composition therefore does not explain the period reversal. The next test should focus on time shocks and country-clustered paired uncertainty, not add an arbitrary size interaction to rescue H1.
 
 ## Country-clustered paired uncertainty

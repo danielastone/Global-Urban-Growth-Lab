@@ -540,6 +540,56 @@ def rolling_baseline_errors(
     return pd.concat(frames, ignore_index=True)
 
 
+def balanced_origin_cohort(panel: pd.DataFrame, origins: list[int]) -> pd.DataFrame:
+    """Restrict a forecast panel to cities observed at every declared origin."""
+    required = {"city_id", "period_start", "period_end"}
+    require_columns(panel, required, source_name="forecast interval panel")
+    if not origins or len(set(origins)) != len(origins):
+        raise SourceSchemaError("Balanced cohort origins must be unique and non-empty")
+    reject_duplicate_keys(
+        panel, ["city_id", "period_start", "period_end"], source_name="forecast intervals"
+    )
+    declared = set(origins)
+    subset = panel.loc[panel["period_start"].isin(declared)].copy()
+    observed = subset.groupby("city_id")["period_start"].agg(lambda x: set(x))
+    eligible = observed.index[observed.eq(declared)]
+    result = subset.loc[subset["city_id"].isin(eligible)].copy()
+    if result.empty:
+        raise SourceSchemaError("No cities have complete intervals at every declared origin")
+    result["cohort_selection"] = "balanced_all_declared_origins"
+    return result.sort_values(["period_start", "city_id"]).reset_index(drop=True)
+
+
+def equal_country_forecast_metrics(
+    errors: pd.DataFrame,
+    *,
+    group_columns: list[str] | None = None,
+) -> pd.DataFrame:
+    """Score models after giving every country equal weight within each group."""
+    groups = group_columns or []
+    required = {"model", "country_code", "error", "absolute_error", *groups}
+    require_columns(errors, required, source_name="row-level forecast errors")
+    working = errors.copy()
+    working["squared_error"] = working["error"] ** 2
+    country_keys = [*groups, "model", "country_code"]
+    country = working.groupby(country_keys, observed=True).agg(
+        country_mae=("absolute_error", "mean"),
+        country_mse=("squared_error", "mean"),
+        country_bias=("error", "mean"),
+        country_rows=("error", "size"),
+    ).reset_index()
+    result_keys = [*groups, "model"]
+    result = country.groupby(result_keys, observed=True).agg(
+        countries=("country_code", "nunique"),
+        n_rows=("country_rows", "sum"),
+        equal_country_mae=("country_mae", "mean"),
+        equal_country_mse=("country_mse", "mean"),
+        equal_country_bias=("country_bias", "mean"),
+    ).reset_index()
+    result["equal_country_rmse"] = np.sqrt(result.pop("equal_country_mse"))
+    return result.sort_values(result_keys).reset_index(drop=True)
+
+
 def paired_error_comparison(
     errors: pd.DataFrame,
     *,
