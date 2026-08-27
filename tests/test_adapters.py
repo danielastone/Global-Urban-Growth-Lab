@@ -9,8 +9,10 @@ from urban_growth.adapters.ghsl_ucdb import (
 )
 from urban_growth.adapters.wup import (
     city_area_panel,
+    city_metric_panel,
     city_population_panel,
     degree_of_urbanization_panel,
+    validate_density_identity,
 )
 from urban_growth.io import SourceSchemaError
 
@@ -219,3 +221,38 @@ def test_wup_area_panel_drops_threshold_blanks_and_requires_positive_area() -> N
     result = city_area_panel(source, city_id_column="ID")
     assert result["year"].tolist() == [2025, 2050]
     assert result["land_area_km2"].tolist() == [12.0, 15.0]
+
+
+def test_wup_metric_zero_rule_is_explicit() -> None:
+    source = pd.DataFrame({"ID": [1], "2025": [0.0]})
+    result = city_metric_panel(
+        source, city_id_column="ID", value_name="built_up_area_m2_per_capita",
+        allow_zero=True,
+    )
+    assert result["built_up_area_m2_per_capita"].tolist() == [0.0]
+    assert result["reported_zero"].all()
+    with pytest.raises(SourceSchemaError, match="positive"):
+        city_metric_panel(
+            source, city_id_column="ID", value_name="population_density_per_km2",
+            allow_zero=False,
+        )
+
+
+def test_wup_density_identity_allows_publisher_rounding() -> None:
+    population = pd.DataFrame({"city_id": [1], "year": [2025], "population": [60_000]})
+    area = pd.DataFrame({"city_id": [1], "year": [2025], "land_area_km2": [12.0]})
+    density = pd.DataFrame(
+        {"city_id": [1], "year": [2025], "population_density_per_km2": [5_000.005]}
+    )
+    result = validate_density_identity(population, area, density)
+    assert result["density_difference"].abs().max() == pytest.approx(0.005)
+
+
+def test_wup_density_identity_scales_population_rounding_by_area() -> None:
+    population = pd.DataFrame({"city_id": [1], "year": [2025], "population": [50_000]})
+    area = pd.DataFrame({"city_id": [1], "year": [2025], "land_area_km2": [1.0]})
+    density = pd.DataFrame(
+        {"city_id": [1], "year": [2025], "population_density_per_km2": [49_999.6]}
+    )
+    result = validate_density_identity(population, area, density)
+    assert result["density_difference"].tolist() == pytest.approx([0.4])

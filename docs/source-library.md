@@ -16,7 +16,11 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 
 ## Verified WUP F21 schema
 
-The exact F21 and F25 workbooks were retrieved on 2026-08-27 and registered in `data/manifest.csv`. Each `Data` sheet contains 16,828 unique `City_Code` rows and annual columns from 1975 through 2050. The annual series is threshold-truncated: a cell is blank while the city is below 50,000 and populated once it meets the reporting threshold. In F21, 12,138 cities have 2025 values and 3,633 records are absent in 2025 but present by 2050. F25 has the same non-null counts for the checked years, supporting a direct city-year join.
+The exact F21, F25, F30 and F34 workbooks were retrieved on 2026-08-27 and registered in `data/manifest.csv`. Each `Data` sheet contains 16,828 unique `City_Code` rows and annual columns from 1975 through 2050. The annual series is threshold-truncated: a cell is blank while the city is below 50,000 and populated once it meets the reporting threshold. In F21, 12,138 cities have 2025 values and 3,633 records are absent in 2025 but present by 2050. F25, F30 and F34 have identical identifiers, names, country codes and checked-year coverage, supporting joins within the WUP namespace.
+
+F34 is a derived-variable check, but the precision varies by year. At the five-year benchmark epochs, reported density equals F21 population in persons divided by F25 land area within 0.005 persons per square kilometre. Across all annual interpolated values, differences reach 0.4 for one-square-kilometre centres because displayed population is rounded to a person while density is calculated from higher-precision inputs. The validator therefore applies a row-specific bound of 0.005 plus 0.5 person divided by reported area; all 779,718 city-years pass that bound.
+
+F30 reports zero built-up area per capita for Timerein, Sudan, in all 46 observed years from 1975 through 2020, then positive values afterward. The adapter permits zero but rejects negative values. These records require a sensitivity flag: zero is almost certainly a missing or unresolved built-up estimate encoded numerically, not evidence that a populated city literally had no built structures.
 
 Consequences:
 
