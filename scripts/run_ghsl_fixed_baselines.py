@@ -52,6 +52,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/ghsl_2025_boundary_reconciliation.csv"),
     )
+    parser.add_argument(
+        "--gapped-metrics-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_gapped_baseline_metrics.csv"),
+    )
+    parser.add_argument(
+        "--gapped-temporal-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_gapped_temporal_diagnostics.csv"),
+    )
     args = parser.parse_args()
     fixed = fixed_2025_theme_panel(read_ghsl_theme_csv(str(args.input)))
     dynamic = multitemporal_boundary_panel(read_ghsl_mtuc_csv(str(args.dynamic_input)))
@@ -61,11 +71,20 @@ def main() -> None:
     metrics = evaluate_rolling_baselines(intervals, origins)
     errors = rolling_baseline_errors(intervals, origins)
     temporal = temporal_reversal_diagnostics(intervals)
+    gapped_intervals = build_ghsl_fixed_forecast_intervals(
+        fixed, list(range(1980, 2020, 5)), outcome_gap_years=5
+    )
+    gapped_metrics = evaluate_rolling_baselines(
+        gapped_intervals, list(range(1990, 2020, 5))
+    )
+    gapped_temporal = temporal_reversal_diagnostics(gapped_intervals)
     for path, frame in [
         (args.metrics_output, metrics),
         (args.errors_output, errors),
         (args.temporal_output, temporal),
         (args.reconciliation_output, reconciliation),
+        (args.gapped_metrics_output, gapped_metrics),
+        (args.gapped_temporal_output, gapped_temporal),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)

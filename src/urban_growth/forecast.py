@@ -43,6 +43,7 @@ def build_forecast_intervals(
     *,
     lookback_years: int = 5,
     horizon_years: int = 5,
+    outcome_gap_years: int = 0,
     allowed_outcome_types: set[str] | None = None,
 ) -> pd.DataFrame:
     """Create lagged predictors and later outcomes from exact source years.
@@ -56,8 +57,8 @@ def build_forecast_intervals(
     }
     require_columns(city_year_panel, required, source_name="WUP city-year forecast source")
     reject_duplicate_keys(city_year_panel, ["city_id", "year"], source_name="WUP forecast")
-    if lookback_years <= 0 or horizon_years <= 0:
-        raise SourceSchemaError("Forecast lookback and horizon must be positive")
+    if lookback_years <= 0 or horizon_years <= 0 or outcome_gap_years < 0:
+        raise SourceSchemaError("Forecast lookback/horizon must be positive and gap non-negative")
     if not origins or any(not isinstance(year, int) for year in origins):
         raise SourceSchemaError("Forecast origins must be a non-empty list of integer years")
     allowed = {"estimate"} if allowed_outcome_types is None else allowed_outcome_types
@@ -68,10 +69,12 @@ def build_forecast_intervals(
     frames: list[pd.DataFrame] = []
     for origin in sorted(set(origins)):
         lag_year = origin - lookback_years
-        future_year = origin + horizon_years
+        outcome_start_year = origin + outcome_gap_years
+        future_year = outcome_start_year + horizon_years
         available_cities = source.index.get_level_values("city_id").unique()
         keys = pd.MultiIndex.from_product(
-            [available_cities, [lag_year, origin, future_year]], names=["city_id", "year"]
+            [available_cities, sorted({lag_year, origin, outcome_start_year, future_year})],
+            names=["city_id", "year"],
         )
         complete = source.reindex(keys).reset_index()
         wide = complete.pivot(index="city_id", columns="year")
@@ -79,8 +82,12 @@ def build_forecast_intervals(
         if not has_population.any():
             continue
         wide = wide.loc[has_population]
-        outcome_type = wide[("observation_type", future_year)]
-        wide = wide.loc[outcome_type.isin(allowed)]
+        outcome_start_type = wide[("observation_type", outcome_start_year)]
+        outcome_end_type = wide[("observation_type", future_year)]
+        allowed_outcome = outcome_end_type.isin(allowed)
+        if outcome_gap_years:
+            allowed_outcome &= outcome_start_type.isin(allowed)
+        wide = wide.loc[allowed_outcome]
         if wide.empty:
             continue
         result = pd.DataFrame(index=wide.index)
@@ -88,6 +95,8 @@ def build_forecast_intervals(
         result["city_name"] = wide[("City_Name", origin)]
         result["period_start"] = origin
         result["period_end"] = future_year
+        result["outcome_start_year"] = outcome_start_year
+        result["outcome_gap_years"] = outcome_gap_years
         result["population_lag"] = wide[("population", lag_year)]
         result["population_start"] = wide[("population", origin)]
         result["population_end"] = wide[("population", future_year)]
@@ -95,7 +104,8 @@ def build_forecast_intervals(
             np.log(result["population_start"]) - np.log(result["population_lag"])
         ) / lookback_years
         result["future_growth"] = (
-            np.log(result["population_end"]) - np.log(result["population_start"])
+            np.log(result["population_end"])
+            - np.log(wide[("population", outcome_start_year)])
         ) / horizon_years
         result["built_up_share_at_origin"] = wide[("built_up_share_of_land", origin)]
         result["population_density_at_origin"] = wide[
@@ -103,8 +113,9 @@ def build_forecast_intervals(
         ]
         result["lag_observation_type"] = wide[("observation_type", lag_year)]
         result["origin_observation_type"] = wide[("observation_type", origin)]
-        result["outcome_observation_type"] = wide[("observation_type", future_year)]
-        result["coverage_selection"] = "complete_lag_origin_future"
+        result["outcome_start_observation_type"] = outcome_start_type.loc[wide.index]
+        result["outcome_observation_type"] = outcome_end_type.loc[wide.index]
+        result["coverage_selection"] = "complete_lag_origin_outcome_start_end"
         frames.append(result.reset_index())
     if not frames:
         raise SourceSchemaError("No complete forecast intervals satisfy the declared rules")
@@ -118,6 +129,8 @@ def build_forecast_intervals(
 def build_ghsl_fixed_forecast_intervals(
     fixed_panel: pd.DataFrame,
     origins: list[int],
+    *,
+    outcome_gap_years: int = 0,
 ) -> pd.DataFrame:
     """Build intervals only from GHSL statistics inside fixed 2025 polygons.
 
@@ -148,6 +161,7 @@ def build_ghsl_fixed_forecast_intervals(
     result = build_forecast_intervals(
         source,
         origins,
+        outcome_gap_years=outcome_gap_years,
         allowed_outcome_types={"retrospective_model_epoch"},
     )
     result["boundary_mode"] = "fixed"

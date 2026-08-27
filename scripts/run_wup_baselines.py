@@ -54,6 +54,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_2020_city_influence.csv"),
     )
+    parser.add_argument(
+        "--gapped-metrics-output",
+        type=Path,
+        default=Path("outputs/wup_gapped_baseline_metrics.csv"),
+    )
+    parser.add_argument(
+        "--gapped-temporal-output",
+        type=Path,
+        default=Path("outputs/wup_gapped_temporal_diagnostics.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
@@ -75,6 +85,13 @@ def main() -> None:
     city_influence = leave_one_cluster_out_paired_difference(
         errors, origin=2020, cluster_columns=["country_code", "city_id", "city_name"]
     )
+    gapped_intervals = build_forecast_intervals(
+        city_year, list(range(1980, 2020, 5)), outcome_gap_years=5
+    )
+    gapped_metrics = evaluate_rolling_baselines(
+        gapped_intervals, list(range(1990, 2020, 5))
+    )
+    gapped_temporal = temporal_reversal_diagnostics(gapped_intervals)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(args.output, index=False)
     args.paired_output.parent.mkdir(parents=True, exist_ok=True)
@@ -87,12 +104,18 @@ def main() -> None:
     country_influence.to_csv(args.country_influence_output, index=False)
     args.city_influence_output.parent.mkdir(parents=True, exist_ok=True)
     city_influence.to_csv(args.city_influence_output, index=False)
+    args.gapped_metrics_output.parent.mkdir(parents=True, exist_ok=True)
+    gapped_metrics.to_csv(args.gapped_metrics_output, index=False)
+    args.gapped_temporal_output.parent.mkdir(parents=True, exist_ok=True)
+    gapped_temporal.to_csv(args.gapped_temporal_output, index=False)
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
     print(args.temporal_output)
     print(args.country_influence_output)
     print(args.city_influence_output)
+    print(args.gapped_metrics_output)
+    print(args.gapped_temporal_output)
 
 
 if __name__ == "__main__":

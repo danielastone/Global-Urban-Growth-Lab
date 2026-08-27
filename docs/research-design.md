@@ -44,7 +44,7 @@ The fixed-boundary GHSL sensitivity overturns the WUP 2020 reversal: persistence
 Forecasting does not require causal exogeneity, but interpretation of coefficients and benchmark components does. Apply these controls in order:
 
 1. Exclude the focal city's history from country and higher-level aggregates. The implemented test changes pooled country MAE by only 0.012 pp in WUP and 0.013 pp in fixed GHSL, so self-inclusion is not a material explanation.
-2. Test disjoint predictor and outcome windows. Adjacent growth rates share \(P_t\) with opposite signs, so measurement error at the origin mechanically biases persistence downward.
+2. Test disjoint predictor and outcome windows. Adjacent growth rates share \(P_t\) with opposite signs, so measurement error at the origin mechanically biases persistence downward. The implemented five-year-gap diagnostic weakens WUP persistence enough to lose pooled MAE and RMSE, while fixed GHSL persistence retains the best pooled scores but not every period. For the same 2020–2025 target, WUP persistence still loses without a shared 2020 endpoint; endpoint arithmetic is not a sufficient explanation.
 3. Freeze size, rank and hierarchy measures strictly before the prediction window; do not use realized future rank or threshold membership.
 4. Compare fixed-boundary and dynamic-boundary panels without pooling them. Fixed polygons remove changing-area arithmetic but use future boundary information; dynamic polygons confound population change with footprint change.
 5. Treat spatial accessibility, built-up form and national urbanization as predictors, not causal treatments, unless a separate identification design addresses joint determination and migration sorting.

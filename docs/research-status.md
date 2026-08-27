@@ -64,6 +64,23 @@ The standard country mean is slightly optimistic, especially at early origins wi
 
 This result addresses one narrow endogeneity channel, not the entire problem. The next priority is shared-endpoint measurement error. Recent growth uses \(\log(P_t)-\log(P_{t-5})\), while the outcome uses \(\log(P_{t+5})-\log(P_t)\). An error or revision in \(P_t\) enters the predictor positively and the outcome negatively, mechanically inducing apparent mean reversion. Disjoint-window and alternative-source tests are required before interpreting persistence slopes structurally.
 
+## Endogeneity audit: shared endpoint
+
+The disjoint-window diagnostic inserts a five-year gap. Recent growth remains \(t-5\) to \(t\), but the outcome is \(t+5\) to \(t+10\). The predictor and outcome therefore share no population observation. Comparisons use origins 1990–2015, for which an earlier completed gapped interval is available for training and estimate outcomes remain available.
+
+| Panel and design | Persistence MAE | Leave-city-out country MAE | Persistence RMSE | Leave-city-out country RMSE |
+|---|---:|---:|---:|---:|
+| WUP adjacent, eligible origins | 1.311 pp | 1.573 pp | 2.292 pp | 2.305 pp |
+| WUP five-year gap | 1.644 pp | 1.458 pp | 2.653 pp | 2.098 pp |
+| GHSL fixed adjacent, eligible origins | 0.943 pp | 1.604 pp | 1.920 pp | 2.498 pp |
+| GHSL fixed five-year gap | 1.321 pp | 1.656 pp | 2.307 pp | 2.396 pp |
+
+Removing the shared endpoint weakens persistence, as expected when the predictor is made five years more remote. In WUP it changes the pooled ranking: country mean beats persistence on both MAE and RMSE. In fixed GHSL, persistence retains the best pooled MAE and RMSE, but loses period-level MAE at 1995 and narrowly at 2010. Persistence is therefore horizon- and source-dependent even when polygons are fixed.
+
+The 2020–2025 target permits a more focused comparison. WUP's adjacent design uses 2015–2020 growth and has persistence MAE 1.654 pp and recent/future correlation 0.207. The gapped design uses 2010–2015 growth, shares no 2020 endpoint, and still loses: persistence MAE is 1.402 pp versus 1.026 pp for country mean, with correlation only 0.327. Removing the shared endpoint improves association but does not eliminate the failure. In fixed GHSL, the corresponding gapped persistence MAE is 1.017 pp versus 1.081 pp for the best alternative, and correlation remains 0.719.
+
+The diagnostic cannot isolate measurement-error bias because inserting a gap also changes predictor recency and the information set. It rejects the stronger claim that the WUP reversal is merely shared-endpoint arithmetic. The unresolved issue is state dependence: why WUP city growth from either 2010–2015 or 2015–2020 transfers poorly into 2020–2025 while fixed-polygon GHSL growth transfers substantially better.
+
 ## Prespecified size-bin comparison
 
 The paired comparison uses the README's existing size bins and compares persistence with country mean on the same city-origin rows. The pooled results do not support a claim that persistence is especially valuable for smaller cities:

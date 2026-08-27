@@ -74,6 +74,20 @@ def test_forecast_intervals_require_exact_lag_year() -> None:
         build_forecast_intervals(source, [2020])
 
 
+def test_gapped_interval_has_no_shared_population_endpoint() -> None:
+    source = city_year_source()
+    result = build_forecast_intervals(
+        source,
+        [2020],
+        outcome_gap_years=5,
+        allowed_outcome_types={"estimate", "projection"},
+    )
+    assert result["outcome_start_year"].tolist() == [2025]
+    assert result["period_end"].tolist() == [2030]
+    assert result["outcome_gap_years"].tolist() == [5]
+    assert result["future_growth"].iloc[0] == pytest.approx(0.03646431136)
+
+
 def test_ghsl_forecast_requires_and_preserves_fixed_boundary_semantics() -> None:
     source = pd.DataFrame(
         {
