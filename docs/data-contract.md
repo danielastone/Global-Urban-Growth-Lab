@@ -1,0 +1,33 @@
+# Analytical panel contract
+
+## Unit of observation
+
+One stable urban unit over one non-overlapping observation interval. Administrative cities and consistently defined agglomerations must not be pooled without a definition flag and sensitivity analysis.
+
+## Required fields
+
+| Field | Type | Meaning |
+|---|---|---|
+| `city_id` | string | Stable project identifier, never a city name alone |
+| `country_code` | string | Stable country identifier for the period |
+| `period_start` | integer | First population year |
+| `period_end` | integer | Last population year |
+| `population_start` | positive number | Population at `period_start` |
+| `population_end` | positive number | Population at `period_end` |
+
+## Recommended fields
+
+`city_name`, `urban_definition`, `boundary_version`, `latitude`, `longitude`, `source_id`, `observation_type`, `national_population_growth`, `urban_share_change`, `city_rank_start`, and measurement-quality flags.
+
+## Invariants
+
+- `(city_id, period_start, period_end)` is unique.
+- `period_end > period_start`.
+- Start and end populations are positive.
+- Predictors are timestamped and available by the forecast origin.
+- Boundary changes, interpolations, and modeled observations are explicit.
+- Dropped records receive machine-readable exclusion reasons.
+
+## Leakage control
+
+The outcome is future annualized log growth. Lagged growth must end at or before `period_start`. Random row splits are prohibited because they leak adjacent periods and common shocks. Forecast evaluation uses chronological rolling origins, with country-aware diagnostics.
