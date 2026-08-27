@@ -4,9 +4,9 @@
 
 The source and transformation pipeline is reproducible from registered local files, but all results remain **retrospective current-revision tests**. The WUP and GHSL exercises use different city definitions and must not be pooled. WUP supplies demographic city records without a verified stable-polygon restriction. GHSL supplies a balanced panel calculated inside fixed 2025 polygons, but that definition uses future geographic information and is not vintage-correct. Neither is sufficient for a commercial forecasting claim.
 
-## Geography-controlled result
+## Fixed-2025-boundary sensitivity
 
-The GHSL fixed-boundary workflow uses all 11,422 quality-controlled urban-centre polygons at every five-year epoch. Historical population and built-up values are calculated inside the same 2025 polygon. The executable workflow also reconciles the fixed and multi-temporal products at their common 2025 point before forecasting; mismatched identifiers, countries, population beyond rounding tolerance, built-up area or polygon area fail validation.
+The GHSL fixed-boundary workflow uses all 11,422 quality-controlled urban-centre polygons at every five-year epoch. Historical population and built-up values are calculated inside the same 2025 polygon. The executable workflow also reconciles the fixed and multi-temporal products at their common 2025 point before forecasting; mismatched identifiers, countries, population beyond rounding tolerance, built-up area or polygon area fail validation. This validates the common 2025 cross-stream point and fixed-boundary semantics—not the historical accuracy of a 2025 polygon applied backward.
 
 Across 91,376 rolling test cases, persistence is strongest on both MAE and RMSE:
 

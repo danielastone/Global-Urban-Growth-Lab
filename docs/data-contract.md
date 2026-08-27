@@ -17,7 +17,7 @@ One stable urban unit over one non-overlapping observation interval. Administrat
 
 ## Recommended fields
 
-`city_name`, `urban_definition`, `boundary_version`, `latitude`, `longitude`, `source_id`, `observation_type`, `national_population_growth`, `urban_share_change`, `city_rank_start`, and measurement-quality flags.
+`city_name`, `urban_definition`, `boundary_version`, `boundary_reference_year`, `boundary_temporally_fixed`, `boundary_history_uses_future_reference`, `cross_stream_reconciled`, `latitude`, `longitude`, `source_id`, `observation_type`, `national_population_growth`, `urban_share_change`, `city_rank_start`, and measurement-quality flags.
 
 ## Invariants
 

@@ -72,13 +72,18 @@ def main() -> None:
     fixed = fixed_2025_theme_panel(read_ghsl_theme_csv(str(args.input)))
     dynamic = multitemporal_boundary_panel(read_ghsl_mtuc_csv(str(args.dynamic_input)))
     reconciliation = reconcile_2025_streams(fixed, dynamic)
-    intervals = build_ghsl_fixed_forecast_intervals(fixed, list(range(1980, 2025, 5)))
+    intervals = build_ghsl_fixed_forecast_intervals(
+        fixed, list(range(1980, 2025, 5)), reconciliation=reconciliation
+    )
     origins = list(range(1985, 2025, 5))
     metrics = evaluate_rolling_baselines(intervals, origins)
     errors = rolling_baseline_errors(intervals, origins)
     temporal = temporal_reversal_diagnostics(intervals)
     gapped_intervals = build_ghsl_fixed_forecast_intervals(
-        fixed, list(range(1980, 2020, 5)), outcome_gap_years=5
+        fixed,
+        list(range(1980, 2020, 5)),
+        outcome_gap_years=5,
+        reconciliation=reconciliation,
     )
     gapped_metrics = evaluate_rolling_baselines(
         gapped_intervals, list(range(1990, 2020, 5))

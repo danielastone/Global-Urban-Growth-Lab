@@ -116,8 +116,26 @@ def test_ghsl_forecast_requires_and_preserves_fixed_boundary_semantics() -> None
         }
     )
     result = build_ghsl_fixed_forecast_intervals(source, [2020])
-    assert result["geography_validated"].all()
+    assert result["boundary_temporally_fixed"].all()
+    assert result["boundary_reference_year"].unique().tolist() == [2025]
+    assert result["boundary_history_uses_future_reference"].all()
+    assert result["cross_stream_reconciled"].eq(False).all()
     assert result["boundary_mode"].unique().tolist() == ["fixed"]
+    reconciliation = pd.DataFrame(
+        {
+            "city_id": [1], "population_difference": [0.25],
+            "built_up_area_difference_m2": [0],
+            "urban_centre_area_difference_km2": [0],
+        }
+    )
+    checked = build_ghsl_fixed_forecast_intervals(
+        source, [2020], reconciliation=reconciliation
+    )
+    assert checked["cross_stream_reconciled"].all()
+    with pytest.raises(SourceSchemaError, match="entity universe"):
+        build_ghsl_fixed_forecast_intervals(
+            source, [2020], reconciliation=reconciliation.iloc[0:0]
+        )
     source.loc[source["year"].eq(2015), "boundary_mode"] = "dynamic"
     with pytest.raises(SourceSchemaError, match="fixed boundaries only"):
         build_ghsl_fixed_forecast_intervals(source, [2020])

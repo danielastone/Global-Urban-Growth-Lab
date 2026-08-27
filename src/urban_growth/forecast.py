@@ -148,6 +148,7 @@ def build_ghsl_fixed_forecast_intervals(
     origins: list[int],
     *,
     outcome_gap_years: int = 0,
+    reconciliation: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """Build intervals only from GHSL statistics inside fixed 2025 polygons.
 
@@ -165,6 +166,31 @@ def build_ghsl_fixed_forecast_intervals(
     expected_product = "ucdb_fixed_2025_boundary"
     if fixed_panel["boundary_product"].ne(expected_product).any():
         raise SourceSchemaError(f"GHSL forecast sensitivity requires {expected_product}")
+    reconciled = reconciliation is not None
+    if reconciliation is not None:
+        reconciliation_required = {
+            "city_id", "population_difference", "built_up_area_difference_m2",
+            "urban_centre_area_difference_km2",
+        }
+        require_columns(
+            reconciliation,
+            reconciliation_required,
+            source_name="GHSL 2025 cross-stream reconciliation",
+        )
+        reject_duplicate_keys(
+            reconciliation, ["city_id"], source_name="GHSL 2025 cross-stream reconciliation"
+        )
+        fixed_ids = set(fixed_panel["city_id"].unique())
+        reconciliation_ids = set(reconciliation["city_id"])
+        if fixed_ids != reconciliation_ids:
+            raise SourceSchemaError("GHSL reconciliation does not cover the fixed entity universe")
+        if reconciliation["population_difference"].abs().gt(0.500001).any():
+            raise SourceSchemaError("GHSL reconciliation exceeds population rounding tolerance")
+        exact_columns = [
+            "built_up_area_difference_m2", "urban_centre_area_difference_km2"
+        ]
+        if reconciliation[exact_columns].ne(0).any().any():
+            raise SourceSchemaError("GHSL reconciliation has nonzero area differences")
     source = fixed_panel.copy()
     source["ISO3_Code"] = source["GC_CNT_GAD_2025"]
     source["City_Name"] = source["GC_UCN_MAI_2025"]
@@ -183,7 +209,10 @@ def build_ghsl_fixed_forecast_intervals(
     )
     result["boundary_mode"] = "fixed"
     result["boundary_product"] = expected_product
-    result["geography_validated"] = True
+    result["boundary_reference_year"] = 2025
+    result["boundary_temporally_fixed"] = True
+    result["boundary_history_uses_future_reference"] = True
+    result["cross_stream_reconciled"] = reconciled
     return result
 
 
