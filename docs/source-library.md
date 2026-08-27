@@ -6,7 +6,7 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 
 | Source | Role | Use | Main limitation |
 |---|---|---|---|
-| WUP 2025 Cities | City statistical core | Individual-city population, area and density | Retrospective revision; 2025-threshold selection |
+| WUP 2025 Cities | City statistical core | Individual-city population, area and density | Values suppressed below 50,000 at each year |
 | WUP 2025 country DEGURBA | National control | Cities/towns/rural totals and urbanization stage | Not an individual-city panel |
 | GHS-UCDB R2024A v1.2 | Spatial core | Dynamic footprint, fixed-boundary sensitivity, density, area change | Not independent of WUP/DEGURBA |
 | WPP 2024 | National control | National demographic benchmark | Current-vintage history is not a real-time forecast vintage |
@@ -24,6 +24,14 @@ Consequences:
 - Applying a fresh `population >= 50,000` filter does not solve truncation.
 - Entry-year, balanced-panel and near-threshold analyses must be explicit.
 - GHSL fixed-entity histories are a sensitivity path, not independent evidence.
+
+## Verified GHSL R2024A v1.2 schema
+
+The official v1.2 GHSL thematic archive was retrieved and registered on 2026-08-27. Its CSV uses Windows-1252 encoding and contains 11,422 unique `ID_UC_G0` records and 551 columns. The adapter reads 12 five-year epochs from 1975 through 2030 for both `GH_POP_TOT_YYYY` (inhabitants) and `GH_BUS_TOT_YYYY` (square metres). All 274,128 values across those two families are present, numeric and positive.
+
+The thematic archive is the fixed-boundary stream: every historical statistic is calculated inside the urban centre's 2025 boundary. The separately published MTUC archive follows changing boundaries. GHSL documentation says the two streams are different and not comparable except at 2025. Therefore a trend from the thematic archive describes change within today's footprint; it is not the city's historical spatial expansion.
+
+The publisher landing page still labels the release v1.1, but the official download script and archive readme identify v1.2, state that the data were last updated on 2026-05-15, and explicitly deprecate v1.1. The catalog records that discrepancy instead of silently downgrading the acquired package.
 
 ## Rules
 

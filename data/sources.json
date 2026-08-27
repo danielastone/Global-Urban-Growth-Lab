@@ -78,18 +78,32 @@
       "status": "core_spatial",
       "publisher": "European Commission Joint Research Centre",
       "dataset": "GHS Urban Centre Database R2024A",
-      "release": "v1.2, 2026-06-10",
+      "release": "v1.2; data last updated 2026-05-15",
       "landing_page": "https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php",
       "documentation_url": "https://human-settlement.emergency.copernicus.eu/ucdb2024Overview.php",
       "retrieval": "manual_large_file",
       "formats": ["csv", "xlsx", "gpkg"],
       "coverage": "11,422 quality-controlled urban centres; multi-temporal attributes 1975-2030",
-      "unit": "DEGURBA urban centre with multi-temporal footprints and attributes",
+      "unit": "DEGURBA urban centre; fixed-2025 and multi-temporal boundary streams",
       "role": "Spatial footprint, density, area-change, geometry and boundary sensitivity",
       "upstream_dependencies": ["ec_ghsl_degurb_r2023a"],
       "redistribution": "allowed_with_attribution_review_package_terms",
       "citation": "European Commission, Joint Research Centre. GHS Urban Centre Database 2024, R2024A.",
-      "notes": "Do not describe as an independent replication of WUP 2025; both depend on GHSL/DEGURBA. Preserve dynamic and fixed-boundary streams and never assign boundary semantics from an unverified caller label."
+      "files": [
+        {
+          "package": "GHS_UCDB_THEME_GHSL_GLOBE_R2024A_V1_2.zip",
+          "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_THEME_GLOBE_R2024A/GHS_UCDB_THEME_GHSL_GLOBE_R2024A/V1-2/GHS_UCDB_THEME_GHSL_GLOBE_R2024A_V1_2.zip",
+          "boundary_semantics": "statistics for all epochs inside the fixed 2025 urban-centre boundary",
+          "measures": ["population", "built_up_area_m2"]
+        },
+        {
+          "package": "GHS_UCDB_MTUC_GLOBE_R2024A_V1_2.zip",
+          "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_MTUC_GLOBE_R2024A/V1-2/GHS_UCDB_MTUC_GLOBE_R2024A_V1_2.zip",
+          "boundary_semantics": "separate multi-temporal boundaries; values are not comparable with the fixed stream except at 2025",
+          "measures": ["dynamic_geometry_and_attributes"]
+        }
+      ],
+      "notes": "The v1.2 package readme explicitly replaces deprecated v1.1, despite the landing page still showing v1.1. Do not describe UCDB as an independent replication of WUP 2025; both depend on GHSL/DEGURBA. Fixed and dynamic values are different and not comparable except at 2025."
     },
     {
       "source_id": "un_wpp_2024",

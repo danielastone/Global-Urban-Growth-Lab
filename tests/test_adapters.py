@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from urban_growth.adapters.ghsl_ucdb import indicator_panel
+from urban_growth.adapters.ghsl_ucdb import fixed_2025_theme_panel, indicator_panel
 from urban_growth.adapters.wup import (
     city_area_panel,
     city_population_panel,
@@ -17,11 +17,45 @@ def test_ghsl_indicator_preserves_boundary_mode() -> None:
     result = indicator_panel(
         source, city_id_column="ID", metadata_columns=["NAME"],
         indicator_pattern=r"MT_POP_TOT_(?P<year>\d{4})", value_name="population",
-        boundary_product="ucdb_multitemporal_footprints",
+        boundary_product="ucdb_multitemporal_boundaries",
     )
     assert result["year"].tolist() == [1975, 1980]
     assert result["boundary_mode"].unique().tolist() == ["dynamic"]
-    assert result["boundary_product"].unique().tolist() == ["ucdb_multitemporal_footprints"]
+    assert result["boundary_product"].unique().tolist() == ["ucdb_multitemporal_boundaries"]
+
+
+def test_ghsl_fixed_theme_uses_fixed_2025_boundary_and_joins_measures() -> None:
+    source = pd.DataFrame(
+        {
+            "ID_UC_G0": [1],
+            "GC_UCN_MAI_2025": ["Apia"],
+            "GC_CNT_GAD_2025": ["Samoa"],
+            "GH_POP_TOT_1975": [10.5],
+            "GH_POP_TOT_2025": [60_041.7],
+            "GH_BUS_TOT_1975": [378],
+            "GH_BUS_TOT_2025": [2_829],
+        }
+    )
+    result = fixed_2025_theme_panel(source)
+    assert result["year"].tolist() == [1975, 2025]
+    assert result["boundary_mode"].unique().tolist() == ["fixed"]
+    assert result["boundary_product"].unique().tolist() == ["ucdb_fixed_2025_boundary"]
+    assert result["population"].tolist() == [10.5, 60_041.7]
+    assert result["built_up_area_m2"].tolist() == [378, 2_829]
+
+
+def test_ghsl_fixed_theme_rejects_non_numeric_measure() -> None:
+    source = pd.DataFrame(
+        {
+            "ID_UC_G0": [1],
+            "GC_UCN_MAI_2025": ["Example"],
+            "GC_CNT_GAD_2025": ["Exampleland"],
+            "GH_POP_TOT_2025": ["not available"],
+            "GH_BUS_TOT_2025": [100],
+        }
+    )
+    with pytest.raises(SourceSchemaError, match="non-numeric population"):
+        fixed_2025_theme_panel(source)
 
 
 def test_wup_converts_thousands_and_requires_mapped_categories() -> None:
