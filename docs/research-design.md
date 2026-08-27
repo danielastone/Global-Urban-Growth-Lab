@@ -65,6 +65,13 @@ Forecasting does not require causal exogeneity, but interpretation of coefficien
 
 A chronological holdout within WUP 2025 is **retrospective pseudo-out-of-sample validation**. It does not recreate a forecast made in an earlier year because the 2025 revision incorporates later censuses, revised methods, boundaries and national totals. Use “real-time” or “vintage-correct” only when each training input is drawn from the edition actually available at that forecast origin. Report current-revision holdouts and vintage tests separately.
 
+The WUP 2018 F22 sensitivity is the first actual vintage test. Its 2013 and 2018
+predictors and 2023 projection come from the archived 2018 edition; the scored target
+comes from WUP 2025 estimates. Because the editions use different urban definitions,
+it is reported only on reciprocal geographic matches and across explicit
+origin-population-agreement sensitivities. It is a large-city forecast-revision test,
+not a clean same-definition validation and not evidence about small cities.
+
 ### Forecast-interval construction
 
 Each five-year forecast interval requires the same city at three exact years: `origin - 5`, `origin`, and `origin + 5`. Recent growth uses only the lag and origin populations; the outcome uses origin and future populations. Density and built-up share are taken at the origin, never from the future row. Structural blanks from the 50,000 threshold remove the interval rather than being interpolated.

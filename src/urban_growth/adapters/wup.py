@@ -112,6 +112,45 @@ def read_f21_city_population(path: str) -> pd.DataFrame:
     )
 
 
+def read_f22_2018_city_population(path: str) -> pd.DataFrame:
+    """Read the WUP 2018 annual urban-agglomeration vintage."""
+    from urban_growth.io import read_table, require_columns
+
+    frame = read_table(path, sheet_name="Data", header=16)
+    required = {
+        "Country Code", "City Code", "Urban Agglomeration", "Latitude", "Longitude",
+        1950, 2018, 2035,
+    }
+    require_columns(frame, required, source_name="WUP 2018 F22")
+    panel = wide_years_to_long(
+        frame,
+        id_columns=[
+            "City Code", "Country Code", "Urban Agglomeration", "Latitude", "Longitude"
+        ],
+        value_pattern=r"(?P<year>\d{4})",
+        value_name="population",
+    ).rename(
+        columns={
+            "City Code": "city_id",
+            "Country Code": "country_location_id",
+            "Urban Agglomeration": "city_name",
+            "Latitude": "latitude",
+            "Longitude": "longitude",
+        }
+    )
+    panel = _scale_population(panel, "thousands")
+    panel["observation_type"] = panel["year"].le(2018).map(
+        {True: "estimate", False: "projection"}
+    )
+    reference = panel.loc[panel["year"].eq(2018), "population"]
+    if len(reference) != frame["City Code"].nunique() or reference.lt(300_000).any():
+        raise SourceSchemaError("WUP 2018 F22 violates its 300,000-in-2018 universe")
+    reject_duplicate_keys(panel, ["city_id", "year"], source_name="WUP 2018 F22")
+    panel["revision"] = "WUP_2018_vintage"
+    panel["urban_definition"] = "national_urban_agglomeration_over_300k_in_2018"
+    return panel
+
+
 def read_f01_country_city_population(path: str) -> pd.DataFrame:
     """Read national populations in WUP's harmonized Cities category.
 

@@ -19,6 +19,8 @@ def read_table(path: str | Path, *, sheet_name: str | int = 0, **kwargs) -> pd.D
         return pd.read_csv(source, **kwargs)
     if suffix in {".xlsx", ".xlsm"}:
         return pd.read_excel(source, sheet_name=sheet_name, engine="openpyxl", **kwargs)
+    if suffix == ".xls":
+        return pd.read_excel(source, sheet_name=sheet_name, engine="xlrd", **kwargs)
     raise SourceSchemaError(f"Unsupported tabular format: {suffix}")
 
 

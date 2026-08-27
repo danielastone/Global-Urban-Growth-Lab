@@ -64,10 +64,12 @@ Run the registered baseline workflows separately:
 
 ```bash
 python scripts/run_wup_baselines.py
+python scripts/run_wup2018_vintage.py
 python scripts/run_ghsl_fixed_baselines.py
 python scripts/run_ghsl_boundary_sensitivity.py
 python scripts/verify_results.py \
   results/wup_expected_manifest.csv \
+  results/wup2018_vintage_expected_manifest.csv \
   results/ghsl_fixed_expected_manifest.csv \
   results/ghsl_boundary_expected_manifest.csv
 ```

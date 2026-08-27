@@ -73,6 +73,33 @@
       "notes": "F21 contains cities that reach 50,000 during 1975-2050, but annual values are blank while a city is below 50,000. This is time-varying threshold truncation, not a balanced history and not selection only at 2025. Keep estimates and projections distinct."
     },
     {
+      "source_id": "un_wup_2018_cities",
+      "priority": 1,
+      "status": "vintage_control",
+      "publisher": "United Nations DESA Population Division",
+      "dataset": "World Urbanization Prospects 2018 Revision - Urban Agglomerations",
+      "release": "2018 Revision",
+      "landing_page": "https://population.un.org/wup/downloads",
+      "documentation_url": "https://population.un.org/wup/publications",
+      "retrieval": "official_archive",
+      "formats": ["zip", "xls"],
+      "coverage": "Annual estimates through 2018 and projections through 2035 for 1,860 urban agglomerations reaching 300,000 inhabitants in 2018",
+      "unit": "urban agglomeration under national definitions",
+      "role": "Vintage-correct large-city forecast benchmark",
+      "upstream_dependencies": [],
+      "redistribution": "CC_BY_3_IGO_not_committed",
+      "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2018). World Urbanization Prospects: The 2018 Revision, Online Edition.",
+      "files": [
+        {
+          "table": "F22",
+          "filename": "WUP2018-F22-Cities_Over_300K_Annual.xls",
+          "archive_url": "https://population.un.org/wup/assets/Download/Archive/WUP2018-Excel-files.zip",
+          "measure": "annual_population_thousands"
+        }
+      ],
+      "notes": "This vintage uses national urban-agglomeration definitions and a 300,000-in-2018 inclusion rule. It is not definition-equivalent to WUP 2025 DEGURBA cities and cannot validate small-city results. Cross-revision comparisons require an audited geographic crosswalk and definition-agreement sensitivities."
+    },
+    {
       "source_id": "ec_ghsl_ucdb_r2024a_v1_2",
       "priority": 1,
       "status": "core_spatial",

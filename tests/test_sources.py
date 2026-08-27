@@ -13,7 +13,7 @@ from urban_growth.sources import (
 
 def test_repository_catalog_is_valid() -> None:
     catalog = load_catalog("data/sources.json")
-    assert len(catalog["sources"]) == 8
+    assert len(catalog["sources"]) == 9
     ghsl = source_by_id(catalog, "ec_ghsl_ucdb_r2024a_v1_2")
     wup = source_by_id(catalog, "un_wup_2025_cities")
     assert "ec_ghsl_degurb_r2023a" in ghsl["upstream_dependencies"]

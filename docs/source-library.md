@@ -36,6 +36,30 @@ The adapter applies one narrow repair, mapping parent 918 to Northern America an
 published Northern America region row 905. This agrees with the UN M49 composition;
 all other 232 countries must follow the workbook's explicit parent chain or fail.
 
+## Verified WUP 2018 vintage
+
+The official WUP download center retains complete Excel archives for earlier
+revisions. The registered 2018 archive contains the unchanged F22 workbook,
+`POP/DB/WUP/Rev.2018/1/F22`: annual estimates through 2018 and projections through
+2035 for 1,860 urban agglomerations reaching 300,000 inhabitants in 2018. The server
+archive was packaged in 2025, but the workbook identifies itself, its methods and its
+copyright as the 2018 revision. The archive and extracted member have separate
+checksums in `data/manifest.csv`.
+
+WUP 2018 and WUP 2025 are not the same city universe. F22 uses national
+urban-agglomeration definitions and a 300,000 threshold; F21 uses harmonized DEGURBA
+cities and a 50,000 reporting threshold. City codes are revision-specific. The
+crosswalk therefore accepts only reciprocal nearest coordinates within the same
+country, never numeric-code or name equality alone. It finds 1,710 one-to-one pairs
+within 10 km, of which 1,509 have complete 2013, 2018 and 2023 populations and lie
+within 5 km.
+
+Only 304 of those primary matches have 2018 populations agreeing within 10% across
+revisions, and 567 agree within 20%. Population-agreement restrictions use the later
+revision and are therefore sensitivity analyses, not valid 2018 selection rules.
+This vintage test is informative about large-city revision bias but cannot validate
+any result for cities below 300,000.
+
 ## Verified WUP F21 schema
 
 The exact F21, F25, F30 and F34 workbooks were retrieved on 2026-08-27 and registered in `data/manifest.csv`. Each `Data` sheet contains 16,828 unique `City_Code` rows and annual columns from 1975 through 2050. The annual series is threshold-truncated: a cell is blank while the city is below 50,000 and populated once it meets the reporting threshold. In F21, 12,138 cities have 2025 values and 3,633 records are absent in 2025 but present by 2050. F25, F30 and F34 have identical identifiers, names, country codes and checked-year coverage, supporting joins within the WUP namespace.

@@ -235,6 +235,39 @@ does not prove that politics or national demography are irrelevant; it shows tha
 this forecasting design cannot distinguish their incremental contribution from
 shared subregional growth patterns. Adding causal language would exceed the design.
 
+## WUP 2018 vintage test
+
+The archived WUP 2018 F22 workbook permits one genuinely vintage-correct predictor
+test. On reciprocal within-country geographic matches no farther than 5 km, 1,509
+urban agglomerations across 141 countries have complete 2013, 2018 and 2023 values
+in both editions. The target is WUP 2025 estimated growth from 2018–2023.
+
+| Predictor available or published in 2018 | MAE | RMSE | Bias |
+|---|---:|---:|---:|
+| WUP 2018 published projection | 1.268 pp | 1.650 pp | +1.081 pp |
+| Persistence calculated from WUP 2018 | 1.494 pp | 1.940 pp | +1.364 pp |
+| Persistence recalculated from WUP 2025 | 0.959 pp | 1.499 pp | +0.648 pp |
+
+The published 2018 projection beats the persistence baseline available in 2018 by
+0.226 pp. A country-clustered bootstrap gives [−0.270, −0.169] pp. Restricting to the
+567 cities whose 2018 populations agree within 20% across revisions produces almost
+the same difference, 0.224 pp with interval [−0.277, −0.158] pp.
+
+The more consequential comparison is vintage versus retrospective persistence.
+Recomputing persistence with values revised in 2025 lowers apparent MAE by 0.536 pp.
+That performance was unavailable to a forecaster in 2018. The current-revision
+rolling-origin results therefore materially overstate the real-time value of
+persistence for this matched large-city sample.
+
+This does not make the 2018 projection a clean winner or a small-city result. WUP
+2018 uses nationally defined urban agglomerations above 300,000, while WUP 2025 uses
+harmonized DEGURBA cities. Only 304 primary matches agree within 10% at the 2018
+origin. All three predictors are positively biased against the later target, and the
+2018–2023 window includes both definition revisions and the pandemic shock. The
+defensible result is narrower: the official vintage forecast robustly beats vintage
+persistence on matched large places, while revised-history persistence receives a
+large hindsight advantage.
+
 ## Temporal decomposition of the 2020 reversal
 
 The reversal is not a uniform decline in city growth. Mean annual growth rises from 0.695% in 2015–2020 to 0.992% in 2020–2025, so persistence underpredicts on average. Its larger failure is cross-city: the association between recent and future growth collapses and more cities switch growth direction.
@@ -273,6 +306,7 @@ With the registered raw files under `data/raw/`, run:
 
 ```bash
 python scripts/run_wup_baselines.py
+python scripts/run_wup2018_vintage.py
 python scripts/run_ghsl_fixed_baselines.py
 python scripts/run_ghsl_boundary_sensitivity.py
 ```
@@ -284,6 +318,7 @@ The WUP command now writes both origin-by-size and explicitly pooled-by-size pai
 ```bash
 python scripts/verify_results.py \
   results/wup_expected_manifest.csv \
+  results/wup2018_vintage_expected_manifest.csv \
   results/ghsl_fixed_expected_manifest.csv \
   results/ghsl_boundary_expected_manifest.csv
 ```
