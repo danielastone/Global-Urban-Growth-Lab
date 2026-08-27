@@ -132,3 +132,76 @@ def score_forecast(actual: pd.Series, predicted: pd.Series) -> ForecastMetrics:
             (np.sign(pairs["predicted"]) == np.sign(pairs["actual"])).mean()
         ),
     )
+
+
+def baseline_predictions(
+    train: pd.DataFrame,
+    test: pd.DataFrame,
+    *,
+    outcome_column: str = "future_growth",
+    persistence_column: str = "recent_growth",
+) -> pd.DataFrame:
+    """Predict simple baselines using training outcomes and test-origin information only."""
+    required = {"country_code", outcome_column}
+    require_columns(train, required, source_name="forecast training set")
+    require_columns(
+        test, {"country_code", persistence_column}, source_name="forecast test set"
+    )
+    valid_train = train.loc[np.isfinite(train[outcome_column])].copy()
+    if valid_train.empty:
+        raise SourceSchemaError("No finite training outcomes for forecast baselines")
+    global_mean = float(valid_train[outcome_column].mean())
+    country_means = valid_train.groupby("country_code")[outcome_column].mean()
+    predictions = pd.DataFrame(index=test.index)
+    predictions["zero_growth"] = 0.0
+    predictions["global_mean"] = global_mean
+    predictions["country_mean"] = test["country_code"].map(country_means).fillna(global_mean)
+    predictions["persistence"] = pd.to_numeric(test[persistence_column], errors="coerce")
+    return predictions
+
+
+def evaluate_rolling_baselines(
+    panel: pd.DataFrame,
+    origins: list[int],
+    *,
+    outcome_column: str = "future_growth",
+) -> pd.DataFrame:
+    """Score matched baseline predictions at chronological rolling origins."""
+    require_columns(
+        panel,
+        {"period_start", "period_end", "country_code", outcome_column, "recent_growth"},
+        source_name="forecast interval panel",
+    )
+    rows: list[dict[str, float | int | str]] = []
+    for origin, train_index, test_index in rolling_origin_splits(panel, origins):
+        train = panel.loc[train_index]
+        test = panel.loc[test_index]
+        predictions = baseline_predictions(train, test, outcome_column=outcome_column)
+        matched = pd.concat(
+            {"actual": test[outcome_column], **{c: predictions[c] for c in predictions}}, axis=1
+        ).dropna()
+        finite = np.isfinite(matched).all(axis=1)
+        matched = matched.loc[finite]
+        if matched.empty:
+            continue
+        for model in predictions.columns:
+            metrics = score_forecast(matched["actual"], matched[model])
+            rows.append(
+                {
+                    "origin": origin,
+                    "model": model,
+                    "n": metrics.n,
+                    "mae": metrics.mae,
+                    "rmse": metrics.rmse,
+                    "median_absolute_error": metrics.median_absolute_error,
+                    "bias": metrics.bias,
+                    "directional_accuracy": metrics.directional_accuracy,
+                }
+            )
+    if not rows:
+        raise SourceSchemaError("No rolling-origin baseline evaluations were produced")
+    result = pd.DataFrame(rows)
+    counts = result.pivot(index="origin", columns="model", values="n")
+    if counts.nunique(axis=1).gt(1).any():
+        raise SourceSchemaError("Baseline models were not scored on identical observations")
+    return result.sort_values(["origin", "model"]).reset_index(drop=True)

@@ -28,6 +28,8 @@ Models must be evaluated in this order:
 
 A complex model earns inclusion only through repeated held-out improvement over the strongest simpler baseline.
 
+The first baseline execution shows why the ladder is binding: persistence has the lowest weighted MAE but worse pooled-equivalent RMSE than country and global historical means, and it loses on MAE at the 2000 and 2020 origins. Subsequent models must beat the country mean and persistence on matched rows; comparison only with zero growth is inadequate.
+
 ## Validation
 
 - Use expanding or fixed rolling training windows and strictly later test periods.

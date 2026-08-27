@@ -1,7 +1,13 @@
 import pandas as pd
 import pytest
 
-from urban_growth.forecast import build_forecast_intervals, rolling_origin_splits, score_forecast
+from urban_growth.forecast import (
+    baseline_predictions,
+    build_forecast_intervals,
+    evaluate_rolling_baselines,
+    rolling_origin_splits,
+    score_forecast,
+)
 from urban_growth.io import SourceSchemaError
 
 
@@ -60,3 +66,31 @@ def test_forecast_intervals_require_exact_lag_year() -> None:
     source = city_year_source().loc[lambda x: x.year.ne(2015)]
     with pytest.raises(SourceSchemaError, match="No complete"):
         build_forecast_intervals(source, [2020])
+
+
+def test_baselines_use_training_country_mean_and_global_fallback() -> None:
+    train = pd.DataFrame(
+        {"country_code": ["A", "A", "B"], "future_growth": [0.01, 0.03, -0.01]}
+    )
+    test = pd.DataFrame(
+        {"country_code": ["A", "C"], "recent_growth": [0.04, -0.02]}, index=[10, 11]
+    )
+    result = baseline_predictions(train, test)
+    assert result["country_mean"].tolist() == pytest.approx([0.02, 0.01])
+    assert result["global_mean"].tolist() == pytest.approx([0.01, 0.01])
+    assert result["persistence"].tolist() == [0.04, -0.02]
+
+
+def test_rolling_baselines_use_identical_test_rows() -> None:
+    panel = pd.DataFrame(
+        {
+            "period_start": [2000, 2000, 2005, 2005],
+            "period_end": [2005, 2005, 2010, 2010],
+            "country_code": ["A", "B", "A", "B"],
+            "future_growth": [0.01, -0.01, 0.02, -0.02],
+            "recent_growth": [0.00, 0.00, 0.01, -0.01],
+        }
+    )
+    result = evaluate_rolling_baselines(panel, [2005])
+    assert set(result["model"]) == {"zero_growth", "global_mean", "country_mean", "persistence"}
+    assert result["n"].unique().tolist() == [2]
