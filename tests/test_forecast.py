@@ -7,6 +7,7 @@ from urban_growth.forecast import (
     build_ghsl_fixed_forecast_intervals,
     cluster_bootstrap_paired_difference,
     evaluate_rolling_baselines,
+    evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
     paired_error_comparison,
     rolling_baseline_errors,
@@ -88,6 +89,19 @@ def test_gapped_interval_has_no_shared_population_endpoint() -> None:
     assert result["future_growth"].iloc[0] == pytest.approx(0.03646431136)
 
 
+def test_country_rank_uses_full_origin_universe_before_future_filter() -> None:
+    complete = city_year_source()
+    incomplete = complete.loc[complete["year"].le(2020)].copy()
+    incomplete["city_id"] = 2
+    incomplete["City_Name"] = "Larger but incomplete"
+    incomplete["population"] = [100_000, 110_000]
+    source = pd.concat([complete, incomplete], ignore_index=True)
+    result = build_forecast_intervals(source, [2020])
+    assert result["city_id"].tolist() == [1]
+    assert result["country_rank_origin"].tolist() == [2.0]
+    assert result["country_city_count_origin"].tolist() == [2]
+
+
 def test_ghsl_forecast_requires_and_preserves_fixed_boundary_semantics() -> None:
     source = pd.DataFrame(
         {
@@ -145,6 +159,27 @@ def test_rolling_baselines_use_identical_test_rows() -> None:
     assert set(result["model"]) == {
         "zero_growth", "global_mean", "country_mean", "country_mean_leave_city_out",
         "persistence",
+    }
+    assert result["n"].unique().tolist() == [2]
+
+
+def test_hierarchy_models_compare_origin_and_frozen_features() -> None:
+    panel = pd.DataFrame(
+        {
+            "city_id": [1, 2, 1, 2], "country_code": ["A"] * 4,
+            "period_start": [2000, 2000, 2005, 2005],
+            "period_end": [2005, 2005, 2010, 2010],
+            "future_growth": [0.01, -0.01, 0.02, -0.02],
+            "recent_growth": [0.00, 0.01, 0.01, -0.01],
+            "population_lag": [80_000, 60_000, 85_000, 65_000],
+            "population_start": [85_000, 65_000, 90_000, 70_000],
+            "country_rank_percentile_lag": [0.25, 0.75, 0.25, 0.75],
+            "country_rank_percentile_origin": [0.25, 0.75, 0.25, 0.75],
+        }
+    )
+    result = evaluate_rolling_hierarchy_models(panel, [2005])
+    assert set(result["model"]) == {
+        "country_loo_plus_recent_growth", "origin_hierarchy", "frozen_hierarchy"
     }
     assert result["n"].unique().tolist() == [2]
 

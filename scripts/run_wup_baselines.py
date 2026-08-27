@@ -15,6 +15,7 @@ from urban_growth.forecast import (
     build_forecast_intervals,
     cluster_bootstrap_paired_difference,
     evaluate_rolling_baselines,
+    evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
     paired_error_comparison,
     rolling_baseline_errors,
@@ -64,6 +65,11 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_gapped_temporal_diagnostics.csv"),
     )
+    parser.add_argument(
+        "--hierarchy-output",
+        type=Path,
+        default=Path("outputs/wup_hierarchy_model_metrics.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
@@ -92,6 +98,7 @@ def main() -> None:
         gapped_intervals, list(range(1990, 2020, 5))
     )
     gapped_temporal = temporal_reversal_diagnostics(gapped_intervals)
+    hierarchy = evaluate_rolling_hierarchy_models(intervals, list(range(1985, 2025, 5)))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(args.output, index=False)
     args.paired_output.parent.mkdir(parents=True, exist_ok=True)
@@ -108,6 +115,8 @@ def main() -> None:
     gapped_metrics.to_csv(args.gapped_metrics_output, index=False)
     args.gapped_temporal_output.parent.mkdir(parents=True, exist_ok=True)
     gapped_temporal.to_csv(args.gapped_temporal_output, index=False)
+    args.hierarchy_output.parent.mkdir(parents=True, exist_ok=True)
+    hierarchy.to_csv(args.hierarchy_output, index=False)
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
@@ -116,6 +125,7 @@ def main() -> None:
     print(args.city_influence_output)
     print(args.gapped_metrics_output)
     print(args.gapped_temporal_output)
+    print(args.hierarchy_output)
 
 
 if __name__ == "__main__":

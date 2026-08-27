@@ -15,6 +15,7 @@ from urban_growth.adapters.ghsl_ucdb import (
 from urban_growth.forecast import (
     build_ghsl_fixed_forecast_intervals,
     evaluate_rolling_baselines,
+    evaluate_rolling_hierarchy_models,
     rolling_baseline_errors,
     temporal_reversal_diagnostics,
 )
@@ -62,6 +63,11 @@ def main() -> None:
         type=Path,
         default=Path("outputs/ghsl_fixed_gapped_temporal_diagnostics.csv"),
     )
+    parser.add_argument(
+        "--hierarchy-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_hierarchy_model_metrics.csv"),
+    )
     args = parser.parse_args()
     fixed = fixed_2025_theme_panel(read_ghsl_theme_csv(str(args.input)))
     dynamic = multitemporal_boundary_panel(read_ghsl_mtuc_csv(str(args.dynamic_input)))
@@ -78,6 +84,7 @@ def main() -> None:
         gapped_intervals, list(range(1990, 2020, 5))
     )
     gapped_temporal = temporal_reversal_diagnostics(gapped_intervals)
+    hierarchy = evaluate_rolling_hierarchy_models(intervals, origins)
     for path, frame in [
         (args.metrics_output, metrics),
         (args.errors_output, errors),
@@ -85,6 +92,7 @@ def main() -> None:
         (args.reconciliation_output, reconciliation),
         (args.gapped_metrics_output, gapped_metrics),
         (args.gapped_temporal_output, gapped_temporal),
+        (args.hierarchy_output, hierarchy),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)

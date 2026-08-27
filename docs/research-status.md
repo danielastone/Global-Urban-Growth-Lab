@@ -81,6 +81,23 @@ The 2020–2025 target permits a more focused comparison. WUP's adjacent design 
 
 The diagnostic cannot isolate measurement-error bias because inserting a gap also changes predictor recency and the information set. It rejects the stronger claim that the WUP reversal is merely shared-endpoint arithmetic. The unresolved issue is state dependence: why WUP city growth from either 2010–2015 or 2015–2020 transfers poorly into 2020–2025 while fixed-polygon GHSL growth transfers substantially better.
 
+## Endogeneity audit: frozen size and rank
+
+Within-country population rank and city count are calculated from every city observed in the source at the lag or origin year **before** filtering for a future outcome. This prevents future sample survival from determining historical hierarchy. Rank percentile is then compared in two country-fixed-effect specifications: origin hierarchy uses size and rank at \(t\), while frozen hierarchy uses their values at \(t-5\), before the recent-growth window. Both retain recent growth and use the leave-focal-city-out country mean as the prediction anchor.
+
+| Panel and model | Weighted MAE | Pooled-equivalent RMSE |
+|---|---:|---:|
+| WUP: country-adjusted recent growth | 1.2081 pp | 1.9332 pp |
+| WUP: plus origin size/rank | 1.2094 pp | 1.9337 pp |
+| WUP: plus frozen size/rank | 1.2099 pp | 1.9336 pp |
+| GHSL fixed: country-adjusted recent growth | 0.9468 pp | 1.7655 pp |
+| GHSL fixed: plus origin size/rank | 0.9488 pp | 1.7222 pp |
+| GHSL fixed: plus frozen size/rank | 0.9507 pp | 1.7250 pp |
+
+Size and rank do not improve pooled MAE in either source. In WUP they also do not improve RMSE. In fixed GHSL they reduce RMSE by about 0.04 pp while slightly worsening MAE, consistent with limited tail-error information rather than broad accuracy gains. Origin and frozen hierarchy differ by less than 0.012 pp MAE in every period; neither timing convention dominates consistently.
+
+The correct conclusion is not that hierarchy has been proven irrelevant or exogenous. The current linear specification finds no material incremental typical-error value after country effects and recent growth, and no sign that using endogenously updated origin rank creates a large forecast advantage over frozen rank. Country-clustered paired uncertainty and nonlinear rank-depth interactions remain required before interpreting the small RMSE change.
+
 ## Prespecified size-bin comparison
 
 The paired comparison uses the README's existing size bins and compares persistence with country mean on the same city-origin rows. The pooled results do not support a claim that persistence is especially valuable for smaller cities:

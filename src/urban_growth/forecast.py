@@ -65,7 +65,14 @@ def build_forecast_intervals(
     if not allowed:
         raise SourceSchemaError("At least one outcome observation type must be allowed")
 
-    source = city_year_panel.set_index(["city_id", "year"])
+    ranked_source = city_year_panel.copy()
+    rank_groups = ranked_source.groupby(["ISO3_Code", "year"])["population"]
+    ranked_source["_country_rank"] = rank_groups.rank(method="average", ascending=False)
+    ranked_source["_country_city_count"] = rank_groups.transform("count")
+    ranked_source["_country_rank_percentile"] = (
+        (ranked_source["_country_rank"] - 0.5) / ranked_source["_country_city_count"]
+    )
+    source = ranked_source.set_index(["city_id", "year"])
     frames: list[pd.DataFrame] = []
     for origin in sorted(set(origins)):
         lag_year = origin - lookback_years
@@ -100,6 +107,16 @@ def build_forecast_intervals(
         result["population_lag"] = wide[("population", lag_year)]
         result["population_start"] = wide[("population", origin)]
         result["population_end"] = wide[("population", future_year)]
+        result["country_rank_lag"] = wide[("_country_rank", lag_year)]
+        result["country_rank_origin"] = wide[("_country_rank", origin)]
+        result["country_city_count_lag"] = wide[("_country_city_count", lag_year)]
+        result["country_city_count_origin"] = wide[("_country_city_count", origin)]
+        result["country_rank_percentile_lag"] = wide[
+            ("_country_rank_percentile", lag_year)
+        ]
+        result["country_rank_percentile_origin"] = wide[
+            ("_country_rank_percentile", origin)
+        ]
         result["recent_growth"] = (
             np.log(result["population_start"]) - np.log(result["population_lag"])
         ) / lookback_years
@@ -288,6 +305,79 @@ def evaluate_rolling_baselines(
     if counts.nunique(axis=1).gt(1).any():
         raise SourceSchemaError("Baseline models were not scored on identical observations")
     return result.sort_values(["origin", "model"]).reset_index(drop=True)
+
+
+def evaluate_rolling_hierarchy_models(
+    panel: pd.DataFrame,
+    origins: list[int],
+    *,
+    outcome_column: str = "future_growth",
+) -> pd.DataFrame:
+    """Compare origin and pre-growth frozen hierarchy using country fixed effects."""
+    required = {
+        "city_id", "country_code", "period_start", "period_end", outcome_column,
+        "recent_growth", "population_lag", "population_start",
+        "country_rank_percentile_lag", "country_rank_percentile_origin",
+    }
+    require_columns(panel, required, source_name="hierarchy forecast interval panel")
+    specifications = {
+        "country_loo_plus_recent_growth": ["recent_growth"],
+        "origin_hierarchy": [
+            "recent_growth", "log_population_start", "country_rank_percentile_origin",
+        ],
+        "frozen_hierarchy": [
+            "recent_growth", "log_population_lag", "country_rank_percentile_lag",
+        ],
+    }
+    working = panel.copy()
+    working["log_population_lag"] = np.log(working["population_lag"])
+    working["log_population_start"] = np.log(working["population_start"])
+    rows: list[dict[str, float | int | str]] = []
+    for origin, train_index, test_index in rolling_origin_splits(working, origins):
+        train = working.loc[train_index]
+        test = working.loc[test_index]
+        baseline = baseline_predictions(train, test, outcome_column=outcome_column)
+        for model, features in specifications.items():
+            columns = ["country_code", outcome_column, *features]
+            fit = train[columns].dropna().copy()
+            fit = fit.loc[np.isfinite(fit.select_dtypes(include="number")).all(axis=1)]
+            country_means = fit.groupby("country_code")[[outcome_column, *features]].mean()
+            group_means = fit.groupby("country_code")[[outcome_column, *features]].transform(
+                "mean"
+            )
+            demeaned = fit[[outcome_column, *features]] - group_means
+            x_train = demeaned[features].to_numpy()
+            y_train = demeaned[outcome_column].to_numpy()
+            beta, *_ = np.linalg.lstsq(x_train, y_train, rcond=None)
+            global_feature_means = fit[features].mean()
+            test_feature_means = pd.DataFrame(
+                {
+                    feature: test["country_code"]
+                    .map(country_means[feature])
+                    .fillna(global_feature_means[feature])
+                    for feature in features
+                },
+                index=test.index,
+            )
+            prediction = baseline["country_mean_leave_city_out"] + (
+                test[features] - test_feature_means
+            ).to_numpy() @ beta
+            metrics = score_forecast(test[outcome_column], pd.Series(prediction, index=test.index))
+            rows.append(
+                {
+                    "origin": origin,
+                    "model": model,
+                    "n": metrics.n,
+                    "mae": metrics.mae,
+                    "rmse": metrics.rmse,
+                    "median_absolute_error": metrics.median_absolute_error,
+                    "bias": metrics.bias,
+                    "directional_accuracy": metrics.directional_accuracy,
+                }
+            )
+    if not rows:
+        raise SourceSchemaError("No rolling hierarchy evaluations were produced")
+    return pd.DataFrame(rows).sort_values(["origin", "model"]).reset_index(drop=True)
 
 
 def rolling_baseline_errors(
