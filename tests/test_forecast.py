@@ -4,6 +4,7 @@ import pytest
 from urban_growth.forecast import (
     baseline_predictions,
     build_forecast_intervals,
+    cluster_bootstrap_paired_difference,
     evaluate_rolling_baselines,
     paired_error_comparison,
     rolling_baseline_errors,
@@ -114,3 +115,24 @@ def test_row_errors_support_paired_size_comparison() -> None:
     result = paired_error_comparison(errors)
     assert set(result["size_bin"].astype(str)) == {"50–150k", "2m+"}
     assert result["n"].tolist() == [1, 1]
+
+
+def test_country_cluster_bootstrap_is_reproducible() -> None:
+    rows = []
+    for city_id, country, persistence_error, country_error in [
+        (1, "A", 0.01, 0.02), (2, "A", 0.02, 0.03),
+        (3, "B", 0.03, 0.02), (4, "B", 0.04, 0.03),
+    ]:
+        for model, error in [("persistence", persistence_error), ("country_mean", country_error)]:
+            rows.append(
+                {
+                    "city_id": city_id, "origin": 2020, "country_code": country,
+                    "size_bin": "50–150k", "model": model, "absolute_error": error,
+                }
+            )
+    errors = pd.DataFrame(rows)
+    first = cluster_bootstrap_paired_difference(errors, repetitions=200, seed=7)
+    second = cluster_bootstrap_paired_difference(errors, repetitions=200, seed=7)
+    pd.testing.assert_frame_equal(first, second)
+    assert first.loc[0, "clusters"] == 2
+    assert first.loc[0, "observed_mean_difference"] == pytest.approx(0.0)

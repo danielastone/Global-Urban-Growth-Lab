@@ -51,6 +51,25 @@ Negative differences favor persistence. The strongest pooled improvement occurs 
 
 More importantly, the 2000 and 2020 persistence failures span every size bin on mean error. In 2020, persistence loses even for cities above two million. Size composition therefore does not explain the period reversal. The next test should focus on time shocks and country-clustered paired uncertainty, not add an arbitrary size interaction to rescue H1.
 
+## Country-clustered paired uncertainty
+
+The bootstrap resamples whole countries 2,000 times with seed `20260827`, preserving all sampled cities and origins within each national cluster. This materially changes the strength of several point-estimate conclusions.
+
+Pooled by size, the 95% intervals for the persistence-minus-country MAE difference are:
+
+| Origin population | Difference | 95% country-clustered interval | Conclusion |
+|---|---:|---:|---|
+| 50–150k | −0.151 pp | [−0.244, −0.046] pp | Persistence improvement supported |
+| 150–250k | −0.025 pp | [−0.113, +0.092] pp | Unresolved |
+| 250–500k | +0.022 pp | [−0.094, +0.130] pp | Unresolved |
+| 500k–1m | −0.120 pp | [−0.254, +0.009] pp | Unresolved at 95% |
+| 1–2m | −0.258 pp | [−0.334, −0.156] pp | Persistence improvement supported |
+| 2m+ | −0.306 pp | [−0.447, −0.207] pp | Persistence improvement supported |
+
+The 2020 reversal is robust: all six size-bin intervals are entirely above zero, including [+0.310, +1.010] pp for 50–150k and [+0.059, +0.577] pp for 2m+. By contrast, all six 2000 intervals cross zero. The correct conclusion is therefore not that persistence failed definitively in two periods; it failed decisively in 2020, while the 2000 point estimates are too country-dependent to distinguish from no difference.
+
+This still falsifies universal H1, because one broad and statistically supported period reversal is enough to defeat “consistent across periods.” It also narrows the next question: identify what changed in the 2015–2020 predictor window and 2020–2025 outcome window, without automatically labeling the effect COVID or claiming causation.
+
 ## Reproduction
 
 With the four registered WUP workbooks under `data/raw/`, run:
@@ -59,4 +78,4 @@ With the four registered WUP workbooks under `data/raw/`, run:
 python scripts/run_wup_baselines.py
 ```
 
-The command writes `outputs/wup_baseline_metrics.csv` and `outputs/wup_persistence_vs_country_by_size.csv`. Raw workbooks and generated outputs remain outside Git.
+The command writes baseline metrics, paired size comparisons, and country-clustered bootstrap intervals under `outputs/`. Raw workbooks and generated outputs remain outside Git.

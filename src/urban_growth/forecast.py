@@ -286,3 +286,68 @@ def paired_error_comparison(
     result["model_a"] = model_a
     result["model_b"] = model_b
     return result
+
+
+def cluster_bootstrap_paired_difference(
+    errors: pd.DataFrame,
+    *,
+    model_a: str = "persistence",
+    model_b: str = "country_mean",
+    group_columns: list[str] | None = None,
+    cluster_column: str = "country_code",
+    repetitions: int = 2_000,
+    seed: int = 20260827,
+    confidence: float = 0.95,
+) -> pd.DataFrame:
+    """Bootstrap paired MAE differences by resampling whole country clusters."""
+    groups = group_columns or ["origin", "size_bin"]
+    required = {
+        "city_id", "origin", "model", "absolute_error", cluster_column, *groups,
+    }
+    require_columns(errors, required, source_name="row-level forecast errors")
+    if repetitions < 100:
+        raise SourceSchemaError("Cluster bootstrap requires at least 100 repetitions")
+    if not 0 < confidence < 1:
+        raise SourceSchemaError("Bootstrap confidence must be between zero and one")
+    subset = errors.loc[errors["model"].isin([model_a, model_b])]
+    index = [
+        "city_id", "origin", cluster_column, *[c for c in groups if c not in {"origin", cluster_column}]
+    ]
+    paired = subset.pivot(index=index, columns="model", values="absolute_error").dropna()
+    if model_a not in paired or model_b not in paired:
+        raise SourceSchemaError("Requested models do not have matched row-level errors")
+    paired["difference"] = paired[model_a] - paired[model_b]
+    paired = paired.reset_index()
+    alpha = (1 - confidence) / 2
+    rng = np.random.default_rng(seed)
+    rows: list[dict[str, float | int | str]] = []
+    grouper: str | list[str] = groups[0] if len(groups) == 1 else groups
+    for group_key, group in paired.groupby(grouper, observed=True, sort=True):
+        keys = (group_key,) if len(groups) == 1 else group_key
+        clusters = group.groupby(cluster_column)["difference"].agg(["sum", "count"])
+        cluster_count = len(clusters)
+        if cluster_count < 2:
+            continue
+        draws = rng.integers(0, cluster_count, size=(repetitions, cluster_count))
+        sums = clusters["sum"].to_numpy()[draws].sum(axis=1)
+        counts = clusters["count"].to_numpy()[draws].sum(axis=1)
+        estimates = sums / counts
+        row: dict[str, float | int | str] = dict(zip(groups, keys, strict=True))
+        row.update(
+            {
+                "model_a": model_a,
+                "model_b": model_b,
+                "n": len(group),
+                "clusters": cluster_count,
+                "observed_mean_difference": float(group["difference"].mean()),
+                "ci_lower": float(np.quantile(estimates, alpha)),
+                "ci_upper": float(np.quantile(estimates, 1 - alpha)),
+                "probability_model_a_better": float((estimates < 0).mean()),
+                "repetitions": repetitions,
+                "seed": seed,
+            }
+        )
+        rows.append(row)
+    if not rows:
+        raise SourceSchemaError("No groups had enough clusters for bootstrap inference")
+    return pd.DataFrame(rows)

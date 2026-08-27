@@ -30,7 +30,7 @@ A complex model earns inclusion only through repeated held-out improvement over 
 
 The first baseline execution shows why the ladder is binding: persistence has the lowest weighted MAE but worse pooled-equivalent RMSE than country and global historical means, and it loses on MAE at the 2000 and 2020 origins. Subsequent models must beat the country mean and persistence on matched rows; comparison only with zero growth is inadequate.
 
-The prespecified size comparison does not explain those failures: persistence loses across every size bin in both 2000 and 2020 on mean absolute error. Pooled improvement is larger above one million than below 250,000. Prioritize period shocks, reversals, and country-clustered uncertainty before fitting size interactions.
+The prespecified size comparison does not explain the 2020 failure: persistence loses across every size bin, and every country-clustered 95% interval excludes zero in the adverse direction. The analogous 2000 point estimates are not statistically resolved after country clustering. Pooled improvement is supported for 50–150k and above one million, but not the middle bins. Prioritize the 2015–2025 reversal and shock window before fitting flexible size interactions.
 
 ## Validation
 
