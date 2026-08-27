@@ -11,7 +11,12 @@ from urban_growth.adapters.wup import (
     read_f30_built_up_area_per_capita,
     read_f34_population_density,
 )
-from urban_growth.forecast import build_forecast_intervals, evaluate_rolling_baselines
+from urban_growth.forecast import (
+    build_forecast_intervals,
+    evaluate_rolling_baselines,
+    paired_error_comparison,
+    rolling_baseline_errors,
+)
 from urban_growth.wup_panel import build_wup_city_year_panel
 
 
@@ -20,6 +25,11 @@ def main() -> None:
     parser.add_argument("--raw-dir", type=Path, default=Path("data/raw"))
     parser.add_argument(
         "--output", type=Path, default=Path("outputs/wup_baseline_metrics.csv")
+    )
+    parser.add_argument(
+        "--paired-output",
+        type=Path,
+        default=Path("outputs/wup_persistence_vs_country_by_size.csv"),
     )
     args = parser.parse_args()
     raw = args.raw_dir
@@ -34,9 +44,14 @@ def main() -> None:
     city_year = build_wup_city_year_panel(population, area, built, density)
     intervals = build_forecast_intervals(city_year, list(range(1980, 2025, 5)))
     metrics = evaluate_rolling_baselines(intervals, list(range(1985, 2025, 5)))
+    errors = rolling_baseline_errors(intervals, list(range(1985, 2025, 5)))
+    paired = paired_error_comparison(errors)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(args.output, index=False)
+    args.paired_output.parent.mkdir(parents=True, exist_ok=True)
+    paired.to_csv(args.paired_output, index=False)
     print(args.output)
+    print(args.paired_output)
 
 
 if __name__ == "__main__":

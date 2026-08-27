@@ -34,6 +34,23 @@ H1, as preregistered in the README, requires recent growth to improve held-out M
 
 A narrower regime-dependent hypothesis is plausible—persistence often improves typical absolute error but can fail sharply around reversals or common shocks. That is a new hypothesis to test with size strata, country blocks, shock-period indicators and paired uncertainty; it cannot be substituted retroactively for H1.
 
+## Prespecified size-bin comparison
+
+The paired comparison uses the README's existing size bins and compares persistence with country mean on the same city-origin rows. The pooled results do not support a claim that persistence is especially valuable for smaller cities:
+
+| Origin population | N | Persistence MAE | Country-mean MAE | Difference |
+|---|---:|---:|---:|---:|
+| 50–150k | 43,468 | 1.333 pp | 1.484 pp | −0.151 pp |
+| 150–250k | 10,338 | 1.470 pp | 1.495 pp | −0.025 pp |
+| 250–500k | 7,167 | 1.401 pp | 1.379 pp | +0.022 pp |
+| 500k–1m | 3,389 | 1.178 pp | 1.298 pp | −0.120 pp |
+| 1–2m | 1,529 | 1.017 pp | 1.276 pp | −0.258 pp |
+| 2m+ | 1,328 | 0.855 pp | 1.160 pp | −0.306 pp |
+
+Negative differences favor persistence. The strongest pooled improvement occurs above one million, not among the smallest observed cities. The 250–500k bin has slightly worse mean error under persistence even though its median paired difference favors persistence, indicating a tail-error problem.
+
+More importantly, the 2000 and 2020 persistence failures span every size bin on mean error. In 2020, persistence loses even for cities above two million. Size composition therefore does not explain the period reversal. The next test should focus on time shocks and country-clustered paired uncertainty, not add an arbitrary size interaction to rescue H1.
+
 ## Reproduction
 
 With the four registered WUP workbooks under `data/raw/`, run:
@@ -42,4 +59,4 @@ With the four registered WUP workbooks under `data/raw/`, run:
 python scripts/run_wup_baselines.py
 ```
 
-The command writes `outputs/wup_baseline_metrics.csv`. Raw workbooks and generated outputs remain outside Git.
+The command writes `outputs/wup_baseline_metrics.csv` and `outputs/wup_persistence_vs_country_by_size.csv`. Raw workbooks and generated outputs remain outside Git.

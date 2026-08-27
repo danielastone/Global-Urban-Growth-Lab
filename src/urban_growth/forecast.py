@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
+from urban_growth.outcomes import add_size_bins
 
 
 @dataclass(frozen=True)
@@ -205,3 +206,83 @@ def evaluate_rolling_baselines(
     if counts.nunique(axis=1).gt(1).any():
         raise SourceSchemaError("Baseline models were not scored on identical observations")
     return result.sort_values(["origin", "model"]).reset_index(drop=True)
+
+
+def rolling_baseline_errors(
+    panel: pd.DataFrame,
+    origins: list[int],
+    *,
+    outcome_column: str = "future_growth",
+) -> pd.DataFrame:
+    """Return matched row-level errors for prespecified subgroup analysis."""
+    require_columns(
+        panel,
+        {
+            "city_id", "period_start", "period_end", "country_code", "population_start",
+            outcome_column, "recent_growth",
+        },
+        source_name="forecast interval panel",
+    )
+    frames: list[pd.DataFrame] = []
+    for origin, train_index, test_index in rolling_origin_splits(panel, origins):
+        train = panel.loc[train_index]
+        test = panel.loc[test_index]
+        predictions = baseline_predictions(train, test, outcome_column=outcome_column)
+        matched = test[
+            ["city_id", "country_code", "population_start", outcome_column]
+        ].copy()
+        matched = matched.rename(columns={outcome_column: "actual"})
+        matched = matched.join(predictions)
+        matched = matched.dropna()
+        matched = matched.loc[np.isfinite(matched.select_dtypes(include="number")).all(axis=1)]
+        if matched.empty:
+            continue
+        matched["origin"] = origin
+        matched = add_size_bins(matched, population_column="population_start")
+        long = matched.melt(
+            id_vars=[
+                "city_id", "country_code", "population_start", "size_bin", "origin", "actual"
+            ],
+            value_vars=list(predictions.columns),
+            var_name="model",
+            value_name="predicted",
+        )
+        long["error"] = long["predicted"] - long["actual"]
+        long["absolute_error"] = long["error"].abs()
+        frames.append(long)
+    if not frames:
+        raise SourceSchemaError("No rolling-origin row-level errors were produced")
+    return pd.concat(frames, ignore_index=True)
+
+
+def paired_error_comparison(
+    errors: pd.DataFrame,
+    *,
+    model_a: str = "persistence",
+    model_b: str = "country_mean",
+    group_columns: list[str] | None = None,
+) -> pd.DataFrame:
+    """Compare absolute errors for two models on the same city-origin rows."""
+    groups = group_columns or ["origin", "size_bin"]
+    required = {"city_id", "origin", "model", "absolute_error", *groups}
+    require_columns(errors, required, source_name="row-level forecast errors")
+    subset = errors.loc[errors["model"].isin([model_a, model_b])]
+    index = ["city_id", "origin", *[c for c in groups if c != "origin"]]
+    paired = subset.pivot(index=index, columns="model", values="absolute_error").dropna()
+    if model_a not in paired or model_b not in paired:
+        raise SourceSchemaError("Requested models do not have matched row-level errors")
+    paired["difference"] = paired[model_a] - paired[model_b]
+    paired["a_wins"] = paired[model_a] < paired[model_b]
+    paired = paired.reset_index()
+    result = paired.groupby(groups, observed=True).agg(
+        n=("difference", "size"),
+        model_a_mae=(model_a, "mean"),
+        model_b_mae=(model_b, "mean"),
+        mean_difference=("difference", "mean"),
+        median_difference=("difference", "median"),
+        model_a_win_rate=("a_wins", "mean"),
+    )
+    result = result.reset_index()
+    result["model_a"] = model_a
+    result["model_b"] = model_b
+    return result

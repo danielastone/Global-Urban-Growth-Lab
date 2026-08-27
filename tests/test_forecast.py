@@ -5,6 +5,8 @@ from urban_growth.forecast import (
     baseline_predictions,
     build_forecast_intervals,
     evaluate_rolling_baselines,
+    paired_error_comparison,
+    rolling_baseline_errors,
     rolling_origin_splits,
     score_forecast,
 )
@@ -94,3 +96,21 @@ def test_rolling_baselines_use_identical_test_rows() -> None:
     result = evaluate_rolling_baselines(panel, [2005])
     assert set(result["model"]) == {"zero_growth", "global_mean", "country_mean", "persistence"}
     assert result["n"].unique().tolist() == [2]
+
+
+def test_row_errors_support_paired_size_comparison() -> None:
+    panel = pd.DataFrame(
+        {
+            "city_id": [1, 2, 1, 2],
+            "period_start": [2000, 2000, 2005, 2005],
+            "period_end": [2005, 2005, 2010, 2010],
+            "country_code": ["A", "B", "A", "B"],
+            "population_start": [100_000, 2_000_000, 110_000, 2_100_000],
+            "future_growth": [0.01, -0.01, 0.02, -0.02],
+            "recent_growth": [0.00, 0.00, 0.01, -0.01],
+        }
+    )
+    errors = rolling_baseline_errors(panel, [2005])
+    result = paired_error_comparison(errors)
+    assert set(result["size_bin"].astype(str)) == {"50–150k", "2m+"}
+    assert result["n"].tolist() == [1, 1]
