@@ -198,6 +198,33 @@ def baseline_predictions(
     predictions["zero_growth"] = 0.0
     predictions["global_mean"] = global_mean
     predictions["country_mean"] = test["country_code"].map(country_means).fillna(global_mean)
+    if "city_id" in train.columns and "city_id" in test.columns:
+        country_totals = valid_train.groupby("country_code")[outcome_column].agg(["sum", "count"])
+        city_totals = valid_train.groupby(["country_code", "city_id"])[outcome_column].agg(
+            ["sum", "count"]
+        )
+        test_keys = pd.MultiIndex.from_frame(test[["country_code", "city_id"]])
+        focal_sum = city_totals["sum"].reindex(test_keys, fill_value=0).to_numpy()
+        focal_count = city_totals["count"].reindex(test_keys, fill_value=0).to_numpy()
+        country_sum = test["country_code"].map(country_totals["sum"]).to_numpy()
+        country_count = test["country_code"].map(country_totals["count"]).to_numpy()
+        global_focal = valid_train.groupby("city_id")[outcome_column].agg(["sum", "count"])
+        global_focal_sum = test["city_id"].map(global_focal["sum"]).fillna(0).to_numpy()
+        global_focal_count = test["city_id"].map(global_focal["count"]).fillna(0).to_numpy()
+        global_without_count = len(valid_train) - global_focal_count
+        global_without = np.divide(
+            valid_train[outcome_column].sum() - global_focal_sum,
+            global_without_count,
+            out=np.full(len(test), global_mean, dtype=float),
+            where=global_without_count > 0,
+        )
+        country_without_count = country_count - focal_count
+        predictions["country_mean_leave_city_out"] = np.divide(
+            country_sum - focal_sum,
+            country_without_count,
+            out=global_without.copy(),
+            where=country_without_count > 0,
+        )
     predictions["persistence"] = pd.to_numeric(test[persistence_column], errors="coerce")
     return predictions
 

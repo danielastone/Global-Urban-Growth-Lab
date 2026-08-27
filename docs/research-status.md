@@ -51,6 +51,19 @@ H1, as preregistered in the README, requires recent growth to improve held-out M
 
 A narrower regime-dependent hypothesis is plausible—persistence often improves typical absolute error but can fail sharply around reversals or common shocks. That is a new hypothesis to test with size strata, country blocks, shock-period indicators and paired uncertainty; it cannot be substituted retroactively for H1.
 
+## Endogeneity audit: focal-city contamination
+
+The original country historical mean includes the focal city's own earlier growth observations. That is legitimate forecast-origin information, but it mechanically mixes city persistence into the benchmark and is unsuitable for interpreting a distinct country component. A leave-city-out version subtracts every historical observation for the test city from both its country numerator and denominator; where no other country history exists, it uses a global mean that also excludes the focal city.
+
+| Panel | Standard country MAE | Leave-city-out MAE | Mechanical advantage |
+|---|---:|---:|---:|
+| WUP | 1.454 pp | 1.466 pp | 0.012 pp |
+| GHSL fixed polygons | 1.557 pp | 1.570 pp | 0.013 pp |
+
+The standard country mean is slightly optimistic, especially at early origins with shorter histories. The effect is too small to change any headline comparison. At WUP's 2020 origin, leave-city-out MAE is 1.0167 pp versus 1.0162 pp conventionally—a difference of only 0.0005 pp. Mechanical focal-city aggregation therefore does not explain the WUP reversal or the WUP–GHSL disagreement.
+
+This result addresses one narrow endogeneity channel, not the entire problem. The next priority is shared-endpoint measurement error. Recent growth uses \(\log(P_t)-\log(P_{t-5})\), while the outcome uses \(\log(P_{t+5})-\log(P_t)\). An error or revision in \(P_t\) enters the predictor positively and the outcome negatively, mechanically inducing apparent mean reversion. Disjoint-window and alternative-source tests are required before interpreting persistence slopes structurally.
+
 ## Prespecified size-bin comparison
 
 The paired comparison uses the README's existing size bins and compares persistence with country mean on the same city-origin rows. The pooled results do not support a claim that persistence is especially valuable for smaller cities:

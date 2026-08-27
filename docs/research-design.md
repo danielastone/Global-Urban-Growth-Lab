@@ -21,10 +21,11 @@ Models must be evaluated in this order:
 1. global historical mean;
 2. region-period mean available at the forecast origin;
 3. country historical mean or national demographic forecast;
-4. city persistence (latest observed growth);
-5. persistence plus initial log population and hierarchy position;
-6. national urbanization and demographic controls;
-7. spatial, border, accessibility, and shock extensions.
+4. country historical mean excluding the focal city's history;
+5. city persistence (latest observed growth);
+6. persistence plus initial log population and hierarchy position;
+7. national urbanization and demographic controls;
+8. spatial, border, accessibility, and shock extensions.
 
 A complex model earns inclusion only through repeated held-out improvement over the strongest simpler baseline.
 
@@ -37,6 +38,16 @@ WUP temporal diagnostics show that its 2020 failure is not explained by a common
 Leave-one-cluster-out diagnostics rule out a single-country or single-city explanation for the pooled 2020 reversal. All 189 country deletions leave persistence worse than country mean, as do all 10,709 city deletions. However, India and China contribute 35.9% of observed cities, so deletion robustness must not be misreported as geographically balanced evidence. Add equal-country weighting and balanced-entry cohorts before interpreting the pooled effect as globally representative.
 
 The fixed-boundary GHSL sensitivity overturns the WUP 2020 reversal: persistence MAE is 0.826 pp and the best alternative is 1.081 pp, while within-country recent/future correlation remains 0.750. This is the correct geography-controlled result, but it is not real-time evidence because all historical values use the 2025 polygon. The cross-source difference identifies sensitivity to the combined source/definition package; it does not identify boundary change alone.
+
+### Endogeneity and mechanical dependence
+
+Forecasting does not require causal exogeneity, but interpretation of coefficients and benchmark components does. Apply these controls in order:
+
+1. Exclude the focal city's history from country and higher-level aggregates. The implemented test changes pooled country MAE by only 0.012 pp in WUP and 0.013 pp in fixed GHSL, so self-inclusion is not a material explanation.
+2. Test disjoint predictor and outcome windows. Adjacent growth rates share \(P_t\) with opposite signs, so measurement error at the origin mechanically biases persistence downward.
+3. Freeze size, rank and hierarchy measures strictly before the prediction window; do not use realized future rank or threshold membership.
+4. Compare fixed-boundary and dynamic-boundary panels without pooling them. Fixed polygons remove changing-area arithmetic but use future boundary information; dynamic polygons confound population change with footprint change.
+5. Treat spatial accessibility, built-up form and national urbanization as predictors, not causal treatments, unless a separate identification design addresses joint determination and migration sorting.
 
 ## Validation
 
