@@ -65,9 +65,14 @@ Run the registered baseline workflows separately:
 ```bash
 python scripts/run_wup_baselines.py
 python scripts/run_ghsl_fixed_baselines.py
+python scripts/verify_results.py \
+  results/wup_expected_manifest.csv \
+  results/ghsl_fixed_expected_manifest.csv
 ```
 
 The GHSL workflow accepts only the fixed-2025 boundary product and first reconciles it to the quality-controlled 2025 multi-temporal stream. Fixed polygons eliminate changing geography but introduce a 2025-boundary look-ahead, so the result is retrospective rather than real-time.
+
+Generated CSVs remain outside Git, but the expected file hashes and dimensions are committed under `results/`. Verification therefore detects undocumented changes in default outputs. GitHub Actions validates code and unit tests only because raw source files are not committed; it does not reproduce the empirical tables.
 
 ## Minimum analytical panel
 

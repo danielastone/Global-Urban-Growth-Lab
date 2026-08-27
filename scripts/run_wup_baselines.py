@@ -41,6 +41,16 @@ def main() -> None:
         default=Path("outputs/wup_country_cluster_bootstrap_by_size.csv"),
     )
     parser.add_argument(
+        "--pooled-paired-output",
+        type=Path,
+        default=Path("outputs/wup_persistence_vs_country_pooled_by_size.csv"),
+    )
+    parser.add_argument(
+        "--pooled-bootstrap-output",
+        type=Path,
+        default=Path("outputs/wup_country_cluster_bootstrap_pooled_by_size.csv"),
+    )
+    parser.add_argument(
         "--temporal-output",
         type=Path,
         default=Path("outputs/wup_temporal_reversal_diagnostics.csv"),
@@ -86,6 +96,10 @@ def main() -> None:
     errors = rolling_baseline_errors(intervals, list(range(1985, 2025, 5)))
     paired = paired_error_comparison(errors)
     bootstrap = cluster_bootstrap_paired_difference(errors)
+    pooled_paired = paired_error_comparison(errors, group_columns=["size_bin"])
+    pooled_bootstrap = cluster_bootstrap_paired_difference(
+        errors, group_columns=["size_bin"]
+    )
     temporal = temporal_reversal_diagnostics(intervals)
     country_influence = leave_one_cluster_out_paired_difference(errors, origin=2020)
     city_influence = leave_one_cluster_out_paired_difference(
@@ -105,6 +119,10 @@ def main() -> None:
     paired.to_csv(args.paired_output, index=False)
     args.bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
     bootstrap.to_csv(args.bootstrap_output, index=False)
+    args.pooled_paired_output.parent.mkdir(parents=True, exist_ok=True)
+    pooled_paired.to_csv(args.pooled_paired_output, index=False)
+    args.pooled_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
+    pooled_bootstrap.to_csv(args.pooled_bootstrap_output, index=False)
     args.temporal_output.parent.mkdir(parents=True, exist_ok=True)
     temporal.to_csv(args.temporal_output, index=False)
     args.country_influence_output.parent.mkdir(parents=True, exist_ok=True)
@@ -120,6 +138,8 @@ def main() -> None:
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
+    print(args.pooled_paired_output)
+    print(args.pooled_bootstrap_output)
     print(args.temporal_output)
     print(args.country_influence_output)
     print(args.city_influence_output)

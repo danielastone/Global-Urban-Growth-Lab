@@ -176,3 +176,13 @@ python scripts/run_ghsl_fixed_baselines.py
 ```
 
 The commands write separate WUP and fixed-boundary GHSL metrics and diagnostics under `outputs/`. The GHSL command fails unless the fixed and dynamic products reconcile at 2025. Raw files and generated outputs remain outside Git.
+
+The WUP command now writes both origin-by-size and explicitly pooled-by-size paired/bootstrap tables. The pooled files are the direct source for the six-row tables reported above. After both workflows run, verify every default output against the committed hashes and dimensions:
+
+```bash
+python scripts/verify_results.py \
+  results/wup_expected_manifest.csv \
+  results/ghsl_fixed_expected_manifest.csv
+```
+
+This closes result drift for the registered local files and locked code. It does not make the raw-data workflows executable in GitHub Actions or convert the retrospective estimates into vintage-correct forecasts.
