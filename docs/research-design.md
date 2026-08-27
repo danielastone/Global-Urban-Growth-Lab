@@ -28,13 +28,15 @@ Models must be evaluated in this order:
 
 A complex model earns inclusion only through repeated held-out improvement over the strongest simpler baseline.
 
-The first baseline execution shows why the ladder is binding: persistence has the lowest weighted MAE but worse pooled-equivalent RMSE than country and global historical means, and it loses on MAE at the 2000 and 2020 origins. Subsequent models must beat the country mean and persistence on matched rows; comparison only with zero growth is inadequate.
+The baseline executions show why boundary treatment is binding. In WUP, persistence has the lowest weighted MAE but worse pooled-equivalent RMSE than country and global means, and loses on MAE at 2000 and 2020. Inside fixed GHSL 2025 polygons, persistence has the best MAE and RMSE and wins at every origin. Subsequent models must beat country mean and persistence on matched rows within each declared urban definition; comparison only with zero growth or pooling the two sources is inadequate.
 
 The prespecified size comparison does not explain the 2020 failure: persistence loses across every size bin, and every country-clustered 95% interval excludes zero in the adverse direction. The analogous 2000 point estimates are not statistically resolved after country clustering. Pooled improvement is supported for 50–150k and above one million, but not the middle bins. Prioritize the 2015–2025 reversal and shock window before fitting flexible size interactions.
 
-Temporal diagnostics further show that the 2020 failure is not explained by a common slowdown. Mean growth increases from the predictor to outcome window, while the recent/future Pearson correlation falls to 0.207, the within-country correlation to 0.123, and the fitted persistence slope to 0.126. Direction reversals reach 29.4%. Treat this as descriptive evidence of city-level reordering and mean reversion; test influential-country, balanced-cohort and stable-boundary explanations before adding shock labels or causal mechanisms.
+WUP temporal diagnostics show that its 2020 failure is not explained by a common slowdown. Mean growth increases from the predictor to outcome window, while recent/future Pearson correlation falls to 0.207, within-country correlation to 0.123, and the fitted persistence slope to 0.126. Direction reversals reach 29.4%. Influence and fixed-boundary tests show that this is not a single-cluster result and does not reproduce in GHSL fixed polygons. Test balanced cohorts before adding shock labels or causal mechanisms.
 
 Leave-one-cluster-out diagnostics rule out a single-country or single-city explanation for the pooled 2020 reversal. All 189 country deletions leave persistence worse than country mean, as do all 10,709 city deletions. However, India and China contribute 35.9% of observed cities, so deletion robustness must not be misreported as geographically balanced evidence. Add equal-country weighting and balanced-entry cohorts before interpreting the pooled effect as globally representative.
+
+The fixed-boundary GHSL sensitivity overturns the WUP 2020 reversal: persistence MAE is 0.826 pp and the best alternative is 1.081 pp, while within-country recent/future correlation remains 0.750. This is the correct geography-controlled result, but it is not real-time evidence because all historical values use the 2025 polygon. The cross-source difference identifies sensitivity to the combined source/definition package; it does not identify boundary change alone.
 
 ## Validation
 

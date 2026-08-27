@@ -115,6 +115,47 @@ def build_forecast_intervals(
     return panel.sort_values(["period_start", "city_id"]).reset_index(drop=True)
 
 
+def build_ghsl_fixed_forecast_intervals(
+    fixed_panel: pd.DataFrame,
+    origins: list[int],
+) -> pd.DataFrame:
+    """Build intervals only from GHSL statistics inside fixed 2025 polygons.
+
+    This is a stable-polygon sensitivity analysis, not a vintage-correct forecast:
+    the historical statistics use a boundary defined using 2025 settlement extent.
+    """
+    required = {
+        "city_id", "year", "population", "built_up_area_m2",
+        "urban_centre_area_km2", "boundary_mode", "boundary_product",
+        "GC_UCN_MAI_2025", "GC_CNT_GAD_2025",
+    }
+    require_columns(fixed_panel, required, source_name="GHSL fixed-boundary forecast source")
+    if fixed_panel["boundary_mode"].ne("fixed").any():
+        raise SourceSchemaError("GHSL forecast sensitivity requires fixed boundaries only")
+    expected_product = "ucdb_fixed_2025_boundary"
+    if fixed_panel["boundary_product"].ne(expected_product).any():
+        raise SourceSchemaError(f"GHSL forecast sensitivity requires {expected_product}")
+    source = fixed_panel.copy()
+    source["ISO3_Code"] = source["GC_CNT_GAD_2025"]
+    source["City_Name"] = source["GC_UCN_MAI_2025"]
+    source["observation_type"] = "retrospective_model_epoch"
+    source["built_up_share_of_land"] = source["built_up_area_m2"] / (
+        source["urban_centre_area_km2"] * 1_000_000
+    )
+    source["population_density_per_km2"] = (
+        source["population"] / source["urban_centre_area_km2"]
+    )
+    result = build_forecast_intervals(
+        source,
+        origins,
+        allowed_outcome_types={"retrospective_model_epoch"},
+    )
+    result["boundary_mode"] = "fixed"
+    result["boundary_product"] = expected_product
+    result["geography_validated"] = True
+    return result
+
+
 def score_forecast(actual: pd.Series, predicted: pd.Series) -> ForecastMetrics:
     """Score matched observations after dropping non-finite pairs."""
     pairs = pd.concat({"actual": actual, "predicted": predicted}, axis=1).dropna()

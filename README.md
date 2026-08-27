@@ -16,7 +16,7 @@ This repository currently supports the first two as research targets. It does no
 
 ## Current status
 
-**Reconstruction stage.** Earlier exploratory estimates are recorded in [docs/research-status.md](docs/research-status.md), but they are not findings until regenerated from frozen inputs by committed code. The immediate objective is a defensible forecasting benchmark, especially for smaller cities—not a prematurely commercialized forecast product.
+**Baseline sensitivity stage.** WUP and GHSL rolling-origin results are regenerated from registered inputs by committed code. They disagree materially at 2020 when GHSL geography is held to fixed 2025 polygons. The immediate objective is to explain that source/definition sensitivity—not to commercialize an unstable headline.
 
 ## Primary hypotheses
 
@@ -58,7 +58,16 @@ urban-growth-sources verify-catalog
 urban-growth-sources inventory data/raw/<file> --source-id <source_id>
 ```
 
-The catalog is documented in [docs/source-library.md](docs/source-library.md). WUP 2025 individual-city tables are the statistical core; its country/category tables provide national controls. GHSL is the spatial reconstruction and sensitivity layer, not an independent replication.
+The catalog is documented in [docs/source-library.md](docs/source-library.md). WUP 2025 supplies demographic city records and national controls, but those results are not geography-controlled. GHSL supplies the fixed-polygon sensitivity layer, not an independent replication. The two sources remain separate analytical panels.
+
+Run the registered baseline workflows separately:
+
+```bash
+python scripts/run_wup_baselines.py
+python scripts/run_ghsl_fixed_baselines.py
+```
+
+The GHSL workflow accepts only the fixed-2025 boundary product and first reconciles it to the quality-controlled 2025 multi-temporal stream. Fixed polygons eliminate changing geography but introduce a 2025-boundary look-ahead, so the result is retrospective rather than real-time.
 
 ## Minimum analytical panel
 

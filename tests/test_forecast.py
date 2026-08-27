@@ -4,6 +4,7 @@ import pytest
 from urban_growth.forecast import (
     baseline_predictions,
     build_forecast_intervals,
+    build_ghsl_fixed_forecast_intervals,
     cluster_bootstrap_paired_difference,
     evaluate_rolling_baselines,
     leave_one_cluster_out_paired_difference,
@@ -71,6 +72,27 @@ def test_forecast_intervals_require_exact_lag_year() -> None:
     source = city_year_source().loc[lambda x: x.year.ne(2015)]
     with pytest.raises(SourceSchemaError, match="No complete"):
         build_forecast_intervals(source, [2020])
+
+
+def test_ghsl_forecast_requires_and_preserves_fixed_boundary_semantics() -> None:
+    source = pd.DataFrame(
+        {
+            "city_id": [1, 1, 1], "year": [2015, 2020, 2025],
+            "population": [80_000, 90_000, 100_000],
+            "built_up_area_m2": [10_000_000, 11_000_000, 12_000_000],
+            "urban_centre_area_km2": [20, 20, 20],
+            "boundary_mode": ["fixed"] * 3,
+            "boundary_product": ["ucdb_fixed_2025_boundary"] * 3,
+            "GC_UCN_MAI_2025": ["Example"] * 3,
+            "GC_CNT_GAD_2025": ["Exampleland"] * 3,
+        }
+    )
+    result = build_ghsl_fixed_forecast_intervals(source, [2020])
+    assert result["geography_validated"].all()
+    assert result["boundary_mode"].unique().tolist() == ["fixed"]
+    source.loc[source["year"].eq(2015), "boundary_mode"] = "dynamic"
+    with pytest.raises(SourceSchemaError, match="fixed boundaries only"):
+        build_ghsl_fixed_forecast_intervals(source, [2020])
 
 
 def test_baselines_use_training_country_mean_and_global_fallback() -> None:
