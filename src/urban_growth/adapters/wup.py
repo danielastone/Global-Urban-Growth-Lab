@@ -112,6 +112,49 @@ def read_f21_city_population(path: str) -> pd.DataFrame:
     )
 
 
+def read_f01_country_city_population(path: str) -> pd.DataFrame:
+    """Read national populations in WUP's harmonized Cities category.
+
+    The returned history is from the 2025 revision. It can support a
+    revised-history national comparator, but must not be represented as a
+    vintage-real-time forecast.
+    """
+    from urban_growth.io import read_table, require_columns
+
+    frame = read_table(path, sheet_name="Cities")
+    required = {
+        "LocID", "ISO3_Code", "Location", "LocType", "LocTypeName",
+        "ParentID", "1950", "2025", "2050",
+    }
+    require_columns(frame, required, source_name="WUP 2025 F01 Cities")
+    countries = frame.loc[frame["LocType"].eq(4)].copy()
+    if countries.empty or countries["LocTypeName"].ne("Country/Area").any():
+        raise SourceSchemaError("WUP F01 has no valid Country/Area rows")
+    countries["category"] = "city"
+    panel = degree_of_urbanization_panel(
+        countries,
+        location_id_column="LocID",
+        category_column="category",
+        metadata_columns=["ISO3_Code", "Location", "ParentID"],
+    ).rename(
+        columns={
+            "ISO3_Code": "country_code",
+            "Location": "country_name",
+            "population": "national_city_category_population",
+        }
+    )
+    if panel["country_code"].isna().any():
+        raise SourceSchemaError("WUP F01 Country/Area row lacks ISO3 code")
+    reject_duplicate_keys(
+        panel, ["country_code", "year"], source_name="WUP F01 national Cities"
+    )
+    panel["observation_type"] = panel["year"].le(2025).map(
+        {True: "estimate", False: "projection"}
+    )
+    panel["revision_semantics"] = "WUP_2025_revised_history"
+    return panel.sort_values(["country_code", "year"]).reset_index(drop=True)
+
+
 def city_area_panel(
     frame: pd.DataFrame,
     *,

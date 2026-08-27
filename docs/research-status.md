@@ -183,6 +183,31 @@ Every size-bin interval crosses zero. The overall persistence-minus-leave-city-o
 
 This does not overturn the 2020 finding. A single-origin comparison has no across-time sampling dimension; its country-clustered intervals remain the relevant uncertainty calculation and remain adverse to persistence in every size bin. With only eight evaluated origins, the two-way intervals are necessarily coarse and should be treated as a warning against pooled generalization rather than precise time-series inference.
 
+## National demographic comparator
+
+The acquired WUP F01 national control now supplies a baseline that was previously
+missing: each country's observed growth in the harmonized Cities category over the
+five years ending at the forecast origin is carried forward to its sampled cities.
+This is not the same as `country_mean`, which is an unweighted historical mean of
+sampled city outcomes.
+
+Across the 67,219 WUP evaluation rows, national Cities-category persistence has MAE
+1.747 pp and RMSE 2.446 pp. It is worse than city persistence (1.337 pp MAE) and the
+leave-city-out country mean (1.466 pp MAE), with a +0.984 pp bias. Equal-country MAE
+is also worse at 1.959 pp, compared with 1.613 pp for city persistence. National
+aggregate momentum therefore does not explain the pooled city-level signal.
+
+At the 2020 origin, however, the national comparator's MAE is 1.132 pp, well below
+city persistence's 1.654 pp but still above the historical country mean's 1.016 pp.
+The 2020 city-persistence reversal is thus consistent with a period when national
+momentum was more useful than each city's immediately preceding trajectory. It does
+not establish a causal national mechanism, and the current WUP revision cannot
+reconstruct the information set of an actual pre-2020 forecaster.
+
+This closes the missing national-baseline omission but does not complete H4. A
+country-versus-region variance decomposition and vintage-correct national forecasts
+remain untested.
+
 ## Temporal decomposition of the 2020 reversal
 
 The reversal is not a uniform decline in city growth. Mean annual growth rises from 0.695% in 2015–2020 to 0.992% in 2020–2025, so persistence underpredicts on average. Its larger failure is cross-city: the association between recent and future growth collapses and more cities switch growth direction.

@@ -48,7 +48,7 @@ python -m pip install -e ".[dev]"
 pytest
 ```
 
-The package does not download source data automatically. Register every input in `data/manifest.csv`, place permitted local files under `data/raw/`, and build analytical panels through code.
+The package does not download source data automatically. Register every input in `data/manifest.csv`, place permitted local files under `data/raw/`, and build analytical panels through code. The WUP workflow requires F01 plus the F21/F25/F30/F34 city workbooks; F01 provides the national Cities-category comparator.
 
 Inspect the authoritative source catalog and inventory local downloads with:
 

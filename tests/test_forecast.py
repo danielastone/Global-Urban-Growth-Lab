@@ -1,7 +1,9 @@
+import numpy as np
 import pandas as pd
 import pytest
 
 from urban_growth.forecast import (
+    attach_national_city_category_baseline,
     balanced_origin_cohort,
     baseline_predictions,
     build_forecast_intervals,
@@ -193,6 +195,39 @@ def test_baselines_use_training_country_mean_and_global_fallback() -> None:
     assert result["country_mean_leave_city_out"].tolist() == pytest.approx([0.03, 0.01])
     assert result["global_mean"].tolist() == pytest.approx([0.01, 0.01])
     assert result["persistence"].tolist() == [0.04, -0.02]
+
+
+def test_national_city_category_baseline_uses_only_pre_origin_values() -> None:
+    intervals = pd.DataFrame(
+        {"country_code": ["A"], "period_start": [2020], "future_growth": [0.01]}
+    )
+    national = pd.DataFrame(
+        {
+            "country_code": ["A", "A", "A"],
+            "year": [2015, 2020, 2025],
+            "national_city_category_population": [100.0, 110.0, 9999.0],
+            "revision_semantics": ["WUP_2025_revised_history"] * 3,
+        }
+    )
+    attached = attach_national_city_category_baseline(intervals, national)
+    expected = (np.log(110.0) - np.log(100.0)) / 5
+    assert attached["national_city_category_recent_growth"].iloc[0] == pytest.approx(
+        expected
+    )
+    assert not attached["national_baseline_uses_future_value"].iloc[0]
+
+
+def test_baselines_include_attached_national_demographic_comparator() -> None:
+    train = pd.DataFrame({"country_code": ["A"], "future_growth": [0.01]})
+    test = pd.DataFrame(
+        {
+            "country_code": ["A"],
+            "recent_growth": [0.02],
+            "national_city_category_recent_growth": [0.03],
+        }
+    )
+    result = baseline_predictions(train, test)
+    assert result["national_city_category_persistence"].tolist() == [0.03]
 
 
 def test_rolling_baselines_use_identical_test_rows() -> None:

@@ -14,6 +14,21 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 | WorldPop Global 2 | Robustness | Fine-grid population allocation | 2015-2030 is too short for the primary historical design |
 | Natural Earth Admin 0 | Spatial control | Borders and island geometry | Geometry does not measure migration-policy restrictiveness |
 
+## Verified WUP F01 national control
+
+The official F01 workbook was retrieved on 2026-08-27 and registered with its exact
+URL and SHA-256 checksum. Its `Cities` sheet contains 237 unique Country/Area rows
+and annual harmonized Cities-category populations for 1950–2050. The adapter rejects
+aggregate rows, requires ISO3 country codes, converts thousands to persons, and
+preserves estimate-versus-projection status.
+
+For each city forecast origin, the national comparator annualizes log growth in the
+country's F01 Cities-category population from `origin - 5` through `origin`. It never
+uses the national value after the origin. This is a genuine national demographic
+comparator, unlike the repository's `country_mean`, which averages historical city
+outcomes in the analytical sample. It is still revised-history evidence from WUP
+2025, not the national forecast vintage available at the historical origin.
+
 ## Verified WUP F21 schema
 
 The exact F21, F25, F30 and F34 workbooks were retrieved on 2026-08-27 and registered in `data/manifest.csv`. Each `Data` sheet contains 16,828 unique `City_Code` rows and annual columns from 1975 through 2050. The annual series is threshold-truncated: a cell is blank while the city is below 50,000 and populated once it meets the reporting threshold. In F21, 12,138 cities have 2025 values and 3,633 records are absent in 2025 but present by 2050. F25, F30 and F34 have identical identifiers, names, country codes and checked-year coverage, supporting joins within the WUP namespace.

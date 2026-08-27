@@ -6,12 +6,14 @@ import argparse
 from pathlib import Path
 
 from urban_growth.adapters.wup import (
+    read_f01_country_city_population,
     read_f21_city_population,
     read_f25_city_land_area,
     read_f30_built_up_area_per_capita,
     read_f34_population_density,
 )
 from urban_growth.forecast import (
+    attach_national_city_category_baseline,
     balanced_origin_cohort,
     build_forecast_intervals,
     cluster_bootstrap_paired_difference,
@@ -125,6 +127,9 @@ def main() -> None:
     )
     args = parser.parse_args()
     raw = args.raw_dir
+    national = read_f01_country_city_population(
+        raw / "WUP2025-F01-Degree-of-Urbanization_Pop_by_category.xlsx"
+    )
     population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
     area = read_f25_city_land_area(raw / "WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx")
     built = read_f30_built_up_area_per_capita(
@@ -135,6 +140,7 @@ def main() -> None:
     )
     city_year = build_wup_city_year_panel(population, area, built, density)
     intervals = build_forecast_intervals(city_year, list(range(1980, 2025, 5)))
+    intervals = attach_national_city_category_baseline(intervals, national)
     metrics = evaluate_rolling_baselines(intervals, list(range(1985, 2025, 5)))
     errors = rolling_baseline_errors(intervals, list(range(1985, 2025, 5)))
     paired = paired_error_comparison(errors)
@@ -151,6 +157,7 @@ def main() -> None:
     gapped_intervals = build_forecast_intervals(
         city_year, list(range(1980, 2020, 5)), outcome_gap_years=5
     )
+    gapped_intervals = attach_national_city_category_baseline(gapped_intervals, national)
     gapped_metrics = evaluate_rolling_baselines(
         gapped_intervals, list(range(1990, 2020, 5))
     )

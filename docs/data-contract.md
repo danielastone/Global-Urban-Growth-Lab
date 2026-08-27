@@ -47,3 +47,10 @@ Because F29 is not retrievable, built-up area is derived as F21 population in pe
 ## Forecast interval contract
 
 One forecast row represents a city at a declared forecast origin and horizon. `period_start` is the forecast origin, while `outcome_start_year` is the first year of the scored outcome. For adjacent designs these years are equal; gapped diagnostics deliberately make `outcome_start_year` later. `recent_growth` must end at the origin, and origin covariates are selected from the origin row only. The interval builder requires exact lag, origin, outcome-start and outcome-end years and records `coverage_selection = complete_lag_origin_outcome_start_end`. Its default outcome universe is estimates; projection outcomes require an explicit caller override.
+
+The optional WUP F01 comparator is `national_city_category_recent_growth`: annualized
+log growth in the national harmonized Cities category from `period_start - 5` through
+`period_start`. Required country-year endpoints must be positive and complete. The
+fields `national_baseline_revision_semantics = WUP_2025_revised_history` and
+`national_baseline_uses_future_value = false` prevent this comparator from being
+misrepresented as a vintage-real-time national forecast.

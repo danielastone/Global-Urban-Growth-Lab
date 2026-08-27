@@ -37,6 +37,68 @@ def rolling_origin_splits(
             yield origin, train, test
 
 
+def attach_national_city_category_baseline(
+    intervals: pd.DataFrame,
+    national_panel: pd.DataFrame,
+    *,
+    lookback_years: int = 5,
+) -> pd.DataFrame:
+    """Attach pre-origin national Cities-category growth from WUP F01.
+
+    This is a revised-history demographic comparator. Both endpoints precede
+    or equal the city forecast origin; no future national value is used.
+    """
+    require_columns(
+        intervals,
+        {"country_code", "period_start"},
+        source_name="forecast intervals",
+    )
+    require_columns(
+        national_panel,
+        {
+            "country_code", "year", "national_city_category_population",
+            "revision_semantics",
+        },
+        source_name="national city-category panel",
+    )
+    reject_duplicate_keys(
+        national_panel, ["country_code", "year"], source_name="national city-category panel"
+    )
+    if national_panel["revision_semantics"].ne("WUP_2025_revised_history").any():
+        raise SourceSchemaError("National baseline revision semantics are not declared correctly")
+    if lookback_years <= 0:
+        raise SourceSchemaError("National baseline lookback must be positive")
+    national = national_panel.set_index(["country_code", "year"])
+    keys = intervals[["country_code", "period_start"]].drop_duplicates().copy()
+    origin_index = pd.MultiIndex.from_frame(
+        keys.rename(columns={"period_start": "year"})[["country_code", "year"]]
+    )
+    lag_keys = keys.assign(year=keys["period_start"] - lookback_years)
+    lag_index = pd.MultiIndex.from_frame(lag_keys[["country_code", "year"]])
+    origin_population = national["national_city_category_population"].reindex(
+        origin_index
+    ).to_numpy()
+    lag_population = national["national_city_category_population"].reindex(
+        lag_index
+    ).to_numpy()
+    if pd.isna(origin_population).any() or pd.isna(lag_population).any():
+        raise SourceSchemaError("National city-category baseline lacks a required country-year")
+    if (origin_population <= 0).any() or (lag_population <= 0).any():
+        raise SourceSchemaError("National city-category baseline requires positive endpoints")
+    keys["national_city_category_recent_growth"] = (
+        np.log(origin_population) - np.log(lag_population)
+    ) / lookback_years
+    result = intervals.merge(
+        keys,
+        on=["country_code", "period_start"],
+        how="left",
+        validate="many_to_one",
+    )
+    result["national_baseline_revision_semantics"] = "WUP_2025_revised_history"
+    result["national_baseline_uses_future_value"] = False
+    return result
+
+
 def build_forecast_intervals(
     city_year_panel: pd.DataFrame,
     origins: list[int],
@@ -339,6 +401,11 @@ def baseline_predictions(
     predictions["zero_growth"] = 0.0
     predictions["global_mean"] = global_mean
     predictions["country_mean"] = test["country_code"].map(country_means).fillna(global_mean)
+    national_column = "national_city_category_recent_growth"
+    if national_column in test.columns:
+        predictions["national_city_category_persistence"] = pd.to_numeric(
+            test[national_column], errors="coerce"
+        )
     if "city_id" in train.columns and "city_id" in test.columns:
         country_totals = valid_train.groupby("country_code")[outcome_column].agg(["sum", "count"])
         city_totals = valid_train.groupby(["country_code", "city_id"])[outcome_column].agg(
