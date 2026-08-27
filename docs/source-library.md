@@ -6,11 +6,13 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 
 | Source | Role | Use | Main limitation |
 |---|---|---|---|
-| WUP 2025 Degree of Urbanization | Statistical core | Cities/towns/rural population, urbanization stage, globally harmonized comparisons | Revised/modelled history; download tables may change names |
-| GHS-UCDB R2024A v1.1 | Spatial core | Dynamic footprint, fixed-boundary sensitivity, density, area change | Not independent of WUP/DEGURBA |
+| WUP 2025 Cities | City statistical core | Individual-city population, area and density | Retrospective revision; 2025-threshold selection |
+| WUP 2025 country DEGURBA | National control | Cities/towns/rural totals and urbanization stage | Not an individual-city panel |
+| GHS-UCDB R2024A v1.2 | Spatial core | Dynamic footprint, fixed-boundary sensitivity, density, area change | Not independent of WUP/DEGURBA |
 | WPP 2024 | National control | National demographic benchmark | Current-vintage history is not a real-time forecast vintage |
 | OECD FUA | Mechanism | Urban core versus commuting zone | Restricted country/sample comparability |
 | WorldPop Global 2 | Robustness | Fine-grid population allocation | 2015-2030 is too short for the primary historical design |
+| Natural Earth Admin 0 | Spatial control | Borders and island geometry | Geometry does not measure migration-policy restrictiveness |
 
 ## Rules
 
@@ -25,8 +27,8 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 
 ## Acquisition order
 
-1. WUP 2025 population and surface-area tables using the international Degree of Urbanization definition.
-2. GHS-UCDB R2024A v1.1 tabular attributes; acquire geometry only after the tabular pipeline is stable.
+1. WUP 2025 individual-city population and surface-area tables plus separate country/category controls.
+2. GHS-UCDB R2024A v1.2 tabular attributes; acquire geometry only after the tabular pipeline is stable.
 3. WPP 2024 national controls.
 4. OECD FUA and WorldPop only after the core out-of-sample benchmark exists.
 

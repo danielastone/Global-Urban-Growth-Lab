@@ -26,8 +26,16 @@ def validate_panel(panel: pd.DataFrame) -> None:
         raise PanelValidationError(f"Missing required columns: {', '.join(missing)}")
 
     keys = ["city_id", "period_start", "period_end"]
-    if panel[keys].isna().any().any():
-        raise PanelValidationError("Panel keys cannot be null")
+    nonnull = [*keys, "country_code", "population_start", "population_end"]
+    if panel[nonnull].isna().any().any():
+        raise PanelValidationError("Keys, country codes, and population values cannot be null")
+    numeric = ["period_start", "period_end", "population_start", "population_end"]
+    if any(not pd.api.types.is_numeric_dtype(panel[column]) for column in numeric):
+        raise PanelValidationError("Years and population values must be numeric")
+    if not np.isfinite(panel[numeric].to_numpy(dtype=float)).all():
+        raise PanelValidationError("Years and population values must be finite")
+    if not (panel["period_start"] % 1 == 0).all() or not (panel["period_end"] % 1 == 0).all():
+        raise PanelValidationError("Period years must be whole numbers")
     if panel.duplicated(keys).any():
         raise PanelValidationError("City-period keys must be unique")
     if (panel["period_end"] <= panel["period_start"]).any():

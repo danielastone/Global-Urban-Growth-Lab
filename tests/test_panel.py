@@ -36,3 +36,18 @@ def test_duplicate_city_period_fails() -> None:
     panel = pd.concat([sample_panel(), sample_panel().iloc[[0]]], ignore_index=True)
     with pytest.raises(PanelValidationError, match="unique"):
         validate_panel(panel)
+
+
+def test_null_population_and_country_fail() -> None:
+    for column in ["country_code", "population_start"]:
+        panel = sample_panel()
+        panel.loc[0, column] = None
+        with pytest.raises(PanelValidationError, match="cannot be null"):
+            validate_panel(panel)
+
+
+def test_nonnumeric_year_fails() -> None:
+    panel = sample_panel()
+    panel["period_start"] = panel["period_start"].astype(str)
+    with pytest.raises(PanelValidationError, match="must be numeric"):
+        validate_panel(panel)

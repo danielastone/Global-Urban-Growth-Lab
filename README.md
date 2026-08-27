@@ -58,7 +58,7 @@ urban-growth-sources verify-catalog
 urban-growth-sources inventory data/raw/<file> --source-id <source_id>
 ```
 
-The catalog is documented in [docs/source-library.md](docs/source-library.md). WUP 2025 is the statistical core; GHSL is the spatial reconstruction and sensitivity layer, not an independent replication.
+The catalog is documented in [docs/source-library.md](docs/source-library.md). WUP 2025 individual-city tables are the statistical core; its country/category tables provide national controls. GHSL is the spatial reconstruction and sensitivity layer, not an independent replication.
 
 ## Minimum analytical panel
 

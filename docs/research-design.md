@@ -38,6 +38,10 @@ A complex model earns inclusion only through repeated held-out improvement over 
 - Use paired block bootstrap intervals clustered at minimum by country; add time blocks when periods overlap.
 - Use leave-one-country-out and influential-city diagnostics.
 
+### Vintage limitation
+
+A chronological holdout within WUP 2025 is **retrospective pseudo-out-of-sample validation**. It does not recreate a forecast made in an earlier year because the 2025 revision incorporates later censuses, revised methods, boundaries and national totals. Use “real-time” or “vintage-correct” only when each training input is drawn from the edition actually available at that forecast origin. Report current-revision holdouts and vintage tests separately.
+
 ## Threats and required attacks
 
 | Threat | Required response |

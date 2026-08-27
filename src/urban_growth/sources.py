@@ -25,7 +25,7 @@ CATALOG_REQUIRED = {
     "coverage",
     "unit",
     "role",
-    "independence_group",
+    "upstream_dependencies",
     "redistribution",
     "citation",
     "notes",
@@ -66,6 +66,18 @@ def load_catalog(path: str | Path = "data/sources.json") -> dict:
     return catalog
 
 
+def default_catalog_path() -> Path:
+    """Locate the project catalog from the working tree or an editable install."""
+    candidates = [Path.cwd(), *Path.cwd().parents, Path(__file__).resolve().parents[2]]
+    for root in candidates:
+        candidate = root / "data" / "sources.json"
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(
+        "Cannot locate data/sources.json; pass --catalog with the project catalog path"
+    )
+
+
 def validate_catalog(catalog: dict) -> None:
     if catalog.get("schema_version") != 1:
         raise SourceCatalogError("Unsupported or missing catalog schema_version")
@@ -84,6 +96,13 @@ def validate_catalog(catalog: dict) -> None:
                 raise SourceCatalogError(f"{source['source_id']} has invalid {field}")
         if not source["formats"]:
             raise SourceCatalogError(f"{source['source_id']} has no declared formats")
+        dependencies = source["upstream_dependencies"]
+        if not isinstance(dependencies, list) or not all(
+            isinstance(item, str) and item for item in dependencies
+        ):
+            raise SourceCatalogError(
+                f"{source['source_id']} upstream_dependencies must be a list of strings"
+            )
     duplicates = sorted({source_id for source_id in ids if ids.count(source_id) > 1})
     if duplicates:
         raise SourceCatalogError(f"Duplicate source_id values: {', '.join(duplicates)}")
@@ -148,7 +167,7 @@ def append_manifest(record: InventoryRecord, path: str | Path = "data/manifest.c
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect and inventory urban-growth sources")
-    parser.add_argument("--catalog", default="data/sources.json")
+    parser.add_argument("--catalog")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("list")
     subparsers.add_parser("verify-catalog")
@@ -158,7 +177,7 @@ def main() -> None:
     inventory.add_argument("--source-url", required=True)
     inventory.add_argument("--manifest", default="data/manifest.csv")
     args = parser.parse_args()
-    catalog = load_catalog(args.catalog)
+    catalog = load_catalog(args.catalog or default_catalog_path())
     if args.command == "list":
         for source in sorted(catalog["sources"], key=lambda item: item["priority"]):
             print(f"{source['priority']}\t{source['source_id']}\t{source['status']}\t{source['dataset']}")

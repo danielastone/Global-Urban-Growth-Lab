@@ -3,9 +3,9 @@
   "reviewed_at": "2026-08-27",
   "sources": [
     {
-      "source_id": "un_wup_2025_degurb",
+      "source_id": "un_wup_2025_country_degurb",
       "priority": 1,
-      "status": "core",
+      "status": "core_control",
       "publisher": "United Nations DESA Population Division",
       "dataset": "World Urbanization Prospects 2025 Revision - Degree of Urbanization",
       "release": "2025 Revision",
@@ -14,20 +14,39 @@
       "retrieval": "manual",
       "formats": ["xlsx", "csv"],
       "coverage": "Annual population 1950-2050; land and built-up area 1975-2050",
-      "unit": "internationally harmonized cities, towns and semi-dense areas, and rural areas",
-      "role": "Primary statistical panel and national urbanization-stage controls",
-      "independence_group": "ghsl_degurb",
+      "unit": "country or area by internationally harmonized settlement category",
+      "role": "National urbanization-stage controls; not an individual-city panel",
+      "upstream_dependencies": ["ec_ghsl_degurb", "un_wpp_2024"],
       "redistribution": "review_before_commit",
       "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision, Online Edition.",
-      "notes": "The 2025 download center supersedes older WUP table numbering. Register the exact downloaded file rather than assuming legacy F-table names."
+      "notes": "F01-F04 are country/category tables. They cannot support individual-city hypotheses. Register exact downloads rather than assuming legacy table names."
     },
     {
-      "source_id": "ec_ghsl_ucdb_r2024a_v1_1",
+      "source_id": "un_wup_2025_cities",
+      "priority": 1,
+      "status": "core_city",
+      "publisher": "United Nations DESA Population Division",
+      "dataset": "World Urbanization Prospects 2025 Revision - Cities",
+      "release": "2025 Revision",
+      "landing_page": "https://population.un.org/wup/downloads?tab=Cities",
+      "documentation_url": "https://population.un.org/wup/faqs",
+      "retrieval": "manual",
+      "formats": ["xlsx", "csv"],
+      "coverage": "Annual estimates through 2025 and projections through 2050 for more than 12,000 cities with at least 50,000 inhabitants in 2025; area series begin in 1975",
+      "unit": "individual internationally harmonized city or urban settlement",
+      "role": "Primary city-level population, surface-area, density and growth panel",
+      "upstream_dependencies": ["ec_ghsl_degurb", "un_wpp_2024"],
+      "redistribution": "review_before_commit",
+      "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision, Online Edition.",
+      "notes": "Selection is based on reaching 50,000 inhabitants in 2025; do not reapply a contemporaneous 50,000 threshold to every historical period. Keep estimates and projections distinct."
+    },
+    {
+      "source_id": "ec_ghsl_ucdb_r2024a_v1_2",
       "priority": 1,
       "status": "core_spatial",
       "publisher": "European Commission Joint Research Centre",
       "dataset": "GHS Urban Centre Database R2024A",
-      "release": "v1.1, 2025-07-31",
+      "release": "v1.2, 2026-06-10",
       "landing_page": "https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php",
       "documentation_url": "https://human-settlement.emergency.copernicus.eu/ucdb2024Overview.php",
       "retrieval": "manual_large_file",
@@ -35,10 +54,10 @@
       "coverage": "11,422 quality-controlled urban centres; multi-temporal attributes 1975-2030",
       "unit": "DEGURBA urban centre with multi-temporal footprints and attributes",
       "role": "Spatial footprint, density, area-change, geometry and boundary sensitivity",
-      "independence_group": "ghsl_degurb",
+      "upstream_dependencies": ["ec_ghsl_degurb"],
       "redistribution": "allowed_with_attribution_review_package_terms",
       "citation": "European Commission, Joint Research Centre. GHS Urban Centre Database 2024, R2024A.",
-      "notes": "Do not describe as an independent replication of WUP 2025; both depend on the GHSL/DEGURBA system. Preserve dynamic and fixed-boundary analytical streams."
+      "notes": "Do not describe as an independent replication of WUP 2025; both depend on GHSL/DEGURBA. Preserve dynamic and fixed-boundary streams and never assign boundary semantics from an unverified caller label."
     },
     {
       "source_id": "un_wpp_2024",
@@ -54,7 +73,7 @@
       "coverage": "National population estimates and projections",
       "unit": "country or area",
       "role": "National demographic controls and forecast baselines",
-      "independence_group": "un_population",
+      "upstream_dependencies": [],
       "redistribution": "review_before_commit",
       "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024.",
       "notes": "Use vintages available at each historical forecast origin when testing genuine real-time forecasts; the current revision is revised-history evidence."
@@ -73,7 +92,7 @@
       "coverage": "OECD FUAs and worldwide estimated FUAs where published",
       "unit": "urban centre plus commuting zone",
       "role": "Core-versus-commuting-zone mechanism and accessibility checks",
-      "independence_group": "oecd_fua",
+      "upstream_dependencies": [],
       "redistribution": "review_before_commit",
       "citation": "OECD. Cities and Functional Urban Areas database.",
       "notes": "Not globally interchangeable with GHSL urban centres; use on its supported sample as a mechanism test."
@@ -92,10 +111,29 @@
       "coverage": "2015-2030 annual estimates at 100m or 1km",
       "unit": "grid cell",
       "role": "High-resolution population-allocation robustness only",
-      "independence_group": "worldpop_top_down",
+      "upstream_dependencies": ["un_wpp_national_totals"],
       "redistribution": "review_product_license",
       "citation": "WorldPop, University of Southampton. Global high-resolution population estimates.",
       "notes": "Top-down estimates are adjusted to national totals and are too short for the primary 1975-forward persistence analysis."
+    },
+    {
+      "source_id": "natural_earth_admin0",
+      "priority": 3,
+      "status": "spatial_control",
+      "publisher": "Natural Earth",
+      "dataset": "Admin 0 - Countries",
+      "release": "pin_on_acquisition",
+      "landing_page": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/",
+      "documentation_url": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "retrieval": "manual",
+      "formats": ["shp", "geojson"],
+      "coverage": "Global country boundaries and island geometries",
+      "unit": "country or mapped sovereignty unit",
+      "role": "Border, island and geographic-boundary tests",
+      "upstream_dependencies": [],
+      "redistribution": "public_domain_verify_exact_release",
+      "citation": "Made with Natural Earth.",
+      "notes": "Political-status and boundary choices must be documented; map geometry is not a migration-policy measure."
     }
   ]
 }
