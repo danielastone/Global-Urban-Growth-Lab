@@ -41,6 +41,12 @@ The 264 MTUC records beyond the 11,422 quality-controlled thematic centres have 
 
 Dynamic-boundary population is itself threshold-selected: every active value is at least 50,000. The MTUC stream fixes the spatial-boundary problem but does not recover below-threshold population histories. It is therefore a boundary sensitivity analysis, not a cure for WUP truncation.
 
+## Fixed/dynamic reconciliation at 2025
+
+The two streams were joined at their documented common epoch. All 11,422 quality-controlled identifiers and country assignments match one-to-one. Built-up surface and urban-centre area match exactly. Population differs by no more than 0.5 person because the MTUC CSV displays whole persons while the thematic CSV retains decimals. Fourteen apparent name differences are not substantive: the thematic file uses `-` where MTUC uses a blank value. The reconciliation utility enforces these rules and fails on missing IDs, country disagreement, nonzero area disagreement, or population differences beyond the publisher's rounding precision.
+
+This reconciliation validates the join and the 2025 common point. It does not make fixed- and dynamic-boundary histories interchangeable before 2025.
+
 ## Rules
 
 1. Never infer a source from a filename alone; pair every file with a catalog `source_id`.

@@ -5,6 +5,7 @@ from urban_growth.adapters.ghsl_ucdb import (
     fixed_2025_theme_panel,
     indicator_panel,
     multitemporal_boundary_panel,
+    reconcile_2025_streams,
 )
 from urban_growth.adapters.wup import (
     city_area_panel,
@@ -34,6 +35,7 @@ def test_ghsl_fixed_theme_uses_fixed_2025_boundary_and_joins_measures() -> None:
             "ID_UC_G0": [1],
             "GC_UCN_MAI_2025": ["Apia"],
             "GC_CNT_GAD_2025": ["Samoa"],
+            "GC_UCA_KM2_2025": [35],
             "GH_POP_TOT_1975": [10.5],
             "GH_POP_TOT_2025": [60_041.7],
             "GH_BUS_TOT_1975": [378],
@@ -54,12 +56,60 @@ def test_ghsl_fixed_theme_rejects_non_numeric_measure() -> None:
             "ID_UC_G0": [1],
             "GC_UCN_MAI_2025": ["Example"],
             "GC_CNT_GAD_2025": ["Exampleland"],
+            "GC_UCA_KM2_2025": [12],
             "GH_POP_TOT_2025": ["not available"],
             "GH_BUS_TOT_2025": [100],
         }
     )
     with pytest.raises(SourceSchemaError, match="non-numeric population"):
         fixed_2025_theme_panel(source)
+
+
+def test_ghsl_2025_stream_reconciliation_allows_population_rounding() -> None:
+    fixed_source = pd.DataFrame(
+        {
+            "ID_UC_G0": [1], "GC_UCN_MAI_2025": ["Example"],
+            "GC_CNT_GAD_2025": ["Exampleland"], "GC_UCA_KM2_2025": [12],
+            "GH_POP_TOT_2025": [50_100.49], "GH_BUS_TOT_2025": [2_500],
+        }
+    )
+    dynamic_source = pd.DataFrame(
+        {
+            "ID_MTUC_G0": [1], "GC_UCN_MAI_2025": ["Example"],
+            "GC_CNT_GAD_2025": ["Exampleland"], "GC_UCB_YOB _2025": [2025],
+            "GC_UCB_YOD _2025": [2030], "MT_POP_TOT_2025": [50_100],
+            "MT_BUS_TOT_2025": [2_500], "MT_UCA_KM2_2025": [12],
+        }
+    )
+    audit = reconcile_2025_streams(
+        fixed_2025_theme_panel(fixed_source),
+        multitemporal_boundary_panel(dynamic_source),
+    )
+    assert audit["population_difference"].tolist() == pytest.approx([0.49])
+    assert audit["built_up_area_difference_m2"].tolist() == [0]
+
+
+def test_ghsl_2025_stream_reconciliation_rejects_material_difference() -> None:
+    fixed_source = pd.DataFrame(
+        {
+            "ID_UC_G0": [1], "GC_UCN_MAI_2025": ["Example"],
+            "GC_CNT_GAD_2025": ["Exampleland"], "GC_UCA_KM2_2025": [12],
+            "GH_POP_TOT_2025": [50_102], "GH_BUS_TOT_2025": [2_500],
+        }
+    )
+    dynamic_source = pd.DataFrame(
+        {
+            "ID_MTUC_G0": [1], "GC_UCN_MAI_2025": ["Example"],
+            "GC_CNT_GAD_2025": ["Exampleland"], "GC_UCB_YOB _2025": [2025],
+            "GC_UCB_YOD _2025": [2030], "MT_POP_TOT_2025": [50_100],
+            "MT_BUS_TOT_2025": [2_500], "MT_UCA_KM2_2025": [12],
+        }
+    )
+    with pytest.raises(SourceSchemaError, match="rounding tolerance"):
+        reconcile_2025_streams(
+            fixed_2025_theme_panel(fixed_source),
+            multitemporal_boundary_panel(dynamic_source),
+        )
 
 
 def test_ghsl_multitemporal_panel_respects_birth_year_and_parses_commas() -> None:

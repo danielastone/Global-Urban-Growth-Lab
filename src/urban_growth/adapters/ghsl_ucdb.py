@@ -12,7 +12,7 @@ BOUNDARY_PRODUCTS = {
     "ucdb_fixed_2025_boundary": "fixed",
 }
 
-GHSL_THEME_METADATA = ["GC_UCN_MAI_2025", "GC_CNT_GAD_2025"]
+GHSL_THEME_METADATA = ["GC_UCN_MAI_2025", "GC_CNT_GAD_2025", "GC_UCA_KM2_2025"]
 GHSL_MTUC_METADATA = [
     "GC_UCN_MAI_2025",
     "GC_CNT_GAD_2025",
@@ -104,7 +104,8 @@ def fixed_2025_theme_panel(frame: pd.DataFrame) -> pd.DataFrame:
         "boundary_product",
     ]
     panel = population.merge(built_up, on=keys, validate="one_to_one")
-    for column in ["population", "built_up_area_m2"]:
+    panel = panel.rename(columns={"GC_UCA_KM2_2025": "urban_centre_area_km2"})
+    for column in ["population", "built_up_area_m2", "urban_centre_area_km2"]:
         raw = panel[column]
         numeric = pd.to_numeric(raw, errors="coerce")
         invalid = raw.notna() & numeric.isna()
@@ -112,14 +113,64 @@ def fixed_2025_theme_panel(frame: pd.DataFrame) -> pd.DataFrame:
             examples = ", ".join(sorted(raw[invalid].astype(str).unique())[:3])
             raise SourceSchemaError(f"GHS-UCDB has non-numeric {column}: {examples}")
         panel[column] = numeric
-    if panel[["population", "built_up_area_m2"]].isna().any().any():
-        raise SourceSchemaError("GHS-UCDB fixed theme has missing population or built-up area")
-    if (panel["population"] <= 0).any() or (panel["built_up_area_m2"] <= 0).any():
+    if panel[["population", "built_up_area_m2", "urban_centre_area_km2"]].isna().any().any():
+        raise SourceSchemaError("GHS-UCDB fixed theme has missing core measures")
+    if (panel[["population", "built_up_area_m2", "urban_centre_area_km2"]] <= 0).any().any():
         raise SourceSchemaError("GHS-UCDB fixed theme requires positive values")
     reject_duplicate_keys(
         panel, ["city_id", "year", "boundary_product"], source_name="GHS-UCDB theme"
     )
     return panel.sort_values(["city_id", "year"]).reset_index(drop=True)
+
+
+def reconcile_2025_streams(
+    fixed_panel: pd.DataFrame,
+    dynamic_panel: pd.DataFrame,
+    *,
+    population_tolerance: float = 0.500001,
+) -> pd.DataFrame:
+    """Audit the publisher's stated fixed/dynamic comparability at the 2025 epoch."""
+    fixed = fixed_panel.loc[fixed_panel["year"].eq(2025)].copy()
+    dynamic = dynamic_panel.loc[
+        dynamic_panel["year"].eq(2025) & dynamic_panel["quality_controlled_2025"]
+    ].copy()
+    measures = ["population", "built_up_area_m2", "urban_centre_area_km2"]
+    required = {"city_id", "year", "GC_CNT_GAD_2025", *measures}
+    require_columns(fixed, required, source_name="GHS-UCDB fixed 2025 panel")
+    require_columns(dynamic, required, source_name="GHS-UCDB dynamic 2025 panel")
+    audit = fixed.merge(
+        dynamic,
+        on="city_id",
+        how="outer",
+        suffixes=("_fixed", "_dynamic"),
+        validate="one_to_one",
+        indicator=True,
+    )
+    if audit["_merge"].ne("both").any():
+        raise SourceSchemaError("GHS-UCDB quality-controlled 2025 identifier sets disagree")
+    if audit["GC_CNT_GAD_2025_fixed"].ne(audit["GC_CNT_GAD_2025_dynamic"]).any():
+        raise SourceSchemaError("GHS-UCDB 2025 country assignments disagree")
+    audit["population_difference"] = audit["population_fixed"] - audit["population_dynamic"]
+    audit["built_up_area_difference_m2"] = (
+        audit["built_up_area_m2_fixed"] - audit["built_up_area_m2_dynamic"]
+    )
+    audit["urban_centre_area_difference_km2"] = (
+        audit["urban_centre_area_km2_fixed"] - audit["urban_centre_area_km2_dynamic"]
+    )
+    if audit["population_difference"].abs().gt(population_tolerance).any():
+        raise SourceSchemaError("GHS-UCDB 2025 population differs beyond rounding tolerance")
+    if audit["built_up_area_difference_m2"].ne(0).any():
+        raise SourceSchemaError("GHS-UCDB 2025 built-up area differs between streams")
+    if audit["urban_centre_area_difference_km2"].ne(0).any():
+        raise SourceSchemaError("GHS-UCDB 2025 centre area differs between streams")
+    return audit[
+        [
+            "city_id",
+            "population_difference",
+            "built_up_area_difference_m2",
+            "urban_centre_area_difference_km2",
+        ]
+    ].sort_values("city_id").reset_index(drop=True)
 
 
 def multitemporal_boundary_panel(frame: pd.DataFrame) -> pd.DataFrame:
