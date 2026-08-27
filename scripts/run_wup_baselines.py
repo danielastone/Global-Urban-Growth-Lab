@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import pandas as pd
+
 from urban_growth.adapters.wup import (
     read_f01_country_city_population,
     read_f21_city_population,
@@ -125,6 +127,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_balanced_country_time_bootstrap_overall.csv"),
     )
+    parser.add_argument(
+        "--aggregation-bootstrap-output",
+        type=Path,
+        default=Path("outputs/wup_aggregation_bootstrap_by_origin.csv"),
+    )
+    parser.add_argument(
+        "--aggregation-country-time-output",
+        type=Path,
+        default=Path("outputs/wup_aggregation_country_time_bootstrap.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     national = read_f01_country_city_population(
@@ -181,6 +193,29 @@ def main() -> None:
     balanced_country_time_bootstrap = two_way_cluster_bootstrap_paired_difference(
         balanced_errors
     )
+    aggregation_pairs = [
+        ("country_mean_leave_city_out", "subregion_mean_leave_city_out"),
+        ("subregion_mean_leave_city_out", "region_mean_leave_city_out"),
+        ("region_mean_leave_city_out", "global_mean_leave_city_out"),
+    ]
+    aggregation_bootstrap = pd.concat(
+        [
+            cluster_bootstrap_paired_difference(
+                errors, model_a=model_a, model_b=model_b, group_columns=["origin"]
+            )
+            for model_a, model_b in aggregation_pairs
+        ],
+        ignore_index=True,
+    )
+    aggregation_country_time = pd.concat(
+        [
+            two_way_cluster_bootstrap_paired_difference(
+                errors, model_a=model_a, model_b=model_b
+            )
+            for model_a, model_b in aggregation_pairs
+        ],
+        ignore_index=True,
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(args.output, index=False)
     args.paired_output.parent.mkdir(parents=True, exist_ok=True)
@@ -225,6 +260,10 @@ def main() -> None:
     balanced_country_time_bootstrap.to_csv(
         args.balanced_country_time_bootstrap_output, index=False
     )
+    args.aggregation_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
+    aggregation_bootstrap.to_csv(args.aggregation_bootstrap_output, index=False)
+    args.aggregation_country_time_output.parent.mkdir(parents=True, exist_ok=True)
+    aggregation_country_time.to_csv(args.aggregation_country_time_output, index=False)
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
@@ -244,6 +283,8 @@ def main() -> None:
     print(args.country_time_bootstrap_output)
     print(args.country_time_size_bootstrap_output)
     print(args.balanced_country_time_bootstrap_output)
+    print(args.aggregation_bootstrap_output)
+    print(args.aggregation_country_time_output)
 
 
 if __name__ == "__main__":

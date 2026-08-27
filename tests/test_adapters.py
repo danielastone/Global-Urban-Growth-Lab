@@ -12,6 +12,7 @@ from urban_growth.adapters.wup import (
     city_metric_panel,
     city_population_panel,
     degree_of_urbanization_panel,
+    read_f01_country_city_population,
     validate_density_identity,
 )
 from urban_growth.io import SourceSchemaError
@@ -184,6 +185,38 @@ def test_wup_converts_thousands_and_requires_mapped_categories() -> None:
     source.loc[0, "Class"] = "publisher label not mapped"
     with pytest.raises(SourceSchemaError, match="Unmapped"):
         degree_of_urbanization_panel(source, location_id_column="Code", category_column="Class")
+
+
+def test_wup_f01_repairs_only_omitted_northern_america_parent(tmp_path) -> None:
+    source = pd.DataFrame(
+        {
+            "LocID": [905, 840],
+            "ISO3_Code": [None, "USA"],
+            "Location": ["NORTHERN AMERICA", "United States of America"],
+            "LocType": [2, 4],
+            "LocTypeName": ["Geographic region", "Country/Area"],
+            "ParentID": [5505, 918],
+            "1950": [10.0, 5.0],
+            "2025": [20.0, 10.0],
+            "2050": [30.0, 15.0],
+        }
+    )
+    path = tmp_path / "f01.xlsx"
+    with pd.ExcelWriter(path) as writer:
+        source.to_excel(writer, sheet_name="Cities", index=False)
+    result = read_f01_country_city_population(path)
+    hierarchy = result[
+        ["country_code", "subregion_id", "subregion_name", "region_id", "region_name"]
+    ].drop_duplicates()
+    assert hierarchy.to_dict("records") == [
+        {
+            "country_code": "USA",
+            "subregion_id": 918,
+            "subregion_name": "Northern America",
+            "region_id": 905,
+            "region_name": "NORTHERN AMERICA",
+        }
+    ]
 
 
 def test_wup_city_panel_preserves_prethreshold_history_and_marks_projections() -> None:

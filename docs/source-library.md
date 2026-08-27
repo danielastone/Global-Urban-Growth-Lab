@@ -29,6 +29,13 @@ comparator, unlike the repository's `country_mean`, which averages historical ci
 outcomes in the analytical sample. It is still revised-history evidence from WUP
 2025, not the national forecast vintage available at the historical origin.
 
+F01 also supplies 22 geographic subregions and six terminal geographic regions. Its
+hierarchy is incomplete as published: Bermuda, Canada, Greenland, Saint Pierre and
+Miquelon, and the United States point to parent ID 918, but F01 omits that parent row.
+The adapter applies one narrow repair, mapping parent 918 to Northern America and the
+published Northern America region row 905. This agrees with the UN M49 composition;
+all other 232 countries must follow the workbook's explicit parent chain or fail.
+
 ## Verified WUP F21 schema
 
 The exact F21, F25, F30 and F34 workbooks were retrieved on 2026-08-27 and registered in `data/manifest.csv`. Each `Data` sheet contains 16,828 unique `City_Code` rows and annual columns from 1975 through 2050. The annual series is threshold-truncated: a cell is blank while the city is below 50,000 and populated once it meets the reporting threshold. In F21, 12,138 cities have 2025 values and 3,633 records are absent in 2025 but present by 2050. F25, F30 and F34 have identical identifiers, names, country codes and checked-year coverage, supporting joins within the WUP namespace.

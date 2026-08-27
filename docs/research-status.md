@@ -204,9 +204,36 @@ momentum was more useful than each city's immediately preceding trajectory. It d
 not establish a causal national mechanism, and the current WUP revision cannot
 reconstruct the information set of an actual pre-2020 forecaster.
 
-This closes the missing national-baseline omission but does not complete H4. A
-country-versus-region variance decomposition and vintage-correct national forecasts
-remain untested.
+This closes the missing national-baseline omission. A vintage-correct national
+forecast remains untested.
+
+## Country, subregion, region and global aggregation
+
+The F01 geographic hierarchy now supports a matched aggregation ladder using only
+historical training outcomes. Leave-city-out versions remove all earlier outcomes
+for the focal city from each aggregate. This matters most for the country baseline;
+for regions the self-inclusion effect is numerically negligible.
+
+| Baseline | Pooled MAE | Equal-country MAE |
+|---|---:|---:|
+| Global mean, leave city out | 1.591 pp | 1.737 pp |
+| Region mean, leave city out | 1.492 pp | 1.610 pp |
+| Subregion mean, leave city out | 1.454 pp | 1.558 pp |
+| Country mean, leave city out | 1.466 pp | 1.664 pp |
+
+Region beats global mean by 0.099 pp. The country-by-time bootstrap interval is
+[−0.237, −0.022] pp, so broad regional information adds predictive value beyond a
+single global history across these eight origins. Subregion improves on region by
+0.038 pp, but its interval [−0.132, +0.067] crosses zero. Country is 0.012 pp worse
+than subregion, with interval [−0.036, +0.054] pp; every origin-specific
+country-clustered interval also crosses zero.
+
+The implication is uncomfortable but clear: the data support geography above the
+global level, but do not show that country history adds predictive value beyond UN
+subregions. H4 is therefore rejected in its stronger national-dominance form. This
+does not prove that politics or national demography are irrelevant; it shows that
+this forecasting design cannot distinguish their incremental contribution from
+shared subregional growth patterns. Adding causal language would exceed the design.
 
 ## Temporal decomposition of the 2020 reversal
 

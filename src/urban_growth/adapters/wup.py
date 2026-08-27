@@ -130,12 +130,49 @@ def read_f01_country_city_population(path: str) -> pd.DataFrame:
     countries = frame.loc[frame["LocType"].eq(4)].copy()
     if countries.empty or countries["LocTypeName"].ne("Country/Area").any():
         raise SourceSchemaError("WUP F01 has no valid Country/Area rows")
+    locations = frame.set_index("LocID", drop=False)
+    hierarchy_rows: list[dict[str, int | str]] = []
+    for row in countries.itertuples(index=False):
+        parent_id = int(row.ParentID)
+        if parent_id == 918:
+            # F01 points the five Northern American Country/Area rows to 918,
+            # but omits that subregion row. The corresponding region row is 905.
+            subregion_name = "Northern America"
+            region_id = 905
+        else:
+            if parent_id not in locations.index:
+                raise SourceSchemaError(f"WUP F01 lacks parent {parent_id}")
+            subregion = locations.loc[parent_id]
+            if subregion["LocType"] != 3 or subregion["LocTypeName"] != "Subregion":
+                raise SourceSchemaError("WUP F01 Country/Area parent is not a subregion")
+            subregion_name = str(subregion["Location"])
+            region_id = int(subregion["ParentID"])
+        if region_id not in locations.index:
+            raise SourceSchemaError(f"WUP F01 lacks region {region_id}")
+        region = locations.loc[region_id]
+        if region["LocType"] != 2 or region["LocTypeName"] != "Geographic region":
+            raise SourceSchemaError("WUP F01 subregion parent is not a geographic region")
+        hierarchy_rows.append(
+            {
+                "subregion_id": parent_id,
+                "subregion_name": subregion_name,
+                "region_id": region_id,
+                "region_name": str(region["Location"]),
+            }
+        )
+    hierarchy = pd.DataFrame(hierarchy_rows, index=countries.index)
+    countries = countries.join(hierarchy)
+    if countries[["subregion_id", "region_id"]].isna().any().any():
+        raise SourceSchemaError("WUP F01 country hierarchy is incomplete")
     countries["category"] = "city"
     panel = degree_of_urbanization_panel(
         countries,
         location_id_column="LocID",
         category_column="category",
-        metadata_columns=["ISO3_Code", "Location", "ParentID"],
+        metadata_columns=[
+            "ISO3_Code", "Location", "ParentID", "subregion_id", "subregion_name",
+            "region_id", "region_name",
+        ],
     ).rename(
         columns={
             "ISO3_Code": "country_code",

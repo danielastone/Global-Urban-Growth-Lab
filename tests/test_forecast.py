@@ -207,6 +207,10 @@ def test_national_city_category_baseline_uses_only_pre_origin_values() -> None:
             "year": [2015, 2020, 2025],
             "national_city_category_population": [100.0, 110.0, 9999.0],
             "revision_semantics": ["WUP_2025_revised_history"] * 3,
+            "subregion_id": [10] * 3,
+            "subregion_name": ["Example subregion"] * 3,
+            "region_id": [1] * 3,
+            "region_name": ["Example region"] * 3,
         }
     )
     attached = attach_national_city_category_baseline(intervals, national)
@@ -215,6 +219,8 @@ def test_national_city_category_baseline_uses_only_pre_origin_values() -> None:
         expected
     )
     assert not attached["national_baseline_uses_future_value"].iloc[0]
+    assert attached["subregion_id"].tolist() == [10]
+    assert attached["region_id"].tolist() == [1]
 
 
 def test_baselines_include_attached_national_demographic_comparator() -> None:
@@ -228,6 +234,33 @@ def test_baselines_include_attached_national_demographic_comparator() -> None:
     )
     result = baseline_predictions(train, test)
     assert result["national_city_category_persistence"].tolist() == [0.03]
+
+
+def test_baselines_include_leave_city_out_region_ladder() -> None:
+    train = pd.DataFrame(
+        {
+            "city_id": [1, 2, 3],
+            "country_code": ["A", "B", "C"],
+            "region_id": [10, 10, 20],
+            "subregion_id": [11, 11, 21],
+            "future_growth": [0.01, 0.03, -0.01],
+        }
+    )
+    test = pd.DataFrame(
+        {
+            "city_id": [1],
+            "country_code": ["A"],
+            "region_id": [10],
+            "subregion_id": [11],
+            "recent_growth": [0.02],
+        }
+    )
+    result = baseline_predictions(train, test)
+    assert result["region_mean"].tolist() == pytest.approx([0.02])
+    assert result["subregion_mean"].tolist() == pytest.approx([0.02])
+    assert result["region_mean_leave_city_out"].tolist() == pytest.approx([0.03])
+    assert result["subregion_mean_leave_city_out"].tolist() == pytest.approx([0.03])
+    assert result["global_mean_leave_city_out"].tolist() == pytest.approx([0.01])
 
 
 def test_rolling_baselines_use_identical_test_rows() -> None:

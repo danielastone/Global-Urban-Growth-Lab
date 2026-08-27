@@ -57,7 +57,8 @@ def attach_national_city_category_baseline(
         national_panel,
         {
             "country_code", "year", "national_city_category_population",
-            "revision_semantics",
+            "revision_semantics", "subregion_id", "subregion_name", "region_id",
+            "region_name",
         },
         source_name="national city-category panel",
     )
@@ -69,7 +70,16 @@ def attach_national_city_category_baseline(
     if lookback_years <= 0:
         raise SourceSchemaError("National baseline lookback must be positive")
     national = national_panel.set_index(["country_code", "year"])
+    hierarchy = national_panel[
+        [
+            "country_code", "subregion_id", "subregion_name", "region_id", "region_name"
+        ]
+    ].drop_duplicates()
+    reject_duplicate_keys(hierarchy, ["country_code"], source_name="WUP F01 hierarchy")
     keys = intervals[["country_code", "period_start"]].drop_duplicates().copy()
+    keys = keys.merge(hierarchy, on="country_code", how="left", validate="many_to_one")
+    if keys[["subregion_id", "region_id"]].isna().any().any():
+        raise SourceSchemaError("National baseline lacks a regional mapping")
     origin_index = pd.MultiIndex.from_frame(
         keys.rename(columns={"period_start": "year"})[["country_code", "year"]]
     )
@@ -400,6 +410,13 @@ def baseline_predictions(
     predictions = pd.DataFrame(index=test.index)
     predictions["zero_growth"] = 0.0
     predictions["global_mean"] = global_mean
+    for group_column in ["region_id", "subregion_id"]:
+        if group_column in train.columns and group_column in test.columns:
+            label = group_column.removesuffix("_id")
+            group_means = valid_train.groupby(group_column)[outcome_column].mean()
+            predictions[f"{label}_mean"] = test[group_column].map(group_means).fillna(
+                global_mean
+            )
     predictions["country_mean"] = test["country_code"].map(country_means).fillna(global_mean)
     national_column = "national_city_category_recent_growth"
     if national_column in test.columns:
@@ -426,6 +443,34 @@ def baseline_predictions(
             out=np.full(len(test), global_mean, dtype=float),
             where=global_without_count > 0,
         )
+        if "region_id" in train.columns and "region_id" in test.columns:
+            predictions["global_mean_leave_city_out"] = global_without
+        for group_column in ["region_id", "subregion_id"]:
+            if group_column not in train.columns or group_column not in test.columns:
+                continue
+            label = group_column.removesuffix("_id")
+            group_totals = valid_train.groupby(group_column)[outcome_column].agg(
+                ["sum", "count"]
+            )
+            group_city_totals = valid_train.groupby(
+                [group_column, "city_id"]
+            )[outcome_column].agg(["sum", "count"])
+            group_test_keys = pd.MultiIndex.from_frame(test[[group_column, "city_id"]])
+            group_focal_sum = group_city_totals["sum"].reindex(
+                group_test_keys, fill_value=0
+            ).to_numpy()
+            group_focal_count = group_city_totals["count"].reindex(
+                group_test_keys, fill_value=0
+            ).to_numpy()
+            group_sum = test[group_column].map(group_totals["sum"]).to_numpy()
+            group_count = test[group_column].map(group_totals["count"]).to_numpy()
+            group_without_count = group_count - group_focal_count
+            predictions[f"{label}_mean_leave_city_out"] = np.divide(
+                group_sum - group_focal_sum,
+                group_without_count,
+                out=global_without.copy(),
+                where=group_without_count > 0,
+            )
         country_without_count = country_count - focal_count
         predictions["country_mean_leave_city_out"] = np.divide(
             country_sum - focal_sum,

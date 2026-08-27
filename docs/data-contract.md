@@ -54,3 +54,9 @@ log growth in the national harmonized Cities category from `period_start - 5` th
 fields `national_baseline_revision_semantics = WUP_2025_revised_history` and
 `national_baseline_uses_future_value = false` prevent this comparator from being
 misrepresented as a vintage-real-time national forecast.
+
+WUP aggregation baselines use the F01 country-to-subregion-to-region hierarchy.
+Global, region, subregion, and country historical means are computed only from
+training outcomes. Their leave-city-out versions subtract every prior outcome for
+the focal city before scoring, preventing the aggregation ladder from inheriting a
+mechanical city-history advantage.
