@@ -228,8 +228,11 @@ def rolling_baseline_errors(
         train = panel.loc[train_index]
         test = panel.loc[test_index]
         predictions = baseline_predictions(train, test, outcome_column=outcome_column)
+        identity_columns = ["city_id", "country_code"]
+        if "city_name" in test.columns:
+            identity_columns.append("city_name")
         matched = test[
-            ["city_id", "country_code", "population_start", outcome_column]
+            [*identity_columns, "population_start", outcome_column]
         ].copy()
         matched = matched.rename(columns={outcome_column: "actual"})
         matched = matched.join(predictions)
@@ -241,7 +244,7 @@ def rolling_baseline_errors(
         matched = add_size_bins(matched, population_column="population_start")
         long = matched.melt(
             id_vars=[
-                "city_id", "country_code", "population_start", "size_bin", "origin", "actual"
+                *identity_columns, "population_start", "size_bin", "origin", "actual"
             ],
             value_vars=list(predictions.columns),
             var_name="model",
@@ -351,6 +354,65 @@ def cluster_bootstrap_paired_difference(
     if not rows:
         raise SourceSchemaError("No groups had enough clusters for bootstrap inference")
     return pd.DataFrame(rows)
+
+
+def leave_one_cluster_out_paired_difference(
+    errors: pd.DataFrame,
+    *,
+    origin: int,
+    cluster_columns: list[str] | None = None,
+    model_a: str = "persistence",
+    model_b: str = "country_mean",
+) -> pd.DataFrame:
+    """Measure how excluding each country or city changes a paired MAE difference."""
+    clusters = cluster_columns or ["country_code"]
+    required = {
+        "city_id", "origin", "model", "absolute_error", *clusters,
+    }
+    require_columns(errors, required, source_name="row-level forecast errors")
+    subset = errors.loc[
+        errors["origin"].eq(origin) & errors["model"].isin([model_a, model_b])
+    ]
+    index = list(dict.fromkeys(["city_id", "origin", *clusters]))
+    paired = subset.pivot(index=index, columns="model", values="absolute_error").dropna()
+    if model_a not in paired or model_b not in paired:
+        raise SourceSchemaError("Requested models do not have matched row-level errors")
+    paired["difference"] = paired[model_a] - paired[model_b]
+    paired = paired.reset_index()
+    total_n = len(paired)
+    if total_n < 2:
+        raise SourceSchemaError("Leave-one-cluster-out analysis requires at least two rows")
+    total_sum = float(paired["difference"].sum())
+    overall = total_sum / total_n
+    rows: list[dict[str, float | int | str]] = []
+    grouper: str | list[str] = clusters[0] if len(clusters) == 1 else clusters
+    for key, group in paired.groupby(grouper, sort=True, observed=True):
+        excluded_n = total_n - len(group)
+        if not excluded_n:
+            continue
+        keys = (key,) if len(clusters) == 1 else key
+        without = (total_sum - float(group["difference"].sum())) / excluded_n
+        row: dict[str, float | int | str] = dict(zip(clusters, keys, strict=True))
+        row.update(
+            {
+                "origin": origin,
+                "model_a": model_a,
+                "model_b": model_b,
+                "cluster_n": len(group),
+                "cluster_share": len(group) / total_n,
+                "cluster_mean_difference": float(group["difference"].mean()),
+                "overall_mean_difference": overall,
+                "excluded_mean_difference": without,
+                "exclusion_shift": without - overall,
+            }
+        )
+        rows.append(row)
+    if not rows:
+        raise SourceSchemaError("No leave-one-cluster-out estimates were produced")
+    result = pd.DataFrame(rows)
+    return result.sort_values("exclusion_shift", key=lambda x: x.abs(), ascending=False).reset_index(
+        drop=True
+    )
 
 
 def temporal_reversal_diagnostics(panel: pd.DataFrame) -> pd.DataFrame:

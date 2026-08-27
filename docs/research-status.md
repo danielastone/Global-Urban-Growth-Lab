@@ -84,6 +84,24 @@ The 2015 origin is primarily a broad slowdown: average growth falls sharply whil
 
 These are descriptive current-revision results, not causal identification. The five-year windows, WUP revisions and lack of contemporaneous covariates do not justify labeling the mechanism COVID. The next independent test should locate influential countries and cities and check whether the collapse survives balanced-cohort and stable-boundary restrictions.
 
+## Influence diagnostics
+
+The 2020 persistence-minus-country MAE difference is +0.637 percentage points. Leave-one-country-out estimates remain adverse under every one of the 189 exclusions, ranging from +0.505 to +0.693 points. No single-country deletion overturns the result.
+
+| Country excluded | Cities | Sample share | Country mean difference | Difference after exclusion | Shift |
+|---|---:|---:|---:|---:|---:|
+| India | 1,838 | 17.2% | +1.278 pp | +0.505 pp | −0.133 pp |
+| China | 2,002 | 18.7% | +0.396 pp | +0.693 pp | +0.055 pp |
+| Brazil | 329 | 3.1% | −0.632 pp | +0.678 pp | +0.040 pp |
+| Pakistan | 274 | 2.6% | +1.832 pp | +0.606 pp | −0.031 pp |
+| Indonesia | 358 | 3.3% | −0.211 pp | +0.667 pp | +0.029 pp |
+
+India is materially influential because it combines a large sample share with a large persistence penalty. China is even larger but closer to the pooled estimate, and Brazil and Indonesia partially offset the reversal. The conclusion is therefore broad enough to survive country deletion, but the nominal city count is not equivalent to balanced global evidence: India and China alone supply 35.9% of observations.
+
+Single-city influence is negligible at the pooled level. The largest deletion changes the mean difference by only 0.0024 percentage points, and none of 10,709 city deletions changes its sign. Extreme city errors remain useful for source-quality review, but they do not explain the aggregate reversal.
+
+This diagnostic addresses dependence on one observed cluster; it does not repair unequal country representation, threshold selection or common WUP revision error. Balanced-country weighting and balanced-entry cohorts remain separate required tests.
+
 ## Reproduction
 
 With the four registered WUP workbooks under `data/raw/`, run:
@@ -92,4 +110,4 @@ With the four registered WUP workbooks under `data/raw/`, run:
 python scripts/run_wup_baselines.py
 ```
 
-The command writes baseline metrics, paired size comparisons, country-clustered bootstrap intervals, and temporal reversal diagnostics under `outputs/`. Raw workbooks and generated outputs remain outside Git.
+The command writes baseline metrics, paired size comparisons, country-clustered bootstrap intervals, temporal reversal diagnostics, and 2020 country/city influence tables under `outputs/`. Raw workbooks and generated outputs remain outside Git.

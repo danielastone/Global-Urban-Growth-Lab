@@ -6,6 +6,7 @@ from urban_growth.forecast import (
     build_forecast_intervals,
     cluster_bootstrap_paired_difference,
     evaluate_rolling_baselines,
+    leave_one_cluster_out_paired_difference,
     paired_error_comparison,
     rolling_baseline_errors,
     rolling_origin_splits,
@@ -152,3 +153,21 @@ def test_temporal_diagnostics_detect_reversal() -> None:
     assert result.loc[0, "pearson_correlation"] == pytest.approx(-1.0)
     assert result.loc[0, "within_country_correlation"] == pytest.approx(-1.0)
     assert result.loc[0, "reversal_rate_nonzero"] == 1.0
+
+
+def test_leave_one_country_out_identifies_influential_cluster() -> None:
+    rows = []
+    for city_id, country, difference in [(1, "A", 0.01), (2, "A", 0.01), (3, "B", -0.03)]:
+        for model, error in [
+            ("persistence", 0.10 + difference), ("country_mean", 0.10)
+        ]:
+            rows.append(
+                {
+                    "city_id": city_id, "origin": 2020, "country_code": country,
+                    "model": model, "absolute_error": error,
+                }
+            )
+    result = leave_one_cluster_out_paired_difference(pd.DataFrame(rows), origin=2020)
+    assert result.loc[0, "country_code"] == "A"
+    assert result.loc[0, "excluded_mean_difference"] == pytest.approx(-0.03)
+    assert result.loc[0, "exclusion_shift"] == pytest.approx(-0.0266666667)

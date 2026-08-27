@@ -34,6 +34,8 @@ The prespecified size comparison does not explain the 2020 failure: persistence 
 
 Temporal diagnostics further show that the 2020 failure is not explained by a common slowdown. Mean growth increases from the predictor to outcome window, while the recent/future Pearson correlation falls to 0.207, the within-country correlation to 0.123, and the fitted persistence slope to 0.126. Direction reversals reach 29.4%. Treat this as descriptive evidence of city-level reordering and mean reversion; test influential-country, balanced-cohort and stable-boundary explanations before adding shock labels or causal mechanisms.
 
+Leave-one-cluster-out diagnostics rule out a single-country or single-city explanation for the pooled 2020 reversal. All 189 country deletions leave persistence worse than country mean, as do all 10,709 city deletions. However, India and China contribute 35.9% of observed cities, so deletion robustness must not be misreported as geographically balanced evidence. Add equal-country weighting and balanced-entry cohorts before interpreting the pooled effect as globally representative.
+
 ## Validation
 
 - Use expanding or fixed rolling training windows and strictly later test periods.

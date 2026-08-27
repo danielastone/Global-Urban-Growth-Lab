@@ -15,6 +15,7 @@ from urban_growth.forecast import (
     build_forecast_intervals,
     cluster_bootstrap_paired_difference,
     evaluate_rolling_baselines,
+    leave_one_cluster_out_paired_difference,
     paired_error_comparison,
     rolling_baseline_errors,
     temporal_reversal_diagnostics,
@@ -43,6 +44,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_temporal_reversal_diagnostics.csv"),
     )
+    parser.add_argument(
+        "--country-influence-output",
+        type=Path,
+        default=Path("outputs/wup_2020_country_influence.csv"),
+    )
+    parser.add_argument(
+        "--city-influence-output",
+        type=Path,
+        default=Path("outputs/wup_2020_city_influence.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
@@ -60,6 +71,10 @@ def main() -> None:
     paired = paired_error_comparison(errors)
     bootstrap = cluster_bootstrap_paired_difference(errors)
     temporal = temporal_reversal_diagnostics(intervals)
+    country_influence = leave_one_cluster_out_paired_difference(errors, origin=2020)
+    city_influence = leave_one_cluster_out_paired_difference(
+        errors, origin=2020, cluster_columns=["country_code", "city_id", "city_name"]
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(args.output, index=False)
     args.paired_output.parent.mkdir(parents=True, exist_ok=True)
@@ -68,10 +83,16 @@ def main() -> None:
     bootstrap.to_csv(args.bootstrap_output, index=False)
     args.temporal_output.parent.mkdir(parents=True, exist_ok=True)
     temporal.to_csv(args.temporal_output, index=False)
+    args.country_influence_output.parent.mkdir(parents=True, exist_ok=True)
+    country_influence.to_csv(args.country_influence_output, index=False)
+    args.city_influence_output.parent.mkdir(parents=True, exist_ok=True)
+    city_influence.to_csv(args.city_influence_output, index=False)
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
     print(args.temporal_output)
+    print(args.country_influence_output)
+    print(args.city_influence_output)
 
 
 if __name__ == "__main__":
