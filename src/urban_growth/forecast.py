@@ -216,6 +216,87 @@ def build_ghsl_fixed_forecast_intervals(
     return result
 
 
+def build_ghsl_dynamic_forecast_intervals(
+    dynamic_panel: pd.DataFrame,
+    origins: list[int],
+    *,
+    outcome_gap_years: int = 0,
+) -> pd.DataFrame:
+    """Build intervals from quality-controlled GHSL multi-temporal polygons."""
+    required = {
+        "city_id", "year", "population", "built_up_area_m2",
+        "urban_centre_area_km2", "boundary_mode", "boundary_product",
+        "GC_UCN_MAI_2025", "GC_CNT_GAD_2025", "quality_controlled_2025",
+    }
+    require_columns(dynamic_panel, required, source_name="GHSL dynamic-boundary source")
+    expected_product = "ucdb_multitemporal_boundaries"
+    if dynamic_panel["boundary_mode"].ne("dynamic").any():
+        raise SourceSchemaError("GHSL dynamic sensitivity requires dynamic boundaries only")
+    if dynamic_panel["boundary_product"].ne(expected_product).any():
+        raise SourceSchemaError(f"GHSL dynamic sensitivity requires {expected_product}")
+    source = dynamic_panel.loc[dynamic_panel["quality_controlled_2025"]].copy()
+    if source.empty:
+        raise SourceSchemaError("GHSL dynamic sensitivity has no quality-controlled entities")
+    source["ISO3_Code"] = source["GC_CNT_GAD_2025"]
+    source["City_Name"] = source["GC_UCN_MAI_2025"]
+    source["observation_type"] = "retrospective_model_epoch"
+    source["built_up_share_of_land"] = source["built_up_area_m2"] / (
+        source["urban_centre_area_km2"] * 1_000_000
+    )
+    source["population_density_per_km2"] = (
+        source["population"] / source["urban_centre_area_km2"]
+    )
+    result = build_forecast_intervals(
+        source,
+        origins,
+        outcome_gap_years=outcome_gap_years,
+        allowed_outcome_types={"retrospective_model_epoch"},
+    )
+    result["boundary_mode"] = "dynamic"
+    result["boundary_product"] = expected_product
+    result["boundary_reference_year"] = pd.NA
+    result["boundary_temporally_fixed"] = False
+    result["boundary_history_uses_future_reference"] = False
+    result["cross_stream_reconciled"] = False
+    return result
+
+
+def matched_boundary_forecast_panels(
+    fixed: pd.DataFrame,
+    dynamic: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Restrict fixed and dynamic panels to identical city-origin forecast rows."""
+    keys = ["city_id", "period_start", "period_end"]
+    required = {*keys, "country_code", "boundary_mode"}
+    require_columns(fixed, required, source_name="fixed boundary forecast panel")
+    require_columns(dynamic, required, source_name="dynamic boundary forecast panel")
+    reject_duplicate_keys(fixed, keys, source_name="fixed boundary forecast panel")
+    reject_duplicate_keys(dynamic, keys, source_name="dynamic boundary forecast panel")
+    if fixed["boundary_mode"].ne("fixed").any() or dynamic["boundary_mode"].ne(
+        "dynamic"
+    ).any():
+        raise SourceSchemaError("Boundary panel modes are not fixed versus dynamic")
+    matched = fixed[keys + ["country_code"]].merge(
+        dynamic[keys + ["country_code"]],
+        on=keys,
+        how="inner",
+        suffixes=("_fixed", "_dynamic"),
+        validate="one_to_one",
+    )
+    if matched.empty:
+        raise SourceSchemaError("Fixed and dynamic panels have no matched forecast rows")
+    if matched["country_code_fixed"].ne(matched["country_code_dynamic"]).any():
+        raise SourceSchemaError("Fixed and dynamic matched rows disagree on country")
+    matched_keys = matched[keys]
+    fixed_matched = fixed.merge(matched_keys, on=keys, validate="one_to_one")
+    dynamic_matched = dynamic.merge(matched_keys, on=keys, validate="one_to_one")
+    sort = ["period_start", "city_id"]
+    return (
+        fixed_matched.sort_values(sort).reset_index(drop=True),
+        dynamic_matched.sort_values(sort).reset_index(drop=True),
+    )
+
+
 def score_forecast(actual: pd.Series, predicted: pd.Series) -> ForecastMetrics:
     """Score matched observations after dropping non-finite pairs."""
     pairs = pd.concat({"actual": actual, "predicted": predicted}, axis=1).dropna()

@@ -37,7 +37,7 @@ WUP temporal diagnostics show that its 2020 failure is not explained by a common
 
 Leave-one-cluster-out diagnostics rule out a single-country or single-city explanation for the pooled 2020 reversal. All 189 country deletions leave persistence worse than country mean, as do all 10,709 city deletions. However, India and China contribute 35.9% of observed cities, so deletion robustness must not be misreported as geographically balanced evidence. Add equal-country weighting and balanced-entry cohorts before interpreting the pooled effect as globally representative.
 
-The fixed-boundary GHSL sensitivity overturns the WUP 2020 reversal: persistence MAE is 0.826 pp and the best alternative is 1.081 pp, while within-country recent/future correlation remains 0.750. This is a fixed-2025-footprint sensitivity, not validated historical geography or real-time evidence. The cross-source difference identifies sensitivity to the combined source/definition package; it does not identify boundary change alone.
+The fixed-boundary GHSL sensitivity overturns the WUP 2020 reversal: persistence MAE is 0.826 pp and the best alternative is 1.081 pp, while within-country recent/future correlation remains 0.750. This is a fixed-2025-footprint sensitivity, not validated historical geography or real-time evidence. A matched within-GHSL test now isolates boundary semantics more closely: dynamic boundaries raise pooled persistence MAE from 0.758 to 1.274 pp and reduce 2020 within-country correlation from 0.764 to 0.532, but persistence still wins 2020 in both streams. Changing polygons affects predictability but does not explain the WUP reversal.
 
 ### Endogeneity and mechanical dependence
 

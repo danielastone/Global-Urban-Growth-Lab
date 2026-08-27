@@ -21,6 +21,21 @@ Persistence has the lowest MAE at every evaluated origin. In 2020 its MAE is 0.8
 
 This does **not** prove changing WUP polygons caused the discrepancy. GHSL and WUP also differ in settlement definition, gridded population allocation, revision process and sample construction. The defensible conclusion is narrower: the 2020 reversal is source/definition-sensitive and cannot support a general forecasting claim.
 
+## Matched fixed-versus-dynamic GHSL sensitivity
+
+The within-GHSL comparison holds source family, identifier, country, forecast origin and row coverage constant. The matched sample grows from 5,061 city-origin rows at 1980 to 10,333 at 2020 as dynamic urban centres enter the threshold-defined universe. Fixed and dynamic populations remain separate estimands: fixed growth occurs inside the 2025 footprint, while dynamic growth includes contemporaneous footprint change.
+
+| Boundary stream | Persistence MAE | Country-mean MAE | Persistence RMSE | Country-mean RMSE |
+|---|---:|---:|---:|---:|
+| Fixed 2025 footprint, matched rows | 0.758 pp | 1.171 pp | 1.334 pp | 1.660 pp |
+| Dynamic footprint, matched rows | 1.274 pp | 1.550 pp | 2.268 pp | 2.220 pp |
+
+Holding the polygon fixed makes growth much smoother and persistence substantially stronger. Under dynamic boundaries, persistence retains the best pooled MAE but loses pooled RMSE narrowly to country mean. Both definitions show a period reversal at 2000. At 2020, persistence still beats the best alternative in both streams: by 0.221 pp under fixed boundaries and 0.071 pp under dynamic boundaries.
+
+Recent/future within-country correlation at 2020 is 0.764 in fixed polygons and 0.532 in dynamic polygons. Boundary evolution therefore weakens city-level state persistence, but it does not reproduce WUP's 2020 collapse or explain the WUP–GHSL disagreement. The remaining discrepancy must lie in the broader source/definition package rather than changing polygons alone.
+
+This matched exercise still has selection: a dynamic centre must exist at every required lag, origin and outcome year, and entry is tied to the 50,000 urban-centre threshold. It isolates boundary semantics better than the cross-source comparison but does not create a balanced historical city universe.
+
 ## WUP rolling-origin baseline result — geography not controlled
 
 The evaluation uses five-year WUP estimate outcomes at origins from 1985 through 2020. Every model is scored on the same 67,219 origin-city test cases in aggregate. Metrics are annual growth errors; the table converts them to percentage points per year.
@@ -173,6 +188,7 @@ With the registered raw files under `data/raw/`, run:
 ```bash
 python scripts/run_wup_baselines.py
 python scripts/run_ghsl_fixed_baselines.py
+python scripts/run_ghsl_boundary_sensitivity.py
 ```
 
 The commands write separate WUP and fixed-boundary GHSL metrics and diagnostics under `outputs/`. The GHSL command fails unless the fixed and dynamic products reconcile at 2025. Raw files and generated outputs remain outside Git.
@@ -182,7 +198,8 @@ The WUP command now writes both origin-by-size and explicitly pooled-by-size pai
 ```bash
 python scripts/verify_results.py \
   results/wup_expected_manifest.csv \
-  results/ghsl_fixed_expected_manifest.csv
+  results/ghsl_fixed_expected_manifest.csv \
+  results/ghsl_boundary_expected_manifest.csv
 ```
 
 This closes result drift for the registered local files and locked code. It does not make the raw-data workflows executable in GitHub Actions or convert the retrospective estimates into vintage-correct forecasts.

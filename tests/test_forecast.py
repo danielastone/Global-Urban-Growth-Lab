@@ -4,11 +4,13 @@ import pytest
 from urban_growth.forecast import (
     baseline_predictions,
     build_forecast_intervals,
+    build_ghsl_dynamic_forecast_intervals,
     build_ghsl_fixed_forecast_intervals,
     cluster_bootstrap_paired_difference,
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
+    matched_boundary_forecast_panels,
     paired_error_comparison,
     rolling_baseline_errors,
     rolling_origin_splits,
@@ -139,6 +141,34 @@ def test_ghsl_forecast_requires_and_preserves_fixed_boundary_semantics() -> None
     source.loc[source["year"].eq(2015), "boundary_mode"] = "dynamic"
     with pytest.raises(SourceSchemaError, match="fixed boundaries only"):
         build_ghsl_fixed_forecast_intervals(source, [2020])
+
+
+def test_dynamic_ghsl_intervals_and_boundary_matching() -> None:
+    years = [2015, 2020, 2025]
+    dynamic = pd.DataFrame(
+        {
+            "city_id": [1] * 3, "year": years, "population": [80_000, 90_000, 100_000],
+            "built_up_area_m2": [10_000_000, 11_000_000, 12_000_000],
+            "urban_centre_area_km2": [18, 19, 20], "boundary_mode": ["dynamic"] * 3,
+            "boundary_product": ["ucdb_multitemporal_boundaries"] * 3,
+            "GC_UCN_MAI_2025": ["Example"] * 3,
+            "GC_CNT_GAD_2025": ["Exampleland"] * 3,
+            "quality_controlled_2025": [True] * 3,
+        }
+    )
+    dynamic_intervals = build_ghsl_dynamic_forecast_intervals(dynamic, [2020])
+    assert dynamic_intervals["boundary_temporally_fixed"].eq(False).all()
+    fixed_source = dynamic.assign(
+        boundary_mode="fixed", boundary_product="ucdb_fixed_2025_boundary",
+        urban_centre_area_km2=20,
+    )
+    fixed_intervals = build_ghsl_fixed_forecast_intervals(fixed_source, [2020])
+    fixed_matched, dynamic_matched = matched_boundary_forecast_panels(
+        fixed_intervals, dynamic_intervals
+    )
+    assert fixed_matched[["city_id", "period_start"]].equals(
+        dynamic_matched[["city_id", "period_start"]]
+    )
 
 
 def test_baselines_use_training_country_mean_and_global_fallback() -> None:
