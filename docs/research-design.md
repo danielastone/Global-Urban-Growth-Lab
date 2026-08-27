@@ -55,6 +55,8 @@ A chronological holdout within WUP 2025 is **retrospective pseudo-out-of-sample 
 | Spatial dependence | Compare country, region, distance, accessibility, border, and island specifications. |
 | COVID shock | Prespecify pre-COVID, shock, and post-shock evaluations. |
 
+WUP F21 reports blank annual cells while a city is below 50,000. Therefore, WUP alone cannot identify behavior immediately below the threshold. Analyses must report entry cohorts and balanced samples; any regression-discontinuity-style interpretation around 50,000 is invalid without a separate source that observes both sides consistently.
+
 ## Commercial decision rule
 
 Do not market point forecasts for individual small cities from aggregate fit statistics. A viable product requires calibrated prediction intervals, material improvement over public baselines, stable performance across geographies, and evidence that the target customer acts differently because of the forecast. Municipal financing applications may value risk bands and scenario diagnostics more than a single growth estimate.

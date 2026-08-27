@@ -14,6 +14,17 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 | WorldPop Global 2 | Robustness | Fine-grid population allocation | 2015-2030 is too short for the primary historical design |
 | Natural Earth Admin 0 | Spatial control | Borders and island geometry | Geometry does not measure migration-policy restrictiveness |
 
+## Verified WUP F21 schema
+
+The exact F21 workbook was retrieved on 2026-08-27 and registered in `data/manifest.csv`. Its `Data` sheet contains 16,828 unique `City_Code` rows and annual columns from 1975 through 2050. The annual series is threshold-truncated: a cell is blank while the city is below 50,000 and populated once it meets the reporting threshold. In the acquired workbook, 12,138 cities have 2025 values and 3,633 records are absent in 2025 but present by 2050.
+
+Consequences:
+
+- WUP F21 cannot by itself estimate population trajectories below 50,000.
+- Applying a fresh `population >= 50,000` filter does not solve truncation.
+- Entry-year, balanced-panel and near-threshold analyses must be explicit.
+- GHSL fixed-entity histories are a sensitivity path, not independent evidence.
+
 ## Rules
 
 1. Never infer a source from a filename alone; pair every file with a catalog `source_id`.

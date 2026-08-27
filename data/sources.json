@@ -38,7 +38,39 @@
       "upstream_dependencies": ["ec_ghsl_degurb_r2023a", "un_wpp_2024"],
       "redistribution": "review_before_commit",
       "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision, Online Edition.",
-      "notes": "Selection is based on reaching 50,000 inhabitants in 2025; do not reapply a contemporaneous 50,000 threshold to every historical period. Keep estimates and projections distinct."
+      "files": [
+        {
+          "table": "F21",
+          "filename": "WUP2025-F21-DEGURBA-Cities_Pop.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F21-DEGURBA-Cities_Pop.xlsx",
+          "measure": "population_thousands"
+        },
+        {
+          "table": "F25",
+          "filename": "WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx",
+          "measure": "land_area_km2"
+        },
+        {
+          "table": "F29",
+          "filename": "WUP2025-F29-DEGURBA-Cities_BU_AREA_km2.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F29-DEGURBA-Cities_BU_AREA_km2.xlsx",
+          "measure": "built_up_area_km2"
+        },
+        {
+          "table": "F30",
+          "filename": "WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx",
+          "measure": "built_up_area_m2_per_capita"
+        },
+        {
+          "table": "F34",
+          "filename": "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx",
+          "measure": "population_density_per_km2"
+        }
+      ],
+      "notes": "F21 contains cities that reach 50,000 during 1975-2050, but annual values are blank while a city is below 50,000. This is time-varying threshold truncation, not a balanced history and not selection only at 2025. Keep estimates and projections distinct."
     },
     {
       "source_id": "ec_ghsl_ucdb_r2024a_v1_2",

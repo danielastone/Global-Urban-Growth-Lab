@@ -34,12 +34,22 @@ def test_wup_converts_thousands_and_requires_mapped_categories() -> None:
 
 def test_wup_city_panel_preserves_prethreshold_history_and_marks_projections() -> None:
     source = pd.DataFrame(
-        {"ID": [1], "2000": [40.0], "2025": [60.0], "2030": [65.0]}
+        {
+            "ID": [1, 2],
+            "2000": [None, 55.0],
+            "2025": [60.0, None],
+            "2030": [65.0, 52.0],
+        }
     )
     result = city_population_panel(source, city_id_column="ID")
-    assert result["population"].tolist() == [40_000, 60_000, 65_000]
-    assert result["eligible_at_reference_year"].all()
-    assert result["observation_type"].tolist() == ["estimate", "estimate", "projection"]
+    city1 = result[result["city_id"] == 1]
+    city2 = result[result["city_id"] == 2]
+    assert city1["population"].tolist() == [60_000, 65_000]
+    assert city1["eligible_at_reference_year"].all()
+    assert city1["sample_entry_year"].unique().tolist() == [2025]
+    assert city2["eligible_at_reference_year"].eq(False).all()
+    assert city2["sample_entry_year"].unique().tolist() == [2000]
+    assert result["threshold_observed"].all()
 
 
 def test_unregistered_ghsl_boundary_product_fails() -> None:

@@ -1,0 +1,3 @@
+Index,Location,Notes,LocID,ISO3_Code,ISO2_Code,City_Code,City_Name,Capital,PWCent_Longitude,PWCent_Latitude,1975,2025,2050
+1,Exampleland,,999,EXP,EX,10001,Example City,0,10.0,20.0,,60.0,70.0
+2,Exampleland,,999,EXP,EX,10002,Future City,0,11.0,21.0,,,55.0
