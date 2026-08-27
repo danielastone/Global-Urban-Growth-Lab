@@ -16,7 +16,7 @@
       "coverage": "Annual population 1950-2050; land and built-up area 1975-2050",
       "unit": "country or area by internationally harmonized settlement category",
       "role": "National urbanization-stage controls; not an individual-city panel",
-      "upstream_dependencies": ["ec_ghsl_degurb", "un_wpp_2024"],
+      "upstream_dependencies": ["ec_ghsl_degurb_r2023a", "un_wpp_2024"],
       "redistribution": "review_before_commit",
       "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision, Online Edition.",
       "notes": "F01-F04 are country/category tables. They cannot support individual-city hypotheses. Register exact downloads rather than assuming legacy table names."
@@ -35,7 +35,7 @@
       "coverage": "Annual estimates through 2025 and projections through 2050 for more than 12,000 cities with at least 50,000 inhabitants in 2025; area series begin in 1975",
       "unit": "individual internationally harmonized city or urban settlement",
       "role": "Primary city-level population, surface-area, density and growth panel",
-      "upstream_dependencies": ["ec_ghsl_degurb", "un_wpp_2024"],
+      "upstream_dependencies": ["ec_ghsl_degurb_r2023a", "un_wpp_2024"],
       "redistribution": "review_before_commit",
       "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision, Online Edition.",
       "notes": "Selection is based on reaching 50,000 inhabitants in 2025; do not reapply a contemporaneous 50,000 threshold to every historical period. Keep estimates and projections distinct."
@@ -54,7 +54,7 @@
       "coverage": "11,422 quality-controlled urban centres; multi-temporal attributes 1975-2030",
       "unit": "DEGURBA urban centre with multi-temporal footprints and attributes",
       "role": "Spatial footprint, density, area-change, geometry and boundary sensitivity",
-      "upstream_dependencies": ["ec_ghsl_degurb"],
+      "upstream_dependencies": ["ec_ghsl_degurb_r2023a"],
       "redistribution": "allowed_with_attribution_review_package_terms",
       "citation": "European Commission, Joint Research Centre. GHS Urban Centre Database 2024, R2024A.",
       "notes": "Do not describe as an independent replication of WUP 2025; both depend on GHSL/DEGURBA. Preserve dynamic and fixed-boundary streams and never assign boundary semantics from an unverified caller label."
@@ -111,10 +111,29 @@
       "coverage": "2015-2030 annual estimates at 100m or 1km",
       "unit": "grid cell",
       "role": "High-resolution population-allocation robustness only",
-      "upstream_dependencies": ["un_wpp_national_totals"],
+      "upstream_dependencies": ["un_wpp_2024"],
       "redistribution": "review_product_license",
       "citation": "WorldPop, University of Southampton. Global high-resolution population estimates.",
       "notes": "Top-down estimates are adjusted to national totals and are too short for the primary 1975-forward persistence analysis."
+    },
+    {
+      "source_id": "ec_ghsl_degurb_r2023a",
+      "priority": 2,
+      "status": "upstream_method",
+      "publisher": "European Commission Joint Research Centre",
+      "dataset": "GHS-SMOD Degree of Urbanisation R2023A",
+      "release": "R2023A",
+      "landing_page": "https://human-settlement.emergency.copernicus.eu/ghs_smod2023.php",
+      "documentation_url": "https://human-settlement.emergency.copernicus.eu/documents/GHSL_Data_Package_2023.pdf",
+      "retrieval": "manual_large_raster",
+      "formats": ["geotiff"],
+      "coverage": "Global settlement-model epochs 1975-2030",
+      "unit": "1 km grid cell settlement class",
+      "role": "Upstream DEGURBA delineation dependency for WUP 2025 and UCDB",
+      "upstream_dependencies": [],
+      "redistribution": "allowed_with_attribution_review_package_terms",
+      "citation": "European Commission, Joint Research Centre. GHS-SMOD R2023A.",
+      "notes": "Registering this upstream product makes the WUP/UCDB methodological dependence explicit; it is not automatically required as a local analytical input."
     },
     {
       "source_id": "natural_earth_admin0",

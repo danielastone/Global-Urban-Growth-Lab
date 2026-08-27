@@ -106,6 +106,17 @@ def validate_catalog(catalog: dict) -> None:
     duplicates = sorted({source_id for source_id in ids if ids.count(source_id) > 1})
     if duplicates:
         raise SourceCatalogError(f"Duplicate source_id values: {', '.join(duplicates)}")
+    known = set(ids)
+    dangling = sorted(
+        {
+            dependency
+            for source in sources
+            for dependency in source["upstream_dependencies"]
+            if dependency not in known
+        }
+    )
+    if dangling:
+        raise SourceCatalogError(f"Unknown upstream dependencies: {', '.join(dangling)}")
 
 
 def source_by_id(catalog: dict, source_id: str) -> dict:
