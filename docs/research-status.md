@@ -253,11 +253,33 @@ The published 2018 projection beats the persistence baseline available in 2018 b
 567 cities whose 2018 populations agree within 20% across revisions produces almost
 the same difference, 0.224 pp with interval [−0.277, −0.158] pp.
 
+The annual horizon decomposition shows when that advantage appears:
+
+| Target end | Published projection MAE | Vintage persistence MAE | Revised-history persistence MAE | Published minus vintage persistence, 95% interval |
+|---:|---:|---:|---:|---:|
+| 2019 | 1.344 pp | 1.380 pp | 0.356 pp | −0.036 pp [−0.097, +0.019] |
+| 2020 | 1.332 pp | 1.377 pp | 0.370 pp | −0.045 pp [−0.106, +0.011] |
+| 2021 | 1.239 pp | 1.361 pp | 0.613 pp | −0.123 pp [−0.170, −0.073] |
+| 2022 | 1.254 pp | 1.433 pp | 0.821 pp | −0.179 pp [−0.222, −0.132] |
+| 2023 | 1.268 pp | 1.494 pp | 0.959 pp | −0.226 pp [−0.270, −0.169] |
+
+The published projection is not distinguishable from vintage persistence for targets
+ending in 2019 or 2020. Its advantage becomes statistically supported at 2021 and
+widens thereafter. That timing is compatible with a pandemic-era shock, but it does
+not identify one: the 2018 projection, population definitions and later estimates
+all change together across editions.
+
 The more consequential comparison is vintage versus retrospective persistence.
 Recomputing persistence with values revised in 2025 lowers apparent MAE by 0.536 pp.
 That performance was unavailable to a forecaster in 2018. The current-revision
 rolling-origin results therefore materially overstate the real-time value of
 persistence for this matched large-city sample.
+
+More importantly, the hindsight advantage already exists for the 2019 target:
+revised-history persistence reports 0.356 pp MAE while actual-vintage persistence is
+1.380 pp. Definition and historical-series revisions therefore contaminate the
+comparison before COVID. The pandemic cannot be the sole explanation for the
+vintage-versus-retrospective gap.
 
 This does not make the 2018 projection a clean winner or a small-city result. WUP
 2018 uses nationally defined urban agglomerations above 300,000, while WUP 2025 uses

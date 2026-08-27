@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import pandas as pd
+
 from urban_growth.adapters.wup import (
     read_f21_city_population,
     read_f22_2018_city_population,
@@ -36,7 +38,19 @@ def main() -> None:
         args.raw_dir / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx"
     )
     crosswalk = reciprocal_nearest_crosswalk(vintage, current)
-    metrics, bootstrap = evaluate_wup2018_vintage(vintage, current, crosswalk)
+    metric_frames = []
+    bootstrap_frames = []
+    for horizon in range(1, 6):
+        horizon_metrics, horizon_bootstrap = evaluate_wup2018_vintage(
+            vintage, current, crosswalk, horizon_years=horizon
+        )
+        horizon_bootstrap.insert(0, "horizon_years", horizon)
+        horizon_bootstrap.insert(0, "target_end", 2018 + horizon)
+        horizon_bootstrap.insert(0, "origin", 2018)
+        metric_frames.append(horizon_metrics)
+        bootstrap_frames.append(horizon_bootstrap)
+    metrics = pd.concat(metric_frames, ignore_index=True)
+    bootstrap = pd.concat(bootstrap_frames, ignore_index=True)
     for path, frame in [
         (args.metrics_output, metrics),
         (args.bootstrap_output, bootstrap),
