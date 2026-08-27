@@ -22,6 +22,8 @@ F34 is a derived-variable check, but the precision varies by year. At the five-y
 
 F30 reports zero built-up area per capita for Timerein, Sudan, in all 46 observed years from 1975 through 2020, then positive values afterward. The adapter permits zero but rejects negative values. These records require a sensitivity flag: zero is almost certainly a missing or unresolved built-up estimate encoded numerically, not evidence that a populated city literally had no built structures.
 
+The controlled WUP assembly produces 779,718 unique city-year rows for 16,828 cities from 1975–2050. It retains all population, land-area and density observations, derives built-up area from F21 × F30, and excludes only the 46 Timerein values from that derived measure. The maximum derived built-up share is 0.496 of land area, so no row violates the physical area bound. This assembled panel remains threshold-truncated and mixes estimates through 2025 with projections afterward; those limitations are not repaired by successful table joins.
+
 Consequences:
 
 - WUP F21 cannot by itself estimate population trajectories below 50,000.
