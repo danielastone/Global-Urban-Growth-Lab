@@ -269,6 +269,19 @@ widens thereafter. That timing is compatible with a pandemic-era shock, but it d
 not identify one: the 2018 projection, population definitions and later estimates
 all change together across editions.
 
+This timing survives the crosswalk specification. The workflow evaluates reciprocal
+matches at 1, 5 and 10 km and, within each radius, no population-agreement restriction
+or later-revision agreement within 10%, 20% or 50%. For the 2023 target, the published
+projection advantage ranges from 0.219 to 0.285 pp across all 12 combinations, and
+every country-clustered interval is entirely below zero. All 12 combinations are also
+below zero for 2021 and 2022. For 2019, 11 of 12 intervals cross zero; for 2020, 11 of
+12 cross zero. The isolated exceptions occur in nested hindsight-selected samples
+and do not justify moving the break earlier.
+
+These are overlapping sensitivity samples, not 12 independent replications. Their
+value is falsification: neither coordinate radius nor origin-population agreement
+overturns the supported post-2020 ranking or the unresolved pre-2021 ranking.
+
 The more consequential comparison is vintage versus retrospective persistence.
 Recomputing persistence with values revised in 2025 lowers apparent MAE by 0.536 pp.
 That performance was unavailable to a forecaster in 2018. The current-revision

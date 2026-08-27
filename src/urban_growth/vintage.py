@@ -156,27 +156,27 @@ def evaluate_wup2018_vintage(
                         "directional_accuracy": metrics.directional_accuracy,
                     }
                 )
-            if distance == 5.0 and agreement_label in {"unrestricted", "within_20pct"}:
-                long = sample.melt(
-                    id_vars=["current_city_id", "country_location_id"],
-                    value_vars=models[:2], var_name="model", value_name="predicted",
-                )
-                actual = sample.set_index("current_city_id")["actual"]
-                long["actual"] = long["current_city_id"].map(actual)
-                long["error"] = long["predicted"] - long["actual"]
-                long["absolute_error"] = long["error"].abs()
-                long["sample"] = agreement_label
-                long = long.rename(
-                    columns={"current_city_id": "city_id", "country_location_id": "country_code"}
-                )
-                long["origin"] = origin_year
-                error_frames.append(long)
+            long = sample.melt(
+                id_vars=["current_city_id", "country_location_id"],
+                value_vars=models[:2], var_name="model", value_name="predicted",
+            )
+            actual = sample.set_index("current_city_id")["actual"]
+            long["actual"] = long["current_city_id"].map(actual)
+            long["error"] = long["predicted"] - long["actual"]
+            long["absolute_error"] = long["error"].abs()
+            long["distance_threshold_km"] = distance
+            long["origin_population_agreement"] = agreement_label
+            long = long.rename(
+                columns={"current_city_id": "city_id", "country_location_id": "country_code"}
+            )
+            long["origin"] = origin_year
+            error_frames.append(long)
     metrics = pd.DataFrame(metric_rows)
     errors = pd.concat(error_frames, ignore_index=True)
     bootstrap = cluster_bootstrap_paired_difference(
         errors,
         model_a="published_projection",
         model_b="vintage_persistence",
-        group_columns=["sample"],
+        group_columns=["distance_threshold_km", "origin_population_agreement"],
     )
     return metrics, bootstrap

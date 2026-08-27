@@ -65,5 +65,8 @@ def test_vintage_evaluation_separates_published_and_retrospective_inputs() -> No
     assert unrestricted["n"].unique().tolist() == [2]
     published = unrestricted.loc[unrestricted["model"].eq("published_projection"), "mae"]
     assert published.iloc[0] >= 0
-    assert set(bootstrap["sample"]) == {"unrestricted", "within_20pct"}
+    assert set(bootstrap["origin_population_agreement"]) == {
+        "unrestricted", "within_20pct"
+    }
+    assert bootstrap["distance_threshold_km"].unique().tolist() == [5.0]
     assert bootstrap["clusters"].eq(2).all()
