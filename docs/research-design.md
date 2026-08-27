@@ -42,6 +42,14 @@ A complex model earns inclusion only through repeated held-out improvement over 
 
 A chronological holdout within WUP 2025 is **retrospective pseudo-out-of-sample validation**. It does not recreate a forecast made in an earlier year because the 2025 revision incorporates later censuses, revised methods, boundaries and national totals. Use “real-time” or “vintage-correct” only when each training input is drawn from the edition actually available at that forecast origin. Report current-revision holdouts and vintage tests separately.
 
+### Forecast-interval construction
+
+Each five-year forecast interval requires the same city at three exact years: `origin - 5`, `origin`, and `origin + 5`. Recent growth uses only the lag and origin populations; the outcome uses origin and future populations. Density and built-up share are taken at the origin, never from the future row. Structural blanks from the 50,000 threshold remove the interval rather than being interpolated.
+
+The default outcome filter permits WUP estimates only, so the latest eligible five-year origin is 2020 with a 2025 outcome. Using 2025–2030 or later intervals requires explicit inclusion of publisher projections and answers a different question: consistency with the UN projection, not observed forecasting accuracy. Every interval records lag, origin, and outcome observation types so the two exercises cannot be silently pooled.
+
+Applied to five-year origins from 1980–2020, the exact-year rule yields 72,857 retrospective estimate intervals across 11,537 cities. Coverage rises from 5,638 intervals at the 1980 origin to 10,709 at 2020 because of threshold entry. Nine origin rows have missing built-up share after excluding Timerein's publisher zeros; they remain usable for population-only baselines but must drop from models requiring the built-environment covariate. This changing sample is a selection feature to report, not a nuisance to conceal with imputation.
+
 ## Threats and required attacks
 
 | Threat | Required response |

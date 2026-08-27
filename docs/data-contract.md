@@ -43,3 +43,7 @@ The outcome is future annualized log growth. Lagged growth must end at or before
 The WUP city-year assembly is strictly internal to the WUP `City_Code` namespace. It joins F21 population, F25 land area, F30 built-up area per capita, and F34 population density only after exact city-year coverage and the F21/F25/F34 density identity pass validation.
 
 Because F29 is not retrievable, built-up area is derived as F21 population in persons multiplied by F30 square metres per capita. This provenance is recorded as `derived_f21_times_f30`; it must not be represented as a direct F29 observation. F30 publisher zeros are converted to a missing derived area with `publisher_zero_excluded`, while the raw per-capita value remains available for audit.
+
+## Forecast interval contract
+
+One forecast row represents a city at a declared origin and horizon. `recent_growth` must end at the origin; `future_growth` must begin at the origin. Origin covariates are selected from the origin row only. The interval builder requires exact lag, origin and future years and records `coverage_selection = complete_lag_origin_future`. Its default outcome universe is estimates; projection outcomes require an explicit caller override.
