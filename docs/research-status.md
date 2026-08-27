@@ -70,6 +70,20 @@ The 2020 reversal is robust: all six size-bin intervals are entirely above zero,
 
 This still falsifies universal H1, because one broad and statistically supported period reversal is enough to defeat “consistent across periods.” It also narrows the next question: identify what changed in the 2015–2020 predictor window and 2020–2025 outcome window, without automatically labeling the effect COVID or claiming causation.
 
+## Temporal decomposition of the 2020 reversal
+
+The reversal is not a uniform decline in city growth. Mean annual growth rises from 0.695% in 2015–2020 to 0.992% in 2020–2025, so persistence underpredicts on average. Its larger failure is cross-city: the association between recent and future growth collapses and more cities switch growth direction.
+
+| Origin | Mean recent growth | Mean future growth | Pearson correlation | Within-country correlation | Persistence slope | Sign reversal rate |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2000 | 1.795% | 1.265% | 0.488 | 0.383 | 0.329 | 17.8% |
+| 2015 | 1.359% | 0.544% | 0.577 | 0.554 | 0.608 | 23.3% |
+| 2020 | 0.695% | 0.992% | 0.207 | 0.123 | 0.126 | 29.4% |
+
+The 2015 origin is primarily a broad slowdown: average growth falls sharply while city rankings remain moderately persistent. The 2020 origin instead shows strong mean reversion and reordering even after removing country means. A country-average forecast can therefore outperform city persistence because the city-specific signal becomes unstable, not because all countries or cities share a common decline.
+
+These are descriptive current-revision results, not causal identification. The five-year windows, WUP revisions and lack of contemporaneous covariates do not justify labeling the mechanism COVID. The next independent test should locate influential countries and cities and check whether the collapse survives balanced-cohort and stable-boundary restrictions.
+
 ## Reproduction
 
 With the four registered WUP workbooks under `data/raw/`, run:
@@ -78,4 +92,4 @@ With the four registered WUP workbooks under `data/raw/`, run:
 python scripts/run_wup_baselines.py
 ```
 
-The command writes baseline metrics, paired size comparisons, and country-clustered bootstrap intervals under `outputs/`. Raw workbooks and generated outputs remain outside Git.
+The command writes baseline metrics, paired size comparisons, country-clustered bootstrap intervals, and temporal reversal diagnostics under `outputs/`. Raw workbooks and generated outputs remain outside Git.

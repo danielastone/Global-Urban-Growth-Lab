@@ -351,3 +351,49 @@ def cluster_bootstrap_paired_difference(
     if not rows:
         raise SourceSchemaError("No groups had enough clusters for bootstrap inference")
     return pd.DataFrame(rows)
+
+
+def temporal_reversal_diagnostics(panel: pd.DataFrame) -> pd.DataFrame:
+    """Describe period-specific persistence, reversals, and country-adjusted association."""
+    required = {
+        "city_id", "country_code", "period_start", "recent_growth", "future_growth",
+    }
+    require_columns(panel, required, source_name="forecast interval panel")
+    rows: list[dict[str, float | int]] = []
+    for origin, group in panel.groupby("period_start", sort=True):
+        data = group[["country_code", "recent_growth", "future_growth"]].dropna().copy()
+        finite = np.isfinite(data[["recent_growth", "future_growth"]]).all(axis=1)
+        data = data.loc[finite]
+        if len(data) < 2:
+            continue
+        recent = data["recent_growth"]
+        future = data["future_growth"]
+        country_recent = data.groupby("country_code")["recent_growth"].transform("mean")
+        country_future = data.groupby("country_code")["future_growth"].transform("mean")
+        recent_residual = recent - country_recent
+        future_residual = future - country_future
+        variance = float(recent.var(ddof=0))
+        slope = float(np.cov(recent, future, ddof=0)[0, 1] / variance) if variance else np.nan
+        nonzero = recent.ne(0) & future.ne(0)
+        rows.append(
+            {
+                "origin": int(origin),
+                "n": len(data),
+                "countries": data["country_code"].nunique(),
+                "mean_recent_growth": float(recent.mean()),
+                "mean_future_growth": float(future.mean()),
+                "mean_growth_change": float((future - recent).mean()),
+                "mean_absolute_growth_change": float((future - recent).abs().mean()),
+                "pearson_correlation": float(recent.corr(future)),
+                "spearman_correlation": float(recent.rank().corr(future.rank())),
+                "within_country_correlation": float(recent_residual.corr(future_residual)),
+                "persistence_slope": slope,
+                "sign_agreement": float((np.sign(recent) == np.sign(future)).mean()),
+                "reversal_rate_nonzero": float(
+                    (np.sign(recent[nonzero]) != np.sign(future[nonzero])).mean()
+                ),
+            }
+        )
+    if not rows:
+        raise SourceSchemaError("No periods available for temporal reversal diagnostics")
+    return pd.DataFrame(rows)

@@ -17,6 +17,7 @@ from urban_growth.forecast import (
     evaluate_rolling_baselines,
     paired_error_comparison,
     rolling_baseline_errors,
+    temporal_reversal_diagnostics,
 )
 from urban_growth.wup_panel import build_wup_city_year_panel
 
@@ -37,6 +38,11 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_country_cluster_bootstrap_by_size.csv"),
     )
+    parser.add_argument(
+        "--temporal-output",
+        type=Path,
+        default=Path("outputs/wup_temporal_reversal_diagnostics.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
@@ -53,15 +59,19 @@ def main() -> None:
     errors = rolling_baseline_errors(intervals, list(range(1985, 2025, 5)))
     paired = paired_error_comparison(errors)
     bootstrap = cluster_bootstrap_paired_difference(errors)
+    temporal = temporal_reversal_diagnostics(intervals)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(args.output, index=False)
     args.paired_output.parent.mkdir(parents=True, exist_ok=True)
     paired.to_csv(args.paired_output, index=False)
     args.bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
     bootstrap.to_csv(args.bootstrap_output, index=False)
+    args.temporal_output.parent.mkdir(parents=True, exist_ok=True)
+    temporal.to_csv(args.temporal_output, index=False)
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
+    print(args.temporal_output)
 
 
 if __name__ == "__main__":

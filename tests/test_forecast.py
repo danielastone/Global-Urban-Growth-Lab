@@ -10,6 +10,7 @@ from urban_growth.forecast import (
     rolling_baseline_errors,
     rolling_origin_splits,
     score_forecast,
+    temporal_reversal_diagnostics,
 )
 from urban_growth.io import SourceSchemaError
 
@@ -136,3 +137,18 @@ def test_country_cluster_bootstrap_is_reproducible() -> None:
     pd.testing.assert_frame_equal(first, second)
     assert first.loc[0, "clusters"] == 2
     assert first.loc[0, "observed_mean_difference"] == pytest.approx(0.0)
+
+
+def test_temporal_diagnostics_detect_reversal() -> None:
+    panel = pd.DataFrame(
+        {
+            "city_id": [1, 2, 3, 4], "country_code": ["A", "A", "B", "B"],
+            "period_start": [2020] * 4,
+            "recent_growth": [0.01, 0.02, -0.01, -0.02],
+            "future_growth": [-0.01, -0.02, 0.01, 0.02],
+        }
+    )
+    result = temporal_reversal_diagnostics(panel)
+    assert result.loc[0, "pearson_correlation"] == pytest.approx(-1.0)
+    assert result.loc[0, "within_country_correlation"] == pytest.approx(-1.0)
+    assert result.loc[0, "reversal_rate_nonzero"] == 1.0

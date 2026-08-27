@@ -32,6 +32,8 @@ The first baseline execution shows why the ladder is binding: persistence has th
 
 The prespecified size comparison does not explain the 2020 failure: persistence loses across every size bin, and every country-clustered 95% interval excludes zero in the adverse direction. The analogous 2000 point estimates are not statistically resolved after country clustering. Pooled improvement is supported for 50–150k and above one million, but not the middle bins. Prioritize the 2015–2025 reversal and shock window before fitting flexible size interactions.
 
+Temporal diagnostics further show that the 2020 failure is not explained by a common slowdown. Mean growth increases from the predictor to outcome window, while the recent/future Pearson correlation falls to 0.207, the within-country correlation to 0.123, and the fitted persistence slope to 0.126. Direction reversals reach 29.4%. Treat this as descriptive evidence of city-level reordering and mean reversion; test influential-country, balanced-cohort and stable-boundary explanations before adding shock labels or causal mechanisms.
+
 ## Validation
 
 - Use expanding or fixed rolling training windows and strictly later test periods.
