@@ -47,6 +47,20 @@ The two streams were joined at their documented common epoch. All 11,422 quality
 
 This reconciliation validates the join and the 2025 common point. It does not make fixed- and dynamic-boundary histories interchangeable before 2025.
 
+## WUP–GHSL identifier audit
+
+WUP `City_Code` is not GHSL `ID_UC_G0`. Although 11,420 numeric values appear in both columns, direct inspection proves the overlap is coincidental: for example, WUP code 1881 is Andkhoy, Afghanistan, while GHSL ID 1881 is Bandırma, Turkey. A direct numeric join would look almost complete while assigning most cities to the wrong country.
+
+The spatial audit also rejects a naive one-to-one point-in-polygon crosswalk. Of 12,138 WUP cities reported in 2025, 11,161 points fall inside a quality-controlled GHSL 2025 polygon, covering 10,918 GHSL centres. Some polygons contain multiple distinct WUP cities. Even exact normalized names leave five GHSL centres with multiple same-named WUP candidates, including Nanchang, Mandalay, Yangon, Hpakant and Biratnagar. These are definition and aggregation conflicts, not clerical duplicates that can be discarded automatically.
+
+Consequences:
+
+- Use WUP population with WUP area through `City_Code` for the primary WUP panel.
+- Use GHSL population, built-up surface and geometry through `ID_UC_G0` for the GHSL boundary analysis.
+- Do not merge the two panels row-by-row until a reviewed spatial/name/country crosswalk exists.
+- Treat many-WUP-to-one-GHSL cases as an explicit aggregation decision with double-counting checks.
+- Use the two internally coherent panels as sensitivity analyses rather than forcing a false unified city identity.
+
 ## Rules
 
 1. Never infer a source from a filename alone; pair every file with a catalog `source_id`.

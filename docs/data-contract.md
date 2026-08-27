@@ -28,6 +28,12 @@ One stable urban unit over one non-overlapping observation interval. Administrat
 - Boundary changes, interpolations, and modeled observations are explicit.
 - Dropped records receive machine-readable exclusion reasons.
 
+## Identifier namespaces and crosswalks
+
+`WUP City_Code` and `GHSL ID_UC_G0` are source-specific identifiers. Their numeric values are not interchangeable and must never be joined directly. A project `city_id` must include its namespace or be assigned only after an evidence-bearing crosswalk is accepted.
+
+A WUP–GHSL crosswalk requires `wup_city_id`, `ghsl_city_id`, `match_status`, `match_method`, and `evidence`. Accepted matches must be unique on the WUP side. Multiple WUP cities may occupy one GHSL polygon; downstream code must select an explicit aggregation rule rather than duplicating GHSL attributes across WUP rows unnoticed.
+
 ## Leakage control
 
 The outcome is future annualized log growth. Lagged growth must end at or before `period_start`. Random row splits are prohibited because they leak adjacent periods and common shocks. Forecast evaluation uses chronological rolling origins, with country-aware diagnostics.
