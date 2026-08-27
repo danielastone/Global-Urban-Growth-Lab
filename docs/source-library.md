@@ -1,0 +1,33 @@
+# Data source library
+
+The machine-readable catalog is `data/sources.json`. It records analytical role, coverage, provenance, dependence, retrieval method, and redistribution posture. `data/manifest.csv` records the exact local files actually used, including checksums.
+
+## Hierarchy
+
+| Source | Role | Use | Main limitation |
+|---|---|---|---|
+| WUP 2025 Degree of Urbanization | Statistical core | Cities/towns/rural population, urbanization stage, globally harmonized comparisons | Revised/modelled history; download tables may change names |
+| GHS-UCDB R2024A v1.1 | Spatial core | Dynamic footprint, fixed-boundary sensitivity, density, area change | Not independent of WUP/DEGURBA |
+| WPP 2024 | National control | National demographic benchmark | Current-vintage history is not a real-time forecast vintage |
+| OECD FUA | Mechanism | Urban core versus commuting zone | Restricted country/sample comparability |
+| WorldPop Global 2 | Robustness | Fine-grid population allocation | 2015-2030 is too short for the primary historical design |
+
+## Rules
+
+1. Never infer a source from a filename alone; pair every file with a catalog `source_id`.
+2. Save source downloads unchanged under `data/raw/` and register their SHA-256 checksum.
+3. Record retrieval date and source URL. The catalog's landing page is not a substitute for the exact download URL.
+4. Treat estimates, projections, interpolations, and observations as different observation types.
+5. Keep GHSL dynamic-footprint and fixed-boundary streams separate.
+6. Do not call GHSL an independent replication of WUP 2025.
+7. Never commit a source file until redistribution terms have been reviewed for that exact product.
+8. Fail on ambiguous identifiers, duplicate city-period keys, or missing year semantics.
+
+## Acquisition order
+
+1. WUP 2025 population and surface-area tables using the international Degree of Urbanization definition.
+2. GHS-UCDB R2024A v1.1 tabular attributes; acquire geometry only after the tabular pipeline is stable.
+3. WPP 2024 national controls.
+4. OECD FUA and WorldPop only after the core out-of-sample benchmark exists.
+
+The repository deliberately does not automate large or license-sensitive downloads. Acquisition automation is useful only after the publisher exposes a stable, documented endpoint.

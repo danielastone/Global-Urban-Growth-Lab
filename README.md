@@ -50,6 +50,16 @@ pytest
 
 The package does not download source data automatically. Register every input in `data/manifest.csv`, place permitted local files under `data/raw/`, and build analytical panels through code.
 
+Inspect the authoritative source catalog and inventory local downloads with:
+
+```bash
+urban-growth-sources list
+urban-growth-sources verify-catalog
+urban-growth-sources inventory data/raw/<file> --source-id <source_id>
+```
+
+The catalog is documented in [docs/source-library.md](docs/source-library.md). WUP 2025 is the statistical core; GHSL is the spatial reconstruction and sensitivity layer, not an independent replication.
+
 ## Minimum analytical panel
 
 One row represents a stable urban unit in one period. Required fields are documented in [docs/data-contract.md](docs/data-contract.md). Growth is calculated as an annualized log difference, and every predictor must be observable no later than the forecast origin.

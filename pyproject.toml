@@ -9,8 +9,12 @@ description = "Reproducible tools for evaluating global urban population growth 
 requires-python = ">=3.11"
 dependencies = [
   "numpy>=1.26",
+  "openpyxl>=3.1",
   "pandas>=2.1",
 ]
+
+[project.scripts]
+urban-growth-sources = "urban_growth.sources:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
