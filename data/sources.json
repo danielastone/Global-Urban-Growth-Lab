@@ -100,7 +100,7 @@
           "package": "GHS_UCDB_MTUC_GLOBE_R2024A_V1_2.zip",
           "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_MTUC_GLOBE_R2024A/V1-2/GHS_UCDB_MTUC_GLOBE_R2024A_V1_2.zip",
           "boundary_semantics": "separate multi-temporal boundaries; values are not comparable with the fixed stream except at 2025",
-          "measures": ["dynamic_geometry_and_attributes"]
+          "measures": ["population", "built_up_area_m2", "urban_centre_area_km2", "dynamic_geometry"]
         }
       ],
       "notes": "The v1.2 package readme explicitly replaces deprecated v1.1, despite the landing page still showing v1.1. Do not describe UCDB as an independent replication of WUP 2025; both depend on GHSL/DEGURBA. Fixed and dynamic values are different and not comparable except at 2025."

@@ -33,6 +33,14 @@ The thematic archive is the fixed-boundary stream: every historical statistic is
 
 The publisher landing page still labels the release v1.1, but the official download script and archive readme identify v1.2, state that the data were last updated on 2026-05-15, and explicitly deprecate v1.1. The catalog records that discrepancy instead of silently downgrading the acquired package.
 
+## Verified GHSL multi-temporal schema
+
+The separate MTUC v1.2 archive contains 11,686 unique trajectories and 170 columns. Its CSV also uses Windows-1252 encoding. Population, built-up surface and urban-centre area are reported for 12 five-year epochs, but only while a centre satisfies the urban-centre definition. The declared birth and death years exactly explain every absent value: coverage grows from 5,080 centres in 1975 to 11,686 in 2025, then falls to 11,521 in 2030 because 165 centres have a declared 2025 death year.
+
+The 264 MTUC records beyond the 11,422 quality-controlled thematic centres have no `GC_CNT_GAD_2025` country assignment. The adapter retains them with `quality_controlled_2025 = false`; it does not silently discard them or mix them into country-level analysis. Any primary country comparison must filter to the quality-controlled subset and report that exclusion. One uncontrolled trajectory lacks built-up surface for seven active epochs; those rows are retained with `built_up_area_available = false` instead of deleting otherwise valid population and area observations.
+
+Dynamic-boundary population is itself threshold-selected: every active value is at least 50,000. The MTUC stream fixes the spatial-boundary problem but does not recover below-threshold population histories. It is therefore a boundary sensitivity analysis, not a cure for WUP truncation.
+
 ## Rules
 
 1. Never infer a source from a filename alone; pair every file with a catalog `source_id`.

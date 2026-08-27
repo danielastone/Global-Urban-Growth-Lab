@@ -1,7 +1,11 @@
 import pandas as pd
 import pytest
 
-from urban_growth.adapters.ghsl_ucdb import fixed_2025_theme_panel, indicator_panel
+from urban_growth.adapters.ghsl_ucdb import (
+    fixed_2025_theme_panel,
+    indicator_panel,
+    multitemporal_boundary_panel,
+)
 from urban_growth.adapters.wup import (
     city_area_panel,
     city_population_panel,
@@ -56,6 +60,66 @@ def test_ghsl_fixed_theme_rejects_non_numeric_measure() -> None:
     )
     with pytest.raises(SourceSchemaError, match="non-numeric population"):
         fixed_2025_theme_panel(source)
+
+
+def test_ghsl_multitemporal_panel_respects_birth_year_and_parses_commas() -> None:
+    source = pd.DataFrame(
+        {
+            "ID_MTUC_G0": [1],
+            "GC_UCN_MAI_2025": ["Example"],
+            "GC_CNT_GAD_2025": ["Exampleland"],
+            "GC_UCB_YOB _2025": [2020],
+            "GC_UCB_YOD _2025": [2030],
+            "MT_POP_TOT_2015": ["-"],
+            "MT_POP_TOT_2020": ["50,100"],
+            "MT_BUS_TOT_2015": ["       -   "],
+            "MT_BUS_TOT_2020": ["2,500"],
+            "MT_UCA_KM2_2015": [None],
+            "MT_UCA_KM2_2020": [12],
+        }
+    )
+    result = multitemporal_boundary_panel(source)
+    assert result["year"].tolist() == [2020]
+    assert result["population"].tolist() == [50_100]
+    assert result["built_up_area_m2"].tolist() == [2_500]
+    assert result["boundary_mode"].unique().tolist() == ["dynamic"]
+    assert result["quality_controlled_2025"].all()
+    assert result["built_up_area_available"].all()
+
+
+def test_ghsl_multitemporal_panel_flags_uncontrolled_records() -> None:
+    source = pd.DataFrame(
+        {
+            "ID_MTUC_G0": [1],
+            "GC_UCN_MAI_2025": ["Example"],
+            "GC_CNT_GAD_2025": [None],
+            "GC_UCB_YOB _2025": [2025],
+            "GC_UCB_YOD _2025": [2030],
+            "MT_POP_TOT_2025": [50_100],
+            "MT_BUS_TOT_2025": [2_500],
+            "MT_UCA_KM2_2025": [12],
+        }
+    )
+    result = multitemporal_boundary_panel(source)
+    assert result["quality_controlled_2025"].eq(False).all()
+
+
+def test_ghsl_multitemporal_panel_preserves_missing_optional_built_area() -> None:
+    source = pd.DataFrame(
+        {
+            "ID_MTUC_G0": [1],
+            "GC_UCN_MAI_2025": ["Example"],
+            "GC_CNT_GAD_2025": [None],
+            "GC_UCB_YOB _2025": [2025],
+            "GC_UCB_YOD _2025": [2030],
+            "MT_POP_TOT_2025": [50_100],
+            "MT_BUS_TOT_2025": [" - "],
+            "MT_UCA_KM2_2025": [12],
+        }
+    )
+    result = multitemporal_boundary_panel(source)
+    assert result["built_up_area_m2"].isna().all()
+    assert result["built_up_area_available"].eq(False).all()
 
 
 def test_wup_converts_thousands_and_requires_mapped_categories() -> None:
