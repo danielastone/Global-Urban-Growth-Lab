@@ -22,6 +22,7 @@ from urban_growth.forecast import (
     paired_error_comparison,
     rolling_baseline_errors,
     temporal_reversal_diagnostics,
+    two_way_cluster_bootstrap_paired_difference,
 )
 from urban_growth.wup_panel import build_wup_city_year_panel
 
@@ -107,6 +108,21 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_balanced_equal_country_pooled_metrics.csv"),
     )
+    parser.add_argument(
+        "--country-time-bootstrap-output",
+        type=Path,
+        default=Path("outputs/wup_country_time_bootstrap_overall.csv"),
+    )
+    parser.add_argument(
+        "--country-time-size-bootstrap-output",
+        type=Path,
+        default=Path("outputs/wup_country_time_bootstrap_by_size.csv"),
+    )
+    parser.add_argument(
+        "--balanced-country-time-bootstrap-output",
+        type=Path,
+        default=Path("outputs/wup_balanced_country_time_bootstrap_overall.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
@@ -149,6 +165,15 @@ def main() -> None:
     )
     pooled_equal_country = equal_country_forecast_metrics(errors)
     balanced_pooled_equal_country = equal_country_forecast_metrics(balanced_errors)
+    country_time_bootstrap = two_way_cluster_bootstrap_paired_difference(errors)
+    country_time_size_bootstrap = two_way_cluster_bootstrap_paired_difference(
+        errors,
+        model_b="country_mean",
+        group_columns=["size_bin"],
+    )
+    balanced_country_time_bootstrap = two_way_cluster_bootstrap_paired_difference(
+        balanced_errors
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     metrics.to_csv(args.output, index=False)
     args.paired_output.parent.mkdir(parents=True, exist_ok=True)
@@ -183,6 +208,16 @@ def main() -> None:
     balanced_pooled_equal_country.to_csv(
         args.balanced_pooled_equal_country_output, index=False
     )
+    args.country_time_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
+    country_time_bootstrap.to_csv(args.country_time_bootstrap_output, index=False)
+    args.country_time_size_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
+    country_time_size_bootstrap.to_csv(
+        args.country_time_size_bootstrap_output, index=False
+    )
+    args.balanced_country_time_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
+    balanced_country_time_bootstrap.to_csv(
+        args.balanced_country_time_bootstrap_output, index=False
+    )
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
@@ -199,6 +234,9 @@ def main() -> None:
     print(args.balanced_equal_country_output)
     print(args.pooled_equal_country_output)
     print(args.balanced_pooled_equal_country_output)
+    print(args.country_time_bootstrap_output)
+    print(args.country_time_size_bootstrap_output)
+    print(args.balanced_country_time_bootstrap_output)
 
 
 if __name__ == "__main__":

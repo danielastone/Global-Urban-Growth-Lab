@@ -18,6 +18,7 @@ from urban_growth.forecast import (
     rolling_origin_splits,
     score_forecast,
     temporal_reversal_diagnostics,
+    two_way_cluster_bootstrap_paired_difference,
 )
 from urban_growth.io import SourceSchemaError
 
@@ -291,6 +292,28 @@ def test_country_cluster_bootstrap_is_reproducible() -> None:
     pd.testing.assert_frame_equal(first, second)
     assert first.loc[0, "clusters"] == 2
     assert first.loc[0, "observed_mean_difference"] == pytest.approx(0.0)
+
+
+def test_two_way_cluster_bootstrap_resamples_country_and_time() -> None:
+    rows = []
+    for origin in [2000, 2005, 2010]:
+        for city_id, country, difference in [(1, "A", -0.01), (2, "B", 0.02), (3, "C", -0.02)]:
+            for model, error in [
+                ("persistence", 0.05 + difference),
+                ("country_mean_leave_city_out", 0.05),
+            ]:
+                rows.append(
+                    {
+                        "city_id": city_id, "country_code": country, "origin": origin,
+                        "model": model, "absolute_error": error,
+                    }
+                )
+    errors = pd.DataFrame(rows)
+    first = two_way_cluster_bootstrap_paired_difference(errors, repetitions=200, seed=9)
+    second = two_way_cluster_bootstrap_paired_difference(errors, repetitions=200, seed=9)
+    pd.testing.assert_frame_equal(first, second)
+    assert first.loc[0, "countries"] == 3
+    assert first.loc[0, "time_clusters"] == 3
 
 
 def test_temporal_diagnostics_detect_reversal() -> None:

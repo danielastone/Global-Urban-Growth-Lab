@@ -149,22 +149,39 @@ More importantly, the 2000 and 2020 persistence failures span every size bin on 
 
 ## Country-clustered paired uncertainty
 
-The bootstrap resamples whole countries 2,000 times with seed `20260827`, preserving all sampled cities and origins within each national cluster. This materially changes the strength of several point-estimate conclusions.
+The one-way bootstrap resamples whole countries 2,000 times with seed `20260827`, preserving all sampled cities and origins within each national cluster. It accounts for geographic clustering but treats the eight realized forecast origins as fixed. Its pooled intervals must therefore not be interpreted as evidence of stability across time.
 
 Pooled by size, the 95% intervals for the persistence-minus-country MAE difference are:
 
 | Origin population | Difference | 95% country-clustered interval | Conclusion |
 |---|---:|---:|---|
-| 50–150k | −0.151 pp | [−0.244, −0.046] pp | Persistence improvement supported |
+| 50–150k | −0.151 pp | [−0.244, −0.046] pp | Supported conditional on observed periods |
 | 150–250k | −0.025 pp | [−0.113, +0.092] pp | Unresolved |
 | 250–500k | +0.022 pp | [−0.094, +0.130] pp | Unresolved |
 | 500k–1m | −0.120 pp | [−0.254, +0.009] pp | Unresolved at 95% |
-| 1–2m | −0.258 pp | [−0.334, −0.156] pp | Persistence improvement supported |
-| 2m+ | −0.306 pp | [−0.447, −0.207] pp | Persistence improvement supported |
+| 1–2m | −0.258 pp | [−0.334, −0.156] pp | Supported conditional on observed periods |
+| 2m+ | −0.306 pp | [−0.447, −0.207] pp | Supported conditional on observed periods |
 
 The 2020 reversal is robust: all six size-bin intervals are entirely above zero, including [+0.310, +1.010] pp for 50–150k and [+0.059, +0.577] pp for 2m+. By contrast, all six 2000 intervals cross zero. The correct conclusion is therefore not that persistence failed definitively in two periods; it failed decisively in 2020, while the 2000 point estimates are too country-dependent to distinguish from no difference.
 
 Within WUP, this defeats universal H1 because one broad and statistically supported period reversal is enough to violate “consistent across periods.” The fixed-polygon GHSL result does not reproduce that reversal, so the cross-source conclusion is sensitivity, not a settled global failure or success.
+
+## Joint country-and-time uncertainty
+
+The two-way pigeonhole bootstrap independently resamples countries and forecast origins, applying the product of their resampling weights to each country-origin cell. It retains all city errors within a cell and uses the same 2,000 repetitions and seed. This targets sensitivity to both geographic composition and which historical periods were realized.
+
+| Size bin | Difference | Two-way 95% interval |
+|---|---:|---:|
+| 50–150k | −0.151 pp | [−0.426, +0.165] pp |
+| 150–250k | −0.025 pp | [−0.360, +0.344] pp |
+| 250–500k | +0.022 pp | [−0.310, +0.516] pp |
+| 500k–1m | −0.120 pp | [−0.474, +0.308] pp |
+| 1–2m | −0.258 pp | [−0.542, +0.038] pp |
+| 2m+ | −0.306 pp | [−0.686, +0.064] pp |
+
+Every size-bin interval crosses zero. The overall persistence-minus-leave-city-out-country difference is −0.129 pp with interval [−0.406, +0.206] pp. In the balanced cohort it is −0.223 pp with interval [−0.466, +0.060] pp. The data therefore do not support a stable pooled persistence advantage across periods, overall or by size.
+
+This does not overturn the 2020 finding. A single-origin comparison has no across-time sampling dimension; its country-clustered intervals remain the relevant uncertainty calculation and remain adverse to persistence in every size bin. With only eight evaluated origins, the two-way intervals are necessarily coarse and should be treated as a warning against pooled generalization rather than precise time-series inference.
 
 ## Temporal decomposition of the 2020 reversal
 

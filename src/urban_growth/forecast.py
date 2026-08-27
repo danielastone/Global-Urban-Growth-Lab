@@ -688,6 +688,87 @@ def cluster_bootstrap_paired_difference(
     return pd.DataFrame(rows)
 
 
+def two_way_cluster_bootstrap_paired_difference(
+    errors: pd.DataFrame,
+    *,
+    model_a: str = "persistence",
+    model_b: str = "country_mean_leave_city_out",
+    group_columns: list[str] | None = None,
+    country_column: str = "country_code",
+    time_column: str = "origin",
+    repetitions: int = 2_000,
+    seed: int = 20260827,
+    confidence: float = 0.95,
+) -> pd.DataFrame:
+    """Bootstrap paired MAE differences by independently resampling countries and origins."""
+    groups = group_columns or []
+    required = {
+        "city_id", "model", "absolute_error", country_column, time_column, *groups,
+    }
+    require_columns(errors, required, source_name="row-level forecast errors")
+    if repetitions < 100:
+        raise SourceSchemaError("Two-way bootstrap requires at least 100 repetitions")
+    if not 0 < confidence < 1:
+        raise SourceSchemaError("Bootstrap confidence must be between zero and one")
+    subset = errors.loc[errors["model"].isin([model_a, model_b])]
+    index = list(dict.fromkeys(["city_id", country_column, time_column, *groups]))
+    paired = subset.pivot(index=index, columns="model", values="absolute_error").dropna()
+    if model_a not in paired or model_b not in paired:
+        raise SourceSchemaError("Requested models do not have matched row-level errors")
+    paired["difference"] = paired[model_a] - paired[model_b]
+    paired = paired.reset_index()
+    if groups:
+        grouper: str | list[str] = groups[0] if len(groups) == 1 else groups
+        grouped = paired.groupby(grouper, observed=True, sort=True)
+    else:
+        grouped = [((), paired)]
+    alpha = (1 - confidence) / 2
+    rng = np.random.default_rng(seed)
+    rows: list[dict[str, float | int | str]] = []
+    for group_key, group in grouped:
+        countries = sorted(group[country_column].unique())
+        times = sorted(group[time_column].unique())
+        if len(countries) < 2 or len(times) < 2:
+            continue
+        cells = group.groupby([country_column, time_column])["difference"].agg(["sum", "count"])
+        sums = cells["sum"].unstack(fill_value=0).reindex(
+            index=countries, columns=times, fill_value=0
+        ).to_numpy()
+        counts = cells["count"].unstack(fill_value=0).reindex(
+            index=countries, columns=times, fill_value=0
+        ).to_numpy()
+        country_draws = rng.multinomial(
+            len(countries), np.full(len(countries), 1 / len(countries)), size=repetitions
+        )
+        time_draws = rng.multinomial(
+            len(times), np.full(len(times), 1 / len(times)), size=repetitions
+        )
+        sampled_sums = np.einsum("rc,ct,rt->r", country_draws, sums, time_draws)
+        sampled_counts = np.einsum("rc,ct,rt->r", country_draws, counts, time_draws)
+        estimates = sampled_sums / sampled_counts
+        keys = (group_key,) if len(groups) == 1 else group_key
+        row: dict[str, float | int | str] = dict(zip(groups, keys, strict=True))
+        row.update(
+            {
+                "model_a": model_a,
+                "model_b": model_b,
+                "n": len(group),
+                "countries": len(countries),
+                "time_clusters": len(times),
+                "observed_mean_difference": float(group["difference"].mean()),
+                "ci_lower": float(np.quantile(estimates, alpha)),
+                "ci_upper": float(np.quantile(estimates, 1 - alpha)),
+                "probability_model_a_better": float((estimates < 0).mean()),
+                "repetitions": repetitions,
+                "seed": seed,
+            }
+        )
+        rows.append(row)
+    if not rows:
+        raise SourceSchemaError("No groups had enough country and time clusters")
+    return pd.DataFrame(rows)
+
+
 def leave_one_cluster_out_paired_difference(
     errors: pd.DataFrame,
     *,
