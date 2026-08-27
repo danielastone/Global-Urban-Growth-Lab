@@ -16,7 +16,7 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 
 ## Verified WUP F21 schema
 
-The exact F21 workbook was retrieved on 2026-08-27 and registered in `data/manifest.csv`. Its `Data` sheet contains 16,828 unique `City_Code` rows and annual columns from 1975 through 2050. The annual series is threshold-truncated: a cell is blank while the city is below 50,000 and populated once it meets the reporting threshold. In the acquired workbook, 12,138 cities have 2025 values and 3,633 records are absent in 2025 but present by 2050.
+The exact F21 and F25 workbooks were retrieved on 2026-08-27 and registered in `data/manifest.csv`. Each `Data` sheet contains 16,828 unique `City_Code` rows and annual columns from 1975 through 2050. The annual series is threshold-truncated: a cell is blank while the city is below 50,000 and populated once it meets the reporting threshold. In F21, 12,138 cities have 2025 values and 3,633 records are absent in 2025 but present by 2050. F25 has the same non-null counts for the checked years, supporting a direct city-year join.
 
 Consequences:
 

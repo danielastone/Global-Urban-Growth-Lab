@@ -2,7 +2,11 @@ import pandas as pd
 import pytest
 
 from urban_growth.adapters.ghsl_ucdb import indicator_panel
-from urban_growth.adapters.wup import city_population_panel, degree_of_urbanization_panel
+from urban_growth.adapters.wup import (
+    city_area_panel,
+    city_population_panel,
+    degree_of_urbanization_panel,
+)
 from urban_growth.io import SourceSchemaError
 
 
@@ -60,3 +64,10 @@ def test_unregistered_ghsl_boundary_product_fails() -> None:
             indicator_pattern=r"MT_POP_TOT_(?P<year>\d{4})", value_name="population",
             boundary_product="caller_guess",
         )
+
+
+def test_wup_area_panel_drops_threshold_blanks_and_requires_positive_area() -> None:
+    source = pd.DataFrame({"ID": [1], "1975": [None], "2025": [12.0], "2050": [15.0]})
+    result = city_area_panel(source, city_id_column="ID")
+    assert result["year"].tolist() == [2025, 2050]
+    assert result["land_area_km2"].tolist() == [12.0, 15.0]

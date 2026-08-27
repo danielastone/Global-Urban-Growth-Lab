@@ -110,3 +110,50 @@ def read_f21_city_population(path: str) -> pd.DataFrame:
             "LocID", "ISO3_Code", "City_Name", "PWCent_Longitude", "PWCent_Latitude"
         ],
     )
+
+
+def city_area_panel(
+    frame: pd.DataFrame,
+    *,
+    city_id_column: str,
+    year_pattern: str = r"(?P<year>\d{4})",
+    metadata_columns: list[str] | None = None,
+    estimate_end_year: int = 2025,
+) -> pd.DataFrame:
+    """Normalize a threshold-truncated WUP city-area table."""
+    ids = [city_id_column, *(metadata_columns or [])]
+    panel = wide_years_to_long(
+        frame, id_columns=ids, value_pattern=year_pattern, value_name="land_area_km2"
+    ).rename(columns={city_id_column: "city_id"})
+    panel["land_area_km2"] = pd.to_numeric(panel["land_area_km2"], errors="coerce")
+    panel = panel.loc[panel["land_area_km2"].notna()].copy()
+    if panel.empty or (panel["land_area_km2"] <= 0).any():
+        raise SourceSchemaError("WUP land area must be positive when reported")
+    panel["observation_type"] = panel["year"].le(estimate_end_year).map(
+        {True: "estimate", False: "projection"}
+    )
+    spans = panel.groupby("city_id", sort=False)["year"].agg(
+        sample_entry_year="min", sample_exit_year="max"
+    )
+    panel = panel.join(spans, on="city_id")
+    reject_duplicate_keys(panel, ["city_id", "year"], source_name="WUP city land area")
+    return panel
+
+
+def read_f25_city_land_area(path: str) -> pd.DataFrame:
+    """Read and normalize the verified WUP 2025 F25 workbook schema."""
+    from urban_growth.io import read_table, require_columns
+
+    frame = read_table(path, sheet_name="Data")
+    required = {
+        "LocID", "ISO3_Code", "City_Code", "City_Name",
+        "PWCent_Longitude", "PWCent_Latitude", "1975", "2025", "2050",
+    }
+    require_columns(frame, required, source_name="WUP 2025 F25")
+    return city_area_panel(
+        frame,
+        city_id_column="City_Code",
+        metadata_columns=[
+            "LocID", "ISO3_Code", "City_Name", "PWCent_Longitude", "PWCent_Latitude"
+        ],
+    )
