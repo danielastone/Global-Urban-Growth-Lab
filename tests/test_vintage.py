@@ -3,6 +3,7 @@ import pandas as pd
 from urban_growth.vintage import (
     evaluate_wup2018_vintage,
     reciprocal_nearest_crosswalk,
+    vintage_country_weighting_diagnostics,
     vintage_crosswalk_coverage,
 )
 
@@ -88,3 +89,21 @@ def test_vintage_crosswalk_coverage_reports_excluded_universe() -> None:
     ]
     assert excluded.tolist() == [1]
     assert country["primary_matches"].sum() == 1
+
+
+def test_vintage_country_weighting_reports_influence() -> None:
+    vintage = _vintage_panel()
+    current = _current_panel()
+    crosswalk = reciprocal_nearest_crosswalk(vintage, current)
+    summary, country = vintage_country_weighting_diagnostics(
+        vintage, current, crosswalk, repetitions=100
+    )
+    assert summary.loc[0, "cities"] == 2
+    assert summary.loc[0, "countries"] == 2
+    assert (
+        summary.loc[0, "countries_published_projection_wins"]
+        + summary.loc[0, "countries_vintage_persistence_wins"]
+        == 2
+    )
+    assert country["cities"].eq(1).all()
+    assert country["leave_country_out_city_weighted_difference"].notna().all()

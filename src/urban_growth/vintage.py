@@ -136,6 +136,98 @@ def vintage_crosswalk_coverage(
     return summary, country
 
 
+def vintage_country_weighting_diagnostics(
+    vintage_panel: pd.DataFrame,
+    current_panel: pd.DataFrame,
+    crosswalk: pd.DataFrame,
+    *,
+    origin_year: int = 2018,
+    lookback_years: int = 5,
+    horizon_years: int = 5,
+    maximum_distance_km: float = 5.0,
+    repetitions: int = 2_000,
+    seed: int = 20260827,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Compare city and country weighting and audit country influence."""
+    if repetitions <= 0:
+        raise SourceSchemaError("Bootstrap repetitions must be positive")
+    years = [origin_year - lookback_years, origin_year, origin_year + horizon_years]
+    old = vintage_panel.loc[vintage_panel["year"].isin(years)].pivot(
+        index="city_id", columns="year", values="population"
+    )
+    new = current_panel.loc[current_panel["year"].isin(years)].pivot(
+        index="city_id", columns="year", values="population"
+    )
+    old.columns = [f"vintage_{year}" for year in old.columns]
+    new.columns = [f"current_{year}" for year in new.columns]
+    matched = crosswalk.loc[crosswalk["distance_km"].le(maximum_distance_km)].merge(
+        old, left_on="vintage_city_id", right_index=True, validate="one_to_one"
+    ).merge(new, left_on="current_city_id", right_index=True, validate="one_to_one")
+    value_columns = [
+        *(f"vintage_{year}" for year in years), *(f"current_{year}" for year in years)
+    ]
+    matched = matched.dropna(subset=value_columns).copy()
+    if matched.empty or (matched[value_columns] <= 0).any().any():
+        raise SourceSchemaError("Country diagnostics require positive complete populations")
+    actual = (
+        np.log(matched[f"current_{origin_year + horizon_years}"])
+        - np.log(matched[f"current_{origin_year}"])
+    ) / horizon_years
+    projection = (
+        np.log(matched[f"vintage_{origin_year + horizon_years}"])
+        - np.log(matched[f"vintage_{origin_year}"])
+    ) / horizon_years
+    persistence = (
+        np.log(matched[f"vintage_{origin_year}"])
+        - np.log(matched[f"vintage_{origin_year - lookback_years}"])
+    ) / lookback_years
+    matched["published_absolute_error"] = (projection - actual).abs()
+    matched["persistence_absolute_error"] = (persistence - actual).abs()
+    matched["mae_difference"] = (
+        matched["published_absolute_error"] - matched["persistence_absolute_error"]
+    )
+    country = matched.groupby("country_location_id", sort=True).agg(
+        cities=("mae_difference", "size"),
+        published_projection_mae=("published_absolute_error", "mean"),
+        vintage_persistence_mae=("persistence_absolute_error", "mean"),
+        mae_difference=("mae_difference", "mean"),
+    ).reset_index()
+    total_error_difference = matched["mae_difference"].sum()
+    country["leave_country_out_city_weighted_difference"] = (
+        total_error_difference - country["mae_difference"] * country["cities"]
+    ) / (len(matched) - country["cities"])
+    country_means = country["mae_difference"].to_numpy()
+    rng = np.random.default_rng(seed)
+    draws = country_means[
+        rng.integers(0, len(country_means), size=(repetitions, len(country_means)))
+    ].mean(axis=1)
+    summary = pd.DataFrame(
+        [{
+            "origin": origin_year,
+            "target_end": origin_year + horizon_years,
+            "maximum_distance_km": maximum_distance_km,
+            "cities": len(matched),
+            "countries": len(country),
+            "city_weighted_mae_difference": matched["mae_difference"].mean(),
+            "equal_country_mae_difference": country_means.mean(),
+            "equal_country_ci_lower": np.quantile(draws, 0.025),
+            "equal_country_ci_upper": np.quantile(draws, 0.975),
+            "country_median_mae_difference": np.median(country_means),
+            "countries_published_projection_wins": int((country_means < 0).sum()),
+            "countries_vintage_persistence_wins": int((country_means > 0).sum()),
+            "leave_country_out_minimum": country[
+                "leave_country_out_city_weighted_difference"
+            ].min(),
+            "leave_country_out_maximum": country[
+                "leave_country_out_city_weighted_difference"
+            ].max(),
+            "bootstrap_repetitions": repetitions,
+            "bootstrap_seed": seed,
+        }]
+    )
+    return summary, country
+
+
 def evaluate_wup2018_vintage(
     vintage_panel: pd.DataFrame,
     current_panel: pd.DataFrame,

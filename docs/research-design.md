@@ -76,6 +76,12 @@ coordinate matching can select places whose definitions align more closely acros
 revisions. Forecast rankings are conditional on that matched sample unless an
 explicit selection adjustment is separately identified.
 
+Because country sample sizes vary sharply, the vintage comparison must also report
+both city-weighted and equal-country estimands. Country-clustered resampling alone
+does not change the city-weighted point estimate. An equal-country bootstrap instead
+resamples country-level mean error differences, while leave-one-country-out estimates
+test whether any single national sample determines the city-weighted result.
+
 ### Forecast-interval construction
 
 Each five-year forecast interval requires the same city at three exact years: `origin - 5`, `origin`, and `origin + 5`. Recent growth uses only the lag and origin populations; the outcome uses origin and future populations. Density and built-up share are taken at the origin, never from the future row. Structural blanks from the 50,000 threshold remove the interval rather than being interpolated.

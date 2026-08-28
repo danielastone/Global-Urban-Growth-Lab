@@ -14,6 +14,7 @@ from urban_growth.adapters.wup import (
 from urban_growth.vintage import (
     evaluate_wup2018_vintage,
     reciprocal_nearest_crosswalk,
+    vintage_country_weighting_diagnostics,
     vintage_crosswalk_coverage,
 )
 
@@ -44,6 +45,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup2018_vintage_country_coverage.csv"),
     )
+    parser.add_argument(
+        "--country-weighting-output",
+        type=Path,
+        default=Path("outputs/wup2018_vintage_country_weighting.csv"),
+    )
+    parser.add_argument(
+        "--country-influence-output",
+        type=Path,
+        default=Path("outputs/wup2018_vintage_country_influence.csv"),
+    )
     args = parser.parse_args()
     vintage = read_f22_2018_city_population(
         args.raw_dir / "WUP2018-F22-Cities_Over_300K_Annual.xls"
@@ -53,6 +64,9 @@ def main() -> None:
     )
     crosswalk = reciprocal_nearest_crosswalk(vintage, current)
     coverage, country_coverage = vintage_crosswalk_coverage(vintage, crosswalk)
+    country_weighting, country_influence = vintage_country_weighting_diagnostics(
+        vintage, current, crosswalk
+    )
     metric_frames = []
     bootstrap_frames = []
     for horizon in range(1, 6):
@@ -72,6 +86,8 @@ def main() -> None:
         (args.crosswalk_output, crosswalk),
         (args.coverage_output, coverage),
         (args.country_coverage_output, country_coverage),
+        (args.country_weighting_output, country_weighting),
+        (args.country_influence_output, country_influence),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)

@@ -63,6 +63,11 @@ varies substantially by country: the rule excludes 53 of 144 United States, 18 o
 agglomerations. Twelve countries have no primary match. The coverage tables are
 therefore required outputs, not incidental crosswalk diagnostics.
 
+Among the 1,509 fully scored primary matches, country contributions range from one
+city to 381 for China. The workflow therefore publishes a separate equal-country
+estimate and a 141-row leave-one-country-out influence table rather than treating a
+country-clustered interval as a substitute for country-balanced weighting.
+
 Only 304 of those primary matches have 2018 populations agreeing within 10% across
 revisions, and 567 agree within 20%. Population-agreement restrictions use the later
 revision and are therefore sensitivity analyses, not valid 2018 selection rules.

@@ -293,6 +293,15 @@ primary match. The ranking is therefore conditional on geographically matched la
 places and underrepresents several large-country and metropolitan-definition cases.
 It must not be presented as an estimate for all 1,860 F22 agglomerations.
 
+Unequal country sample sizes do not explain the ranking, although they strengthen its
+magnitude. Equal weighting across the 141 matched countries reduces the published
+projection advantage from 0.226 to 0.180 pp; the equal-country bootstrap interval is
+[−0.280, −0.093] pp. The projection has lower country-level MAE in 97 countries and
+persistence in 44. Deleting one country at a time leaves the city-weighted difference
+between −0.234 and −0.212 pp. China contributes 381 of 1,509 scored cities, so the
+city-weighted estimate should not be called globally representative, but neither
+China nor another single country creates the sign of the result.
+
 The more consequential comparison is vintage versus retrospective persistence.
 Recomputing persistence with values revised in 2025 lowers apparent MAE by 0.536 pp.
 That performance was unavailable to a forecaster in 2018. The current-revision
