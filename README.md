@@ -43,10 +43,13 @@ outputs/                generated tables and figures (not hand-edited)
 ## Quick start
 
 ```bash
-python -m venv .venv
-python -m pip install -e ".[dev]"
-pytest
+uv sync --locked --extra dev
+uv run --locked --extra dev pytest
 ```
+
+The committed `uv.lock` resolves exact, cross-platform dependency versions. Use the
+locked commands above for research reproduction; installing directly from the broad
+minimum versions in `pyproject.toml` can produce a different environment.
 
 The package does not download source data automatically. Register every input in `data/manifest.csv`, place permitted local files under `data/raw/`, and build analytical panels through code. The WUP workflow requires F01 plus the F21/F25/F30/F34 city workbooks; F01 provides the national Cities-category comparator.
 
