@@ -1,86 +1,101 @@
 # Global Urban Growth Lab
 
-A reproducible research project examining what predicts city growth and decline across the global urban hierarchy.
+A reproducible research program testing what can—and cannot—forecast population growth across the global urban hierarchy.
 
-## Central question
+## Research question
 
-How much of a city's subsequent population growth can be explained by recent city growth, national demography, urbanization, initial city size, hierarchy position, spatial context, and common shocks?
+How much incremental out-of-sample forecasting value comes from a city's recent growth, initial size, hierarchy position, national demography, urbanization stage, spatial context, and common shocks?
+
+The project separates three claims that are often blurred:
+
+1. **Description:** how growth differs across observed city sizes and ranks.
+2. **Forecasting:** whether information available at time `t` improves predictions after `t`.
+3. **Causation:** whether changing a factor would change subsequent growth.
+
+This repository currently supports the first two as research targets. It does not claim causal identification.
 
 ## Current status
 
-**Research reconstruction in progress.**
+**Baseline sensitivity stage.** WUP and GHSL rolling-origin results are regenerated from registered inputs by committed code. They disagree materially at 2020 when GHSL geography is held to fixed 2025 polygons. The immediate objective is to explain that source/definition sensitivity—not to commercialize an unstable headline.
 
-Substantial exploratory and robustness analysis was completed before this repository was created. The code, frozen inputs, and generated outputs have not yet been committed. Results below are therefore **preliminary research records, not independently reproducible findings**.
+## Primary hypotheses
 
-## Preliminary findings to reproduce
+| ID | Hypothesis | Main test | Falsification condition |
+|---|---|---|---|
+| H1 | Recent city growth contains the strongest city-level predictive signal. | Rolling-origin comparison with national and size-only baselines. | It fails to improve held-out MAE/RMSE consistently across periods and regions. |
+| H2 | Initial size is mainly descriptive after persistence, country-period conditions, and selection are controlled. | Nested models, threshold sensitivity, balanced panels, and survivor reweighting. | Size remains stable, large, and incrementally predictive across designs. |
+| H3 | Smaller cities are harder to forecast, even if their ordinary growth variance is not much larger. | Size-stratified forecast errors with paired bootstrap intervals. | Error distributions are equivalent after coverage and measurement-quality controls. |
+| H4 | National demography and urbanization stage explain more shared variation than broad global shocks. | Country-period, region-period, and global-period decompositions. | Higher aggregation performs as well out of sample and country components add little. |
+| H5 | Borders condition spatial spillovers beyond distance and accessibility. | Matched within/between-border comparisons and border-placebo tests. | Border terms vanish under comparable distance and accessibility specifications. |
 
-- Recent city growth appears to be the strongest forecasting signal.
-- Initial city size is more useful descriptively than causally; part of the observed size effect reflects persistence, sorting, and survivorship.
-- Estimated within-urban growth persistence was approximately **0.72 per five-year period**, corresponding to a rough half-life near **10.7 years**.
-- The cross-sectional size gradient was approximately **+0.19 percentage points of annual growth per population doubling**.
-- After geometry and sample cleaning, ordinary growth volatility appeared nearly size-independent, with an estimated size exponent near **0.03**.
-- Entry into a negative-growth state was more common among smaller cities: approximately **24.5%**, compared with **12.3%** among cities above two million residents.
-- A national urban-hierarchy-depth interaction was estimated near **0.025–0.028** across several specifications.
-- Moderation by the speed of national urbanization was suggestive, not established.
+See [docs/research-design.md](docs/research-design.md) for estimands, validation rules, and test order.
 
-These values are reconstruction targets. They should not be cited as final estimates until this repository reproduces them from documented source data.
-
-## Working interpretation
+## Repository structure
 
 ```text
-city growth
-= national demography
-+ change in national urban share
-+ redistribution within the urban system
-+ city-specific shocks
+data/                   metadata only; raw restricted data stay outside Git
+docs/                   research design, status, and data contract
+src/urban_growth/       reusable panel and forecast utilities
+tests/                  unit tests for leakage-prone transformations
+outputs/                generated tables and figures (not hand-edited)
 ```
 
-> Recent growth carries the most predictive information. City size mainly captures descriptive hierarchy, persistent trajectory, and selection effects rather than a simple causal protection against decline.
+## Quick start
 
-## Evidence base
-
-Prior work used global urban-population sources including World Urbanization Prospects and DEGURBA-related evidence. A full cities/towns/rural stage-variable analysis remains incomplete because required source spreadsheets were unavailable in the earlier workflow.
-
-No restricted or employer-owned data should be committed.
-
-## Reproduction standard
-
-A result is reproduced only when the repository contains:
-
-- a stable source citation and retrieval record;
-- a documented transformation into the analytical panel;
-- code generating the estimate;
-- generated tables or figures;
-- sample and exclusion rules;
-- uncertainty estimates; and
-- a relevant robustness or falsification test.
-
-## Planned structure
-
-```text
-data/
-src/
-notebooks/
-tests/
-outputs/
-docs/
+```bash
+python -m venv .venv
+python -m pip install -e ".[dev]"
+pytest
 ```
 
-Directories will be added only when they contain working artifacts.
+The package does not download source data automatically. Register every input in `data/manifest.csv`, place permitted local files under `data/raw/`, and build analytical panels through code. The WUP workflow requires F01 plus the F21/F25/F30/F34 city workbooks; F01 provides the national Cities-category comparator.
 
-## Immediate sequence
+Inspect the authoritative source catalog and inventory local downloads with:
 
-1. Recover and inventory existing notebooks, scripts, source files, tables, and figures.
-2. Freeze a city-period panel with stable identifiers.
-3. Reproduce persistence and size-gradient estimates.
-4. Reproduce threshold, geometry, bootstrap, and jackknife checks.
-5. Build rolling out-of-sample benchmarks.
-6. Add national, regional, global, and spatial decompositions.
+```bash
+urban-growth-sources list
+urban-growth-sources verify-catalog
+urban-growth-sources inventory data/raw/<file> --source-id <source_id>
+```
 
-## Research discipline
+The catalog is documented in [docs/source-library.md](docs/source-library.md). WUP 2025 supplies demographic city records and national controls, but those results are not geography-controlled. GHSL supplies the fixed-polygon sensitivity layer, not an independent replication. The two sources remain separate analytical panels.
 
-Descriptive association, forecasting performance, and causal identification are separate claims. A predictive coefficient is not evidence that changing city size would change growth.
+Run the registered baseline workflows separately:
 
-## License
+```bash
+python scripts/run_wup_baselines.py
+python scripts/run_wup2018_vintage.py
+python scripts/run_ghsl_fixed_baselines.py
+python scripts/run_ghsl_boundary_sensitivity.py
+python scripts/verify_results.py \
+  results/wup_expected_manifest.csv \
+  results/wup2018_vintage_expected_manifest.csv \
+  results/ghsl_fixed_expected_manifest.csv \
+  results/ghsl_boundary_expected_manifest.csv
+```
 
-No license has been selected. Source datasets retain their original terms and must be reviewed before redistribution.
+The GHSL workflow accepts only the fixed-2025 boundary product and first reconciles it to the quality-controlled 2025 multi-temporal stream. Fixed polygons eliminate changing-boundary arithmetic but introduce a 2025-boundary look-ahead. The result is a retrospective fixed-footprint sensitivity, not historically validated geography or real-time forecasting.
+
+The boundary-sensitivity workflow then restricts fixed and dynamic GHSL streams to identical identifiers, countries, origins and complete forecast rows. Their outcomes remain definition-specific and are never treated as interchangeable ground truth.
+
+Generated CSVs remain outside Git, but the expected file hashes and dimensions are committed under `results/`. Verification therefore detects undocumented changes in default outputs. GitHub Actions validates code and unit tests only because raw source files are not committed; it does not reproduce the empirical tables.
+
+## Minimum analytical panel
+
+One row represents a stable urban unit in one period. Required fields are documented in [docs/data-contract.md](docs/data-contract.md). Growth is calculated as an annualized log difference, and every predictor must be observable no later than the forecast origin.
+
+## Evidence gate
+
+A numerical claim may move from “reconstruction target” to “result” only when the repository contains:
+
+- a versioned source and retrieval record;
+- stable city identifiers and boundary treatment;
+- scripted transformation into the analytical panel;
+- an explicit training and test design;
+- uncertainty that respects country and time dependence;
+- generated output; and
+- at least one serious falsification or sensitivity test.
+
+## Data and licensing
+
+Do not commit restricted, employer-owned, or redistribution-uncertain data. Dataset terms remain controlling. No project-wide license has yet been selected, so reuse rights are not implied.

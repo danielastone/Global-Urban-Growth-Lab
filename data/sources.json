@@ -1,0 +1,231 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-08-27",
+  "sources": [
+    {
+      "source_id": "un_wup_2025_country_degurb",
+      "priority": 1,
+      "status": "core_control",
+      "publisher": "United Nations DESA Population Division",
+      "dataset": "World Urbanization Prospects 2025 Revision - Degree of Urbanization",
+      "release": "2025 Revision",
+      "landing_page": "https://population.un.org/wup/downloads",
+      "documentation_url": "https://population.un.org/wup/methodology",
+      "retrieval": "manual",
+      "formats": ["xlsx", "csv"],
+      "coverage": "Annual population 1950-2050; land and built-up area 1975-2050",
+      "unit": "country or area by internationally harmonized settlement category",
+      "role": "National urbanization-stage controls; not an individual-city panel",
+      "upstream_dependencies": ["ec_ghsl_degurb_r2023a", "un_wpp_2024"],
+      "redistribution": "review_before_commit",
+      "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision, Online Edition.",
+      "notes": "F01-F04 are country/category tables. They cannot support individual-city hypotheses. Register exact downloads rather than assuming legacy table names."
+    },
+    {
+      "source_id": "un_wup_2025_cities",
+      "priority": 1,
+      "status": "core_city",
+      "publisher": "United Nations DESA Population Division",
+      "dataset": "World Urbanization Prospects 2025 Revision - Cities",
+      "release": "2025 Revision",
+      "landing_page": "https://population.un.org/wup/downloads?tab=Cities",
+      "documentation_url": "https://population.un.org/wup/faqs",
+      "retrieval": "manual",
+      "formats": ["xlsx", "csv"],
+      "coverage": "Annual estimates through 2025 and projections through 2050 for more than 12,000 cities with at least 50,000 inhabitants in 2025; area series begin in 1975",
+      "unit": "individual internationally harmonized city or urban settlement",
+      "role": "Primary city-level population, surface-area, density and growth panel",
+      "upstream_dependencies": ["ec_ghsl_degurb_r2023a", "un_wpp_2024"],
+      "redistribution": "review_before_commit",
+      "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2025). World Urbanization Prospects: The 2025 Revision, Online Edition.",
+      "files": [
+        {
+          "table": "F21",
+          "filename": "WUP2025-F21-DEGURBA-Cities_Pop.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F21-DEGURBA-Cities_Pop.xlsx",
+          "measure": "population_thousands"
+        },
+        {
+          "table": "F25",
+          "filename": "WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx",
+          "measure": "land_area_km2"
+        },
+        {
+          "table": "F29",
+          "filename": "WUP2025-F29-DEGURBA-Cities_BU_AREA_km2.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F29-DEGURBA-Cities_BU_AREA_km2.xlsx",
+          "measure": "built_up_area_km2"
+        },
+        {
+          "table": "F30",
+          "filename": "WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx",
+          "measure": "built_up_area_m2_per_capita"
+        },
+        {
+          "table": "F34",
+          "filename": "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx",
+          "measure": "population_density_per_km2"
+        }
+      ],
+      "notes": "F21 contains cities that reach 50,000 during 1975-2050, but annual values are blank while a city is below 50,000. This is time-varying threshold truncation, not a balanced history and not selection only at 2025. Keep estimates and projections distinct."
+    },
+    {
+      "source_id": "un_wup_2018_cities",
+      "priority": 1,
+      "status": "vintage_control",
+      "publisher": "United Nations DESA Population Division",
+      "dataset": "World Urbanization Prospects 2018 Revision - Urban Agglomerations",
+      "release": "2018 Revision",
+      "landing_page": "https://population.un.org/wup/downloads",
+      "documentation_url": "https://population.un.org/wup/publications",
+      "retrieval": "official_archive",
+      "formats": ["zip", "xls"],
+      "coverage": "Annual estimates through 2018 and projections through 2035 for 1,860 urban agglomerations reaching 300,000 inhabitants in 2018",
+      "unit": "urban agglomeration under national definitions",
+      "role": "Vintage-correct large-city forecast benchmark",
+      "upstream_dependencies": [],
+      "redistribution": "CC_BY_3_IGO_not_committed",
+      "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2018). World Urbanization Prospects: The 2018 Revision, Online Edition.",
+      "files": [
+        {
+          "table": "F22",
+          "filename": "WUP2018-F22-Cities_Over_300K_Annual.xls",
+          "archive_url": "https://population.un.org/wup/assets/Download/Archive/WUP2018-Excel-files.zip",
+          "measure": "annual_population_thousands"
+        }
+      ],
+      "notes": "This vintage uses national urban-agglomeration definitions and a 300,000-in-2018 inclusion rule. It is not definition-equivalent to WUP 2025 DEGURBA cities and cannot validate small-city results. Cross-revision comparisons require an audited geographic crosswalk and definition-agreement sensitivities."
+    },
+    {
+      "source_id": "ec_ghsl_ucdb_r2024a_v1_2",
+      "priority": 1,
+      "status": "core_spatial",
+      "publisher": "European Commission Joint Research Centre",
+      "dataset": "GHS Urban Centre Database R2024A",
+      "release": "v1.2; data last updated 2026-05-15",
+      "landing_page": "https://human-settlement.emergency.copernicus.eu/ghs_ucdb_2024.php",
+      "documentation_url": "https://human-settlement.emergency.copernicus.eu/ucdb2024Overview.php",
+      "retrieval": "manual_large_file",
+      "formats": ["csv", "xlsx", "gpkg"],
+      "coverage": "11,422 quality-controlled urban centres; multi-temporal attributes 1975-2030",
+      "unit": "DEGURBA urban centre; fixed-2025 and multi-temporal boundary streams",
+      "role": "Spatial footprint, density, area-change, geometry and boundary sensitivity",
+      "upstream_dependencies": ["ec_ghsl_degurb_r2023a"],
+      "redistribution": "allowed_with_attribution_review_package_terms",
+      "citation": "European Commission, Joint Research Centre. GHS Urban Centre Database 2024, R2024A.",
+      "files": [
+        {
+          "package": "GHS_UCDB_THEME_GHSL_GLOBE_R2024A_V1_2.zip",
+          "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_THEME_GLOBE_R2024A/GHS_UCDB_THEME_GHSL_GLOBE_R2024A/V1-2/GHS_UCDB_THEME_GHSL_GLOBE_R2024A_V1_2.zip",
+          "boundary_semantics": "statistics for all epochs inside the fixed 2025 urban-centre boundary",
+          "measures": ["population", "built_up_area_m2"]
+        },
+        {
+          "package": "GHS_UCDB_MTUC_GLOBE_R2024A_V1_2.zip",
+          "url": "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_MTUC_GLOBE_R2024A/V1-2/GHS_UCDB_MTUC_GLOBE_R2024A_V1_2.zip",
+          "boundary_semantics": "separate multi-temporal boundaries; values are not comparable with the fixed stream except at 2025",
+          "measures": ["population", "built_up_area_m2", "urban_centre_area_km2", "dynamic_geometry"]
+        }
+      ],
+      "notes": "The v1.2 package readme explicitly replaces deprecated v1.1, despite the landing page still showing v1.1. Do not describe UCDB as an independent replication of WUP 2025; both depend on GHSL/DEGURBA. Fixed and dynamic values are different and not comparable except at 2025."
+    },
+    {
+      "source_id": "un_wpp_2024",
+      "priority": 2,
+      "status": "control",
+      "publisher": "United Nations DESA Population Division",
+      "dataset": "World Population Prospects 2024 Revision",
+      "release": "2024 Revision",
+      "landing_page": "https://population.un.org/wpp/Download/Standard/CSV/",
+      "documentation_url": "https://population.un.org/wpp/Methodology/",
+      "retrieval": "manual",
+      "formats": ["csv", "xlsx"],
+      "coverage": "National population estimates and projections",
+      "unit": "country or area",
+      "role": "National demographic controls and forecast baselines",
+      "upstream_dependencies": [],
+      "redistribution": "review_before_commit",
+      "citation": "United Nations, Department of Economic and Social Affairs, Population Division (2024). World Population Prospects 2024.",
+      "notes": "Use vintages available at each historical forecast origin when testing genuine real-time forecasts; the current revision is revised-history evidence."
+    },
+    {
+      "source_id": "oecd_fua",
+      "priority": 3,
+      "status": "mechanism",
+      "publisher": "Organisation for Economic Co-operation and Development",
+      "dataset": "OECD Cities and Functional Urban Areas",
+      "release": "current",
+      "landing_page": "https://www.oecd.org/en/data/datasets/oecd-definition-of-cities-and-functional-urban-areas.html",
+      "documentation_url": "https://www.oecd.org/en/publications/the-eu-oecd-definition-of-a-functional-urban-area_d58cb34d-en.html",
+      "retrieval": "manual_or_sdmx",
+      "formats": ["csv", "shp", "geojson", "sdmx"],
+      "coverage": "OECD FUAs and worldwide estimated FUAs where published",
+      "unit": "urban centre plus commuting zone",
+      "role": "Core-versus-commuting-zone mechanism and accessibility checks",
+      "upstream_dependencies": [],
+      "redistribution": "review_before_commit",
+      "citation": "OECD. Cities and Functional Urban Areas database.",
+      "notes": "Not globally interchangeable with GHSL urban centres; use on its supported sample as a mechanism test."
+    },
+    {
+      "source_id": "worldpop_global2",
+      "priority": 4,
+      "status": "robustness",
+      "publisher": "WorldPop, University of Southampton",
+      "dataset": "Global high-resolution population estimates",
+      "release": "Global 2",
+      "landing_page": "https://hub.worldpop.org/",
+      "documentation_url": "https://www.worldpop.org/choosing-the-right-worldpop-population-data-for-you/",
+      "retrieval": "api_or_manual_large_raster",
+      "formats": ["geotiff"],
+      "coverage": "2015-2030 annual estimates at 100m or 1km",
+      "unit": "grid cell",
+      "role": "High-resolution population-allocation robustness only",
+      "upstream_dependencies": ["un_wpp_2024"],
+      "redistribution": "review_product_license",
+      "citation": "WorldPop, University of Southampton. Global high-resolution population estimates.",
+      "notes": "Top-down estimates are adjusted to national totals and are too short for the primary 1975-forward persistence analysis."
+    },
+    {
+      "source_id": "ec_ghsl_degurb_r2023a",
+      "priority": 2,
+      "status": "upstream_method",
+      "publisher": "European Commission Joint Research Centre",
+      "dataset": "GHS-SMOD Degree of Urbanisation R2023A",
+      "release": "R2023A",
+      "landing_page": "https://human-settlement.emergency.copernicus.eu/ghs_smod2023.php",
+      "documentation_url": "https://human-settlement.emergency.copernicus.eu/documents/GHSL_Data_Package_2023.pdf",
+      "retrieval": "manual_large_raster",
+      "formats": ["geotiff"],
+      "coverage": "Global settlement-model epochs 1975-2030",
+      "unit": "1 km grid cell settlement class",
+      "role": "Upstream DEGURBA delineation dependency for WUP 2025 and UCDB",
+      "upstream_dependencies": [],
+      "redistribution": "allowed_with_attribution_review_package_terms",
+      "citation": "European Commission, Joint Research Centre. GHS-SMOD R2023A.",
+      "notes": "Registering this upstream product makes the WUP/UCDB methodological dependence explicit; it is not automatically required as a local analytical input."
+    },
+    {
+      "source_id": "natural_earth_admin0",
+      "priority": 3,
+      "status": "spatial_control",
+      "publisher": "Natural Earth",
+      "dataset": "Admin 0 - Countries",
+      "release": "pin_on_acquisition",
+      "landing_page": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/",
+      "documentation_url": "https://www.naturalearthdata.com/about/terms-of-use/",
+      "retrieval": "manual",
+      "formats": ["shp", "geojson"],
+      "coverage": "Global country boundaries and island geometries",
+      "unit": "country or mapped sovereignty unit",
+      "role": "Border, island and geographic-boundary tests",
+      "upstream_dependencies": [],
+      "redistribution": "public_domain_verify_exact_release",
+      "citation": "Made with Natural Earth.",
+      "notes": "Political-status and boundary choices must be documented; map geometry is not a migration-policy measure."
+    }
+  ]
+}
