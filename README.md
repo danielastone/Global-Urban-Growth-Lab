@@ -2,6 +2,9 @@
 
 A reproducible research program testing what can—and cannot—forecast population growth across the global urban hierarchy.
 
+For version history and citation metadata, see [CHANGELOG.md](CHANGELOG.md) and
+[CITATION.cff](CITATION.cff).
+
 ## Research question
 
 How much incremental out-of-sample forecasting value comes from a city's recent growth, initial size, hierarchy position, national demography, urbanization stage, spatial context, and common shocks?

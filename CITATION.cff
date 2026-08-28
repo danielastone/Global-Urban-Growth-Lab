@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this software or its documented research results, please cite it as below."
+type: software
+title: "Global Urban Growth Lab"
+version: 0.1.0
+date-released: 2026-08-28
+authors:
+  - family-names: Stone
+    given-names: Daniel
+repository-code: "https://github.com/danielastone/Global-Urban-Growth-Lab"
+url: "https://github.com/danielastone/Global-Urban-Growth-Lab"
+abstract: >-
+  Reproducible Python workflows for testing population-growth forecasts across
+  World Urbanization Prospects city records and Global Human Settlement Layer
+  urban-centre definitions, with explicit vintage, boundary, selection and
+  dependence diagnostics.
+keywords:
+  - urban population
+  - population forecasting
+  - World Urbanization Prospects
+  - Global Human Settlement Layer
+  - reproducible research
