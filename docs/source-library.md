@@ -54,11 +54,20 @@ country, never numeric-code or name equality alone. It finds 1,710 one-to-one pa
 within 10 km, of which 1,509 have complete 2013, 2018 and 2023 populations and lie
 within 5 km.
 
+The 5 km rule is selective. It geographically matches 1,547 of the 1,860 vintage
+agglomerations before later-revision outcome completeness is imposed and excludes
+313. Excluded agglomerations average 2.31 million inhabitants in 2018, compared with
+1.13 million among matches (standardized mean difference −0.41). Coverage also
+varies substantially by country: the rule excludes 53 of 144 United States, 18 of
+31 Philippine, 14 of 25 South Korean, 13 of 33 Indonesian and 8 of 15 South African
+agglomerations. Twelve countries have no primary match. The coverage tables are
+therefore required outputs, not incidental crosswalk diagnostics.
+
 Only 304 of those primary matches have 2018 populations agreeing within 10% across
 revisions, and 567 agree within 20%. Population-agreement restrictions use the later
 revision and are therefore sensitivity analyses, not valid 2018 selection rules.
 This vintage test is informative about large-city revision bias but cannot validate
-any result for cities below 300,000.
+any result for cities below 300,000 or represent the full F22 large-city universe.
 
 ## Verified WUP F21 schema
 

@@ -70,6 +70,72 @@ def reciprocal_nearest_crosswalk(
     return result.sort_values(["country_location_id", "vintage_city_id"]).reset_index(drop=True)
 
 
+def vintage_crosswalk_coverage(
+    vintage_panel: pd.DataFrame,
+    crosswalk: pd.DataFrame,
+    *,
+    primary_distance_km: float = 5.0,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Audit whether reciprocal geographic matching selects the vintage universe."""
+    require_columns(
+        vintage_panel,
+        {"city_id", "country_location_id", "country_name", "year", "population"},
+        source_name="WUP vintage panel",
+    )
+    require_columns(
+        crosswalk,
+        {"vintage_city_id", "distance_km"},
+        source_name="WUP vintage crosswalk",
+    )
+    if primary_distance_km <= 0:
+        raise SourceSchemaError("Primary crosswalk distance must be positive")
+    years = [2013, 2018, 2023]
+    wide = vintage_panel.loc[vintage_panel["year"].isin(years)].pivot(
+        index="city_id", columns="year", values="population"
+    )
+    metadata = vintage_panel[
+        ["city_id", "country_location_id", "country_name"]
+    ].drop_duplicates().set_index("city_id")
+    reject_duplicate_keys(metadata.reset_index(), ["city_id"], source_name="vintage metadata")
+    working = wide.join(metadata).dropna(subset=years)
+    distances = crosswalk.set_index("vintage_city_id")["distance_km"]
+    working["distance_km"] = working.index.map(distances)
+    working["match_status"] = np.select(
+        [
+            working["distance_km"].le(1),
+            working["distance_km"].le(primary_distance_km),
+            working["distance_km"].le(10),
+        ],
+        ["within_1km", "1_to_5km", "5_to_10km"],
+        default="no_reciprocal_match_within_10km",
+    )
+    working["matched_primary"] = working["distance_km"].le(primary_distance_km)
+    working["prior_growth"] = (np.log(working[2018]) - np.log(working[2013])) / 5
+    working["published_projected_growth"] = (
+        np.log(working[2023]) - np.log(working[2018])
+    ) / 5
+    summary = working.groupby("match_status", sort=False).agg(
+        cities=(2018, "size"),
+        countries=("country_location_id", "nunique"),
+        population_2018_mean=(2018, "mean"),
+        population_2018_median=(2018, "median"),
+        population_2018_std=(2018, "std"),
+        prior_growth_mean=("prior_growth", "mean"),
+        prior_growth_std=("prior_growth", "std"),
+        published_projected_growth_mean=("published_projected_growth", "mean"),
+        published_projected_growth_std=("published_projected_growth", "std"),
+    ).reset_index()
+    country = working.groupby(
+        ["country_location_id", "country_name"], sort=True
+    ).agg(
+        vintage_cities=(2018, "size"),
+        primary_matches=("matched_primary", "sum"),
+    ).reset_index()
+    country["excluded_cities"] = country["vintage_cities"] - country["primary_matches"]
+    country["primary_match_rate"] = country["primary_matches"] / country["vintage_cities"]
+    return summary, country
+
+
 def evaluate_wup2018_vintage(
     vintage_panel: pd.DataFrame,
     current_panel: pd.DataFrame,

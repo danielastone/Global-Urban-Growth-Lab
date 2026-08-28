@@ -70,7 +70,11 @@ predictors and 2023 projection come from the archived 2018 edition; the scored t
 comes from WUP 2025 estimates. Because the editions use different urban definitions,
 it is reported only on reciprocal geographic matches and across explicit
 origin-population-agreement sensitivities. It is a large-city forecast-revision test,
-not a clean same-definition validation and not evidence about small cities.
+not a clean same-definition validation and not evidence about small cities. Match
+coverage must be reported by vintage population and country because reciprocal
+coordinate matching can select places whose definitions align more closely across
+revisions. Forecast rankings are conditional on that matched sample unless an
+explicit selection adjustment is separately identified.
 
 ### Forecast-interval construction
 

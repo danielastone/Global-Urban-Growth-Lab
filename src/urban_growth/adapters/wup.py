@@ -118,14 +118,16 @@ def read_f22_2018_city_population(path: str) -> pd.DataFrame:
 
     frame = read_table(path, sheet_name="Data", header=16)
     required = {
-        "Country Code", "City Code", "Urban Agglomeration", "Latitude", "Longitude",
+        "Country Code", "Country or area", "City Code", "Urban Agglomeration",
+        "Latitude", "Longitude",
         1950, 2018, 2035,
     }
     require_columns(frame, required, source_name="WUP 2018 F22")
     panel = wide_years_to_long(
         frame,
         id_columns=[
-            "City Code", "Country Code", "Urban Agglomeration", "Latitude", "Longitude"
+            "City Code", "Country Code", "Country or area", "Urban Agglomeration",
+            "Latitude", "Longitude"
         ],
         value_pattern=r"(?P<year>\d{4})",
         value_name="population",
@@ -133,6 +135,7 @@ def read_f22_2018_city_population(path: str) -> pd.DataFrame:
         columns={
             "City Code": "city_id",
             "Country Code": "country_location_id",
+            "Country or area": "country_name",
             "Urban Agglomeration": "city_name",
             "Latitude": "latitude",
             "Longitude": "longitude",

@@ -1,6 +1,10 @@
 import pandas as pd
 
-from urban_growth.vintage import evaluate_wup2018_vintage, reciprocal_nearest_crosswalk
+from urban_growth.vintage import (
+    evaluate_wup2018_vintage,
+    reciprocal_nearest_crosswalk,
+    vintage_crosswalk_coverage,
+)
 
 
 def _vintage_panel() -> pd.DataFrame:
@@ -11,6 +15,7 @@ def _vintage_panel() -> pd.DataFrame:
                 {
                     "city_id": city_id,
                     "country_location_id": country,
+                    "country_name": f"Country {country}",
                     "city_name": f"Vintage {city_id}",
                     "latitude": latitude,
                     "longitude": 0.0,
@@ -70,3 +75,16 @@ def test_vintage_evaluation_separates_published_and_retrospective_inputs() -> No
     }
     assert bootstrap["distance_threshold_km"].unique().tolist() == [5.0]
     assert bootstrap["clusters"].eq(2).all()
+
+
+def test_vintage_crosswalk_coverage_reports_excluded_universe() -> None:
+    vintage = _vintage_panel()
+    crosswalk = reciprocal_nearest_crosswalk(vintage, _current_panel())
+    crosswalk = crosswalk.loc[crosswalk["vintage_city_id"].eq(1)]
+    summary, country = vintage_crosswalk_coverage(vintage, crosswalk)
+    assert summary["cities"].sum() == 2
+    excluded = summary.loc[
+        summary["match_status"].eq("no_reciprocal_match_within_10km"), "cities"
+    ]
+    assert excluded.tolist() == [1]
+    assert country["primary_matches"].sum() == 1

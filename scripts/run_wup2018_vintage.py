@@ -11,7 +11,11 @@ from urban_growth.adapters.wup import (
     read_f21_city_population,
     read_f22_2018_city_population,
 )
-from urban_growth.vintage import evaluate_wup2018_vintage, reciprocal_nearest_crosswalk
+from urban_growth.vintage import (
+    evaluate_wup2018_vintage,
+    reciprocal_nearest_crosswalk,
+    vintage_crosswalk_coverage,
+)
 
 
 def main() -> None:
@@ -30,6 +34,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup2018_vintage_crosswalk.csv"),
     )
+    parser.add_argument(
+        "--coverage-output",
+        type=Path,
+        default=Path("outputs/wup2018_vintage_match_coverage.csv"),
+    )
+    parser.add_argument(
+        "--country-coverage-output",
+        type=Path,
+        default=Path("outputs/wup2018_vintage_country_coverage.csv"),
+    )
     args = parser.parse_args()
     vintage = read_f22_2018_city_population(
         args.raw_dir / "WUP2018-F22-Cities_Over_300K_Annual.xls"
@@ -38,6 +52,7 @@ def main() -> None:
         args.raw_dir / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx"
     )
     crosswalk = reciprocal_nearest_crosswalk(vintage, current)
+    coverage, country_coverage = vintage_crosswalk_coverage(vintage, crosswalk)
     metric_frames = []
     bootstrap_frames = []
     for horizon in range(1, 6):
@@ -55,6 +70,8 @@ def main() -> None:
         (args.metrics_output, metrics),
         (args.bootstrap_output, bootstrap),
         (args.crosswalk_output, crosswalk),
+        (args.coverage_output, coverage),
+        (args.country_coverage_output, country_coverage),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)

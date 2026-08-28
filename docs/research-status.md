@@ -282,6 +282,17 @@ These are overlapping sensitivity samples, not 12 independent replications. Thei
 value is falsification: neither coordinate radius nor origin-population agreement
 overturns the supported post-2020 ranking or the unresolved pre-2021 ranking.
 
+The matched sample is not representative of the complete vintage universe. Before
+requiring a complete later-revision outcome, the primary 5 km rule matches 1,547 of
+1,860 F22 agglomerations and excludes 313. Included places average 1.13 million
+inhabitants in 2018, versus 2.31 million among exclusions, a standardized mean
+difference of −0.41. Differences in prior and published projected growth are small,
+but country coverage is uneven: 53 United States, 40 Chinese, 24 Indian, 18
+Philippine and 14 South Korean agglomerations are excluded, and 12 countries have no
+primary match. The ranking is therefore conditional on geographically matched large
+places and underrepresents several large-country and metropolitan-definition cases.
+It must not be presented as an estimate for all 1,860 F22 agglomerations.
+
 The more consequential comparison is vintage versus retrospective persistence.
 Recomputing persistence with values revised in 2025 lowers apparent MAE by 0.536 pp.
 That performance was unavailable to a forecaster in 2018. The current-revision
@@ -300,8 +311,8 @@ harmonized DEGURBA cities. Only 304 primary matches agree within 10% at the 2018
 origin. All three predictors are positively biased against the later target, and the
 2018–2023 window includes both definition revisions and the pandemic shock. The
 defensible result is narrower: the official vintage forecast robustly beats vintage
-persistence on matched large places, while revised-history persistence receives a
-large hindsight advantage.
+persistence on the selected matched large-place sample, while revised-history
+persistence receives a large hindsight advantage.
 
 ## Temporal decomposition of the 2020 reversal
 
