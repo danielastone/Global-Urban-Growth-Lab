@@ -82,7 +82,13 @@ Each fixes nominal coverage, minimum calibration rows, minimum prior origins,
 maximum prior origins and grouping before outputs are opened. The recent-window
 variants are sensitivity tests for residual-distribution drift, not alternatives to
 select after comparing coverage. Material disagreement means the expanding
-exchangeability assumption is not credible.
+exchangeability assumption is not credible. Two additional registered sensitivities,
+`overall_90_equal_country_v1` and `size_bin_90_equal_country_v1`, give every
+country equal total weight in the calibration residual distribution. They test
+whether countries with many reported cities determine the radius. These weighted
+empirical quantiles do not receive the ordinary finite-sample conformal rank guarantee
+and are labeled accordingly; they must be compared with, not substituted for, the
+city-weighted policies.
 Registered outputs carry the policy identifier and a prespecification flag. Arbitrary
 groupings produced by the lower-level function are labeled `ad_hoc_unregistered`
 and cannot be presented as confirmatory conditional-coverage tests.
