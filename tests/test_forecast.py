@@ -638,3 +638,34 @@ def test_registered_interval_policy_rejects_analyst_defined_name() -> None:
         registered_sequential_interval_calibration(
             errors, policy_id="post_hoc_underperforming_region"
         )
+
+
+def test_recent_origin_calibration_excludes_stale_residuals() -> None:
+    rows = []
+    for origin, error in [
+        (1990, 9.0),
+        (1995, 8.0),
+        (2000, 0.10),
+        (2005, 0.20),
+        (2010, 0.30),
+        (2015, 0.25),
+    ]:
+        for city_id in range(100):
+            rows.append(
+                {
+                    "origin": origin,
+                    "model": "m",
+                    "country_code": f"C{city_id % 10}",
+                    "error": error,
+                    "absolute_error": error,
+                }
+            )
+    result = registered_sequential_interval_calibration(
+        pd.DataFrame(rows), policy_id="overall_90_recent3_v1"
+    )
+    final = result.loc[result["origin"].eq(2015)].iloc[0]
+    assert final["calibration_origin_start"] == 2000
+    assert final["calibration_origin_end"] == 2010
+    assert final["calibration_origins"] == 3
+    assert final["maximum_calibration_origins"] == 3
+    assert final["interval_radius"] == pytest.approx(0.30)
