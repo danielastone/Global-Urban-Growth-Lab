@@ -111,10 +111,6 @@ def attach_national_city_category_baseline(
     result["national_city_category_recent_growth_inclusive"] = result[
         "national_city_category_recent_growth"
     ]
-    national_origin = result["country_code"].map(
-        national_panel.loc[national_panel["year"].eq(0)]
-        .set_index("country_code")["national_city_category_population"]
-    )
     national_lookup = national_panel.set_index(["country_code", "year"])[
         "national_city_category_population"
     ]
