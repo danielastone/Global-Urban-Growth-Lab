@@ -185,6 +185,12 @@ This does not overturn the 2020 finding. A single-origin comparison has no acros
 
 ## National demographic comparator
 
+**Superseded pending regeneration:** the numerical results immediately below use the
+inclusive F01 national Cities-category comparator and should not be treated as the
+primary national baseline. The corrected workflow now subtracts the focal F21 city
+at both endpoints. New empirical values and expected-output hashes must be generated
+from the registered raw files before this section is updated.
+
 The acquired WUP F01 national control now supplies a baseline that was previously
 missing: each country's observed growth in the harmonized Cities category over the
 five years ending at the forecast origin is carried forward to its sampled cities.

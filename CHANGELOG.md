@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a focal-city-excluded WUP F01 national Cities-category comparator and retain the inclusive version only as a diagnostic.
+
 - Decompose WUP 2018-to-2025 growth-score discrepancies into target and origin revision gaps.
 - Label retrospective persistence as a hindsight diagnostic rather than a like-for-like 2018 benchmark.
 
