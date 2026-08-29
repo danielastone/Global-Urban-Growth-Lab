@@ -113,6 +113,9 @@ def main() -> None:
             registered_sequential_interval_calibration(
                 errors, policy_id="overall_90_recent3_v1"
             ),
+            registered_sequential_interval_calibration(
+                errors, policy_id="overall_90_equal_country_v1"
+            ),
         ],
         ignore_index=True,
     )
@@ -123,6 +126,9 @@ def main() -> None:
             ),
             registered_sequential_interval_calibration(
                 errors, policy_id="size_bin_90_recent3_v1"
+            ),
+            registered_sequential_interval_calibration(
+                errors, policy_id="size_bin_90_equal_country_v1"
             ),
         ],
         ignore_index=True,

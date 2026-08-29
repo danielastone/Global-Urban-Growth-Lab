@@ -669,3 +669,52 @@ def test_recent_origin_calibration_excludes_stale_residuals() -> None:
     assert final["calibration_origins"] == 3
     assert final["maximum_calibration_origins"] == 3
     assert final["interval_radius"] == pytest.approx(0.30)
+
+
+def test_equal_country_calibration_prevents_large_country_dominance() -> None:
+    rows = []
+    for origin in [2000, 2005]:
+        for city_id in range(50):
+            rows.append(
+                {
+                    "origin": origin,
+                    "model": "m",
+                    "country_code": "LARGE",
+                    "error": 0.10,
+                    "absolute_error": 0.10,
+                }
+            )
+        rows.append(
+            {
+                "origin": origin,
+                "model": "m",
+                "country_code": "SMALL",
+                "error": 1.00,
+                "absolute_error": 1.00,
+            }
+        )
+    rows.extend(
+        [
+            {
+                "origin": 2010,
+                "model": "m",
+                "country_code": country,
+                "error": 0.20,
+                "absolute_error": 0.20,
+            }
+            for country in ["LARGE", "SMALL"]
+        ]
+    )
+    errors = pd.DataFrame(rows)
+    city = registered_sequential_interval_calibration(
+        errors, policy_id="overall_90_v1"
+    )
+    country = registered_sequential_interval_calibration(
+        errors, policy_id="overall_90_equal_country_v1"
+    )
+    city_final = city.loc[city["origin"].eq(2010)].iloc[0]
+    country_final = country.loc[country["origin"].eq(2010)].iloc[0]
+    assert city_final["interval_radius"] == pytest.approx(0.10)
+    assert country_final["interval_radius"] == pytest.approx(1.00)
+    assert country_final["calibration_weighting"] == "equal_country"
+    assert not country_final["finite_sample_conformal_rank_applied"]
