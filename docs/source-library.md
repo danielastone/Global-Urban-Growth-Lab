@@ -10,6 +10,7 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 | WUP 2025 country DEGURBA | National control | Cities/towns/rural totals and urbanization stage | Not an individual-city panel |
 | GHS-UCDB R2024A v1.2 | Spatial core | Dynamic footprint, fixed-boundary sensitivity, density, area change | Not independent of WUP/DEGURBA |
 | WPP 2024 | National control | National demographic benchmark | Current-vintage history is not a real-time forecast vintage |
+| MAP accessibility 2015 | Modern validation | Mutually exclusive travel-time rival-mass bands | A 2015 snapshot, not a historical panel |
 | OECD FUA | Mechanism | Urban core versus commuting zone | Restricted country/sample comparability |
 | WorldPop Global 2 | Robustness | Fine-grid population allocation | 2015-2030 is too short for the primary historical design |
 | Natural Earth Admin 0 | Spatial control | Borders and island geometry | Geometry does not measure migration-policy restrictiveness |
