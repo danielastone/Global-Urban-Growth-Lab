@@ -863,7 +863,7 @@ def sequential_interval_calibration(
     """
     groups = group_columns or []
     required = {
-        "origin", "model", "country_code", "absolute_error", *groups,
+        "origin", "model", "country_code", "error", "absolute_error", *groups,
     }
     require_columns(errors, required, source_name="row-level forecast errors")
     if not 0 < miscoverage < 1:
@@ -871,8 +871,8 @@ def sequential_interval_calibration(
     if minimum_calibration_rows < 1 or minimum_calibration_origins < 1:
         raise SourceSchemaError("Calibration minimums must be positive")
     working = errors.copy()
-    if not np.isfinite(working["absolute_error"]).all():
-        raise SourceSchemaError("Interval calibration requires finite absolute errors")
+    if not np.isfinite(working[["error", "absolute_error"]]).all().all():
+        raise SourceSchemaError("Interval calibration requires finite errors")
     keys = [*groups, "model"]
     rows: list[dict[str, float | int | str]] = []
     grouper: str | list[str] = keys[0] if len(keys) == 1 else keys
@@ -898,7 +898,11 @@ def sequential_interval_calibration(
             ordered_errors = np.sort(calibration["absolute_error"].to_numpy())
             radius = float(ordered_errors[conformal_rank - 1])
             covered = test["absolute_error"].le(radius)
+            lower_tail_miss = test["error"].gt(radius)
+            upper_tail_miss = test["error"].lt(-radius)
             country_coverage = covered.groupby(test["country_code"]).mean()
+            country_lower_tail = lower_tail_miss.groupby(test["country_code"]).mean()
+            country_upper_tail = upper_tail_miss.groupby(test["country_code"]).mean()
             row: dict[str, float | int | str] = dict(labels)
             row.update(
                 {
@@ -907,6 +911,17 @@ def sequential_interval_calibration(
                     "empirical_city_coverage": float(covered.mean()),
                     "equal_country_coverage": float(country_coverage.mean()),
                     "coverage_gap": float(covered.mean() - (1 - miscoverage)),
+                    "lower_tail_miss_rate": float(lower_tail_miss.mean()),
+                    "upper_tail_miss_rate": float(upper_tail_miss.mean()),
+                    "tail_miss_imbalance": float(
+                        lower_tail_miss.mean() - upper_tail_miss.mean()
+                    ),
+                    "equal_country_lower_tail_miss_rate": float(
+                        country_lower_tail.mean()
+                    ),
+                    "equal_country_upper_tail_miss_rate": float(
+                        country_upper_tail.mean()
+                    ),
                     "interval_radius": radius,
                     "interval_width": 2 * radius,
                     "test_rows": len(test),
