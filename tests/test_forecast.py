@@ -22,6 +22,7 @@ from urban_growth.forecast import (
     rolling_baseline_errors,
     rolling_origin_splits,
     score_forecast,
+    sequential_interval_calibration,
     temporal_reversal_diagnostics,
     two_way_cluster_bootstrap_paired_difference,
 )
@@ -528,3 +529,46 @@ def test_locked_origin_cannot_enter_development_set() -> None:
         locked_origin_model_evaluation(
             errors, locked_origin=2010, development_origins=[2005, 2010]
         )
+
+
+def test_sequential_intervals_use_only_prior_origins() -> None:
+    errors = pd.DataFrame(
+        {
+            "origin": [2000, 2000, 2005, 2005, 2010, 2010],
+            "model": ["m"] * 6,
+            "country_code": ["A", "B"] * 3,
+            "absolute_error": [0.10, 0.20, 0.20, 0.30, 99.0, 99.0],
+        }
+    )
+    result = sequential_interval_calibration(
+        errors,
+        miscoverage=0.25,
+        minimum_calibration_rows=2,
+        minimum_calibration_origins=1,
+    )
+    at_2005 = result.loc[result["origin"].eq(2005)].iloc[0]
+    assert at_2005["interval_radius"] == pytest.approx(0.20)
+    assert at_2005["calibration_origin_end"] == 2000
+    assert not at_2005["calibration_uses_current_or_future_origin"]
+
+
+def test_sequential_intervals_report_city_and_equal_country_coverage() -> None:
+    errors = pd.DataFrame(
+        {
+            "origin": [2000] * 4 + [2005] * 3,
+            "model": ["m"] * 7,
+            "country_code": ["A", "A", "B", "B", "A", "A", "B"],
+            "absolute_error": [0.10, 0.10, 0.10, 0.10, 0.05, 0.20, 0.20],
+        }
+    )
+    result = sequential_interval_calibration(
+        errors,
+        miscoverage=0.50,
+        minimum_calibration_rows=4,
+        minimum_calibration_origins=1,
+    )
+    row = result.iloc[0]
+    assert row["interval_radius"] == pytest.approx(0.10)
+    assert row["empirical_city_coverage"] == pytest.approx(1 / 3)
+    assert row["equal_country_coverage"] == pytest.approx(0.25)
+    assert row["interval_width"] == pytest.approx(0.20)
