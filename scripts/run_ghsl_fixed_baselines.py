@@ -18,8 +18,8 @@ from urban_growth.forecast import (
     equal_origin_forecast_metrics,
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
+    registered_sequential_interval_calibration,
     rolling_baseline_errors,
-    sequential_interval_calibration,
     temporal_reversal_diagnostics,
 )
 
@@ -103,9 +103,11 @@ def main() -> None:
     errors = rolling_baseline_errors(intervals, origins)
     equal_origin = equal_origin_forecast_metrics(errors)
     equal_country_origin = equal_country_origin_forecast_metrics(errors)
-    interval_calibration = sequential_interval_calibration(errors)
-    interval_calibration_by_size = sequential_interval_calibration(
-        errors, group_columns=["size_bin"]
+    interval_calibration = registered_sequential_interval_calibration(
+        errors, policy_id="overall_90_v1"
+    )
+    interval_calibration_by_size = registered_sequential_interval_calibration(
+        errors, policy_id="size_bin_90_v1"
     )
     temporal = temporal_reversal_diagnostics(intervals)
     gapped_intervals = build_ghsl_fixed_forecast_intervals(

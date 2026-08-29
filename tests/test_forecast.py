@@ -19,6 +19,7 @@ from urban_growth.forecast import (
     locked_origin_model_evaluation,
     matched_boundary_forecast_panels,
     paired_error_comparison,
+    registered_sequential_interval_calibration,
     rolling_baseline_errors,
     rolling_origin_splits,
     score_forecast,
@@ -591,3 +592,40 @@ def test_sequential_interval_uses_exact_conformal_order_statistic() -> None:
     )
     assert result.loc[0, "calibration_order_statistic_rank"] == 3
     assert result.loc[0, "interval_radius"] == pytest.approx(0.30)
+
+
+def test_registered_interval_policy_freezes_strata_and_parameters() -> None:
+    rows = []
+    for origin in [2000, 2005, 2010]:
+        for city_id in range(120):
+            rows.append(
+                {
+                    "origin": origin,
+                    "model": "m",
+                    "country_code": f"C{city_id % 10}",
+                    "size_bin": "50–150k",
+                    "absolute_error": 0.01 + city_id / 100_000,
+                }
+            )
+    result = registered_sequential_interval_calibration(
+        pd.DataFrame(rows), policy_id="size_bin_90_v1"
+    )
+    assert result["calibration_policy_id"].eq("size_bin_90_v1").all()
+    assert result["stratification_prespecified"].all()
+    assert result["nominal_coverage"].eq(0.90).all()
+    assert result["size_bin"].eq("50–150k").all()
+
+
+def test_registered_interval_policy_rejects_analyst_defined_name() -> None:
+    errors = pd.DataFrame(
+        {
+            "origin": [2000],
+            "model": ["m"],
+            "country_code": ["A"],
+            "absolute_error": [0.10],
+        }
+    )
+    with pytest.raises(SourceSchemaError, match="Unknown registered"):
+        registered_sequential_interval_calibration(
+            errors, policy_id="post_hoc_underperforming_region"
+        )

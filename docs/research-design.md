@@ -71,7 +71,12 @@ calibration rows to realize that rank are not reported. Outputs report the chose
 rank, interval radius and width, city-
 weighted realized coverage, equal-country realized coverage, coverage error, and the
 latest calibration origin. Size-stratified tables use only prior errors in the same
-size bin.
+size bin. The executable workflows use two versioned policies:
+`overall_90_v1` and `size_bin_90_v1`, each fixing nominal coverage, minimum
+calibration rows, minimum prior origins and grouping before outputs are opened.
+Registered outputs carry the policy identifier and a prespecification flag. Arbitrary
+groupings produced by the lower-level function are labeled `ad_hoc_unregistered`
+and cannot be presented as confirmatory conditional-coverage tests.
 
 These are retrospective sequential calibration diagnostics, not guaranteed conformal
 prediction intervals. Standard marginal coverage requires exchangeability; repeated
