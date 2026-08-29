@@ -16,6 +16,7 @@ from urban_growth.vintage import (
     reciprocal_nearest_crosswalk,
     vintage_country_weighting_diagnostics,
     vintage_crosswalk_coverage,
+    vintage_revision_decomposition,
 )
 
 
@@ -55,6 +56,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup2018_vintage_country_influence.csv"),
     )
+    parser.add_argument(
+        "--revision-decomposition-output",
+        type=Path,
+        default=Path("outputs/wup2018_vintage_revision_decomposition.csv"),
+    )
+    parser.add_argument(
+        "--revision-decomposition-summary-output",
+        type=Path,
+        default=Path("outputs/wup2018_vintage_revision_decomposition_summary.csv"),
+    )
     args = parser.parse_args()
     vintage = read_f22_2018_city_population(
         args.raw_dir / "WUP2018-F22-Cities_Over_300K_Annual.xls"
@@ -69,6 +80,8 @@ def main() -> None:
     )
     metric_frames = []
     bootstrap_frames = []
+    decomposition_frames = []
+    decomposition_summary_frames = []
     for horizon in range(1, 6):
         horizon_metrics, horizon_bootstrap = evaluate_wup2018_vintage(
             vintage, current, crosswalk, horizon_years=horizon
@@ -76,10 +89,17 @@ def main() -> None:
         horizon_bootstrap.insert(0, "horizon_years", horizon)
         horizon_bootstrap.insert(0, "target_end", 2018 + horizon)
         horizon_bootstrap.insert(0, "origin", 2018)
+        decomposition, decomposition_summary = vintage_revision_decomposition(
+            vintage, current, crosswalk, horizon_years=horizon
+        )
         metric_frames.append(horizon_metrics)
         bootstrap_frames.append(horizon_bootstrap)
+        decomposition_frames.append(decomposition)
+        decomposition_summary_frames.append(decomposition_summary)
     metrics = pd.concat(metric_frames, ignore_index=True)
     bootstrap = pd.concat(bootstrap_frames, ignore_index=True)
+    decomposition = pd.concat(decomposition_frames, ignore_index=True)
+    decomposition_summary = pd.concat(decomposition_summary_frames, ignore_index=True)
     for path, frame in [
         (args.metrics_output, metrics),
         (args.bootstrap_output, bootstrap),
@@ -88,6 +108,8 @@ def main() -> None:
         (args.country_coverage_output, country_coverage),
         (args.country_weighting_output, country_weighting),
         (args.country_influence_output, country_influence),
+        (args.revision_decomposition_output, decomposition),
+        (args.revision_decomposition_summary_output, decomposition_summary),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)

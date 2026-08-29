@@ -5,6 +5,7 @@ from urban_growth.vintage import (
     reciprocal_nearest_crosswalk,
     vintage_country_weighting_diagnostics,
     vintage_crosswalk_coverage,
+    vintage_revision_decomposition,
 )
 
 
@@ -76,6 +77,40 @@ def test_vintage_evaluation_separates_published_and_retrospective_inputs() -> No
     }
     assert bootstrap["distance_threshold_km"].unique().tolist() == [5.0]
     assert bootstrap["clusters"].eq(2).all()
+
+
+def test_vintage_revision_decomposition_closes_identity_without_overclaim() -> None:
+    vintage = _vintage_panel()
+    current = _current_panel()
+    crosswalk = reciprocal_nearest_crosswalk(vintage, current)
+    detail, summary = vintage_revision_decomposition(
+        vintage, current, crosswalk, maximum_distance_km=5.0
+    )
+    assert detail["decomposition_identity_residual"].abs().max() < 1e-12
+    assert summary.loc[0, "identity_residual_max_abs"] < 1e-12
+    assert detail["comparison_status"].eq(
+        "cross_revision_cross_definition_not_clean_forecast_error"
+    ).all()
+    assert summary.loc[0, "target_component_identification"] == (
+        "forecast_error_plus_target_revision_plus_definition_change"
+    )
+
+
+def test_vintage_metrics_label_hindsight_benchmark() -> None:
+    vintage = _vintage_panel()
+    current = _current_panel()
+    crosswalk = reciprocal_nearest_crosswalk(vintage, current)
+    metrics, _ = evaluate_wup2018_vintage(
+        vintage,
+        current,
+        crosswalk,
+        distance_thresholds=(5.0,),
+        population_agreement_thresholds=(None,),
+    )
+    hindsight = metrics.loc[metrics["model"].eq("retrospective_persistence")].iloc[0]
+    assert hindsight["predictor_information_set"] == "revised_2025_hindsight"
+    assert not hindsight["eligible_for_like_for_like_2018_ranking"]
+    assert metrics["target_comparability"].eq("cross_revision_cross_definition").all()
 
 
 def test_vintage_crosswalk_coverage_reports_excluded_universe() -> None:

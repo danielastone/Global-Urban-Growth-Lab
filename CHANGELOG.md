@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Decompose WUP 2018-to-2025 growth-score discrepancies into target and origin revision gaps.
+- Label retrospective persistence as a hindsight diagnostic rather than a like-for-like 2018 benchmark.
+
 ## 0.1.0 — 2026-08-28
 
 First reproducible research-foundation release.
