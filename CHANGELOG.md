@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Adopt the 29 August 2026 locked empirical specification and encode its
+  forecast-origin tier, ILR, census-threshold, accessibility-band, and C1/C2/C3
+  form-timing contracts as tested utilities.
+- Register the Malaria Atlas Project 2015 accessibility layer explicitly as a
+  modern validation snapshot rather than a historical panel.
 - Add equal-origin and equal-country-within-origin forecast estimands to prevent changing temporal coverage from silently determining pooled results.
 
 - Add a focal-city-excluded WUP F01 national Cities-category comparator and retain the inclusive version only as a diagnostic.

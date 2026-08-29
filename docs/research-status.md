@@ -1,5 +1,18 @@
 # Research status
 
+## Specification implementation status — 29 August 2026
+
+The consolidated quality-review specification is now the repository's governing contract.
+Executable utilities enforce forecast-origin-fixed absolute and relative tiers, ordered-tier
+ILR eligibility, open interval-censored WUP-entry delay bounds, comparable-geography census
+cohorts, mutually exclusive modern travel-time bands, and distinct C1/C2/C3 urban-form timing.
+
+This is implementation of design constraints, not completion of the empirical program. The
+finite-T estimator simulation, country census pilots, independent-lineage morphology matrix,
+modern accessibility raster build and national-envelope forecast module remain open gates in
+`docs/locked-specification.md`. No new numerical result or causal claim follows from merging
+the contract code.
+
 ## Evidence state
 
 The source and transformation pipeline is reproducible from registered local files, but all results remain **retrospective current-revision tests**. The WUP and GHSL exercises use different city definitions and must not be pooled. WUP supplies demographic city records without a verified stable-polygon restriction. GHSL supplies a balanced panel calculated inside fixed 2025 polygons, but that definition uses future geographic information and is not vintage-correct. Neither is sufficient for a commercial forecasting claim.

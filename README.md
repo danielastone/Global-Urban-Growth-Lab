@@ -31,7 +31,9 @@ This repository currently supports the first two as research targets. It does no
 | H4 | National demography and urbanization stage explain more shared variation than broad global shocks. | Country-period, region-period, and global-period decompositions. | Higher aggregation performs as well out of sample and country components add little. |
 | H5 | Borders condition spatial spillovers beyond distance and accessibility. | Matched within/between-border comparisons and border-placebo tests. | Border terms vanish under comparable distance and accessibility specifications. |
 
-See [docs/research-design.md](docs/research-design.md) for estimands, validation rules, and test order.
+See [docs/locked-specification.md](docs/locked-specification.md) for the governing empirical
+contract and [docs/research-design.md](docs/research-design.md) for the accumulated estimands,
+validation results, and test order.
 
 ## Repository structure
 

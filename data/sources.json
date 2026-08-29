@@ -152,6 +152,25 @@
       "notes": "Use vintages available at each historical forecast origin when testing genuine real-time forecasts; the current revision is revised-history evidence."
     },
     {
+      "source_id": "map_accessibility_2015",
+      "priority": 3,
+      "status": "modern_validation",
+      "publisher": "Malaria Atlas Project",
+      "dataset": "A global map of travel time to cities to assess inequalities in accessibility in 2015",
+      "release": "2015 nominal year",
+      "landing_page": "https://malariaatlas.org/publication/a-global-map-of-travel-time-to-cities-to-assess-inequalities-in-accessibility-in-2015/",
+      "documentation_url": "https://www.nature.com/articles/nature25181",
+      "retrieval": "manual_large_raster",
+      "formats": ["geotiff"],
+      "coverage": "Global nominal 2015 travel time to cities",
+      "unit": "grid cell",
+      "role": "Modern-period accessibility validation and rival-mass bands",
+      "upstream_dependencies": [],
+      "redistribution": "review_before_commit",
+      "citation": "Weiss et al. (2018). A global map of travel time to cities to assess inequalities in accessibility in 2015. Nature.",
+      "notes": "Snapshot exposure, not a historical friction-surface panel. Do not assign this layer to 1975-2010 origins as if contemporaneous."
+    },
+    {
       "source_id": "oecd_fua",
       "priority": 3,
       "status": "mechanism",
