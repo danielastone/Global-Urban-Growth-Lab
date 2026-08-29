@@ -16,6 +16,7 @@ from urban_growth.forecast import (
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
+    locked_origin_model_evaluation,
     matched_boundary_forecast_panels,
     paired_error_comparison,
     rolling_baseline_errors,
@@ -497,3 +498,33 @@ def test_leave_one_country_out_identifies_influential_cluster() -> None:
     assert result.loc[0, "country_code"] == "A"
     assert result.loc[0, "excluded_mean_difference"] == pytest.approx(-0.03)
     assert result.loc[0, "exclusion_shift"] == pytest.approx(-0.0266666667)
+
+
+def test_locked_origin_selection_does_not_choose_on_locked_outcome() -> None:
+    errors = pd.DataFrame(
+        {
+            "origin": [2000, 2005, 2010] * 2,
+            "model": ["stable"] * 3 + ["shock_winner"] * 3,
+            "absolute_error": [0.10, 0.10, 0.30, 0.20, 0.20, 0.01],
+        }
+    )
+    result = locked_origin_model_evaluation(errors, locked_origin=2010)
+    assert result.loc[0, "selected_model"] == "stable"
+    assert result.loc[0, "hindsight_best_model"] == "shock_winner"
+    assert result.loc[0, "locked_rank"] == 2
+    assert result.loc[0, "selection_regret"] == pytest.approx(0.29)
+    assert result.loc[0, "hindsight_best_is_diagnostic_only"]
+
+
+def test_locked_origin_cannot_enter_development_set() -> None:
+    errors = pd.DataFrame(
+        {
+            "origin": [2005, 2010],
+            "model": ["m", "m"],
+            "absolute_error": [0.10, 0.20],
+        }
+    )
+    with pytest.raises(SourceSchemaError, match="cannot be used"):
+        locked_origin_model_evaluation(
+            errors, locked_origin=2010, development_origins=[2005, 2010]
+        )
