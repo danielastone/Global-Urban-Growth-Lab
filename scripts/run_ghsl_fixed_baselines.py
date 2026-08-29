@@ -19,6 +19,7 @@ from urban_growth.forecast import (
     rolling_baseline_errors,
     temporal_reversal_diagnostics,
 )
+from urban_growth.selection import ghsl_forecast_selection_ledger, selection_summary
 
 
 def main() -> None:
@@ -68,12 +69,27 @@ def main() -> None:
         type=Path,
         default=Path("outputs/ghsl_fixed_hierarchy_model_metrics.csv"),
     )
+    parser.add_argument(
+        "--selection-ledger-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_selection_ledger.csv"),
+    )
+    parser.add_argument(
+        "--selection-summary-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_selection_summary.csv"),
+    )
     args = parser.parse_args()
     fixed = fixed_2025_theme_panel(read_ghsl_theme_csv(str(args.input)))
     dynamic = multitemporal_boundary_panel(read_ghsl_mtuc_csv(str(args.dynamic_input)))
     reconciliation = reconcile_2025_streams(fixed, dynamic)
+    construction_origins = list(range(1980, 2025, 5))
+    selection_ledger = ghsl_forecast_selection_ledger(
+        fixed, construction_origins, boundary_mode="fixed"
+    )
+    selection_audit_summary = selection_summary(selection_ledger)
     intervals = build_ghsl_fixed_forecast_intervals(
-        fixed, list(range(1980, 2025, 5)), reconciliation=reconciliation
+        fixed, construction_origins, reconciliation=reconciliation
     )
     origins = list(range(1985, 2025, 5))
     metrics = evaluate_rolling_baselines(intervals, origins)
@@ -98,6 +114,8 @@ def main() -> None:
         (args.gapped_metrics_output, gapped_metrics),
         (args.gapped_temporal_output, gapped_temporal),
         (args.hierarchy_output, hierarchy),
+        (args.selection_ledger_output, selection_ledger),
+        (args.selection_summary_output, selection_audit_summary),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)

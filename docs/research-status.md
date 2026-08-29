@@ -4,6 +4,20 @@
 
 The source and transformation pipeline is reproducible from registered local files, but all results remain **retrospective current-revision tests**. The WUP and GHSL exercises use different city definitions and must not be pooled. WUP supplies demographic city records without a verified stable-polygon restriction. GHSL supplies a balanced panel calculated inside fixed 2025 polygons, but that definition uses future geographic information and is not vintage-correct. Neither is sufficient for a commercial forecasting claim.
 
+## Sample-selection audit status
+
+The executable workflows now produce source-specific city-origin inclusion ledgers
+and origin-level summaries. They expose threshold blanks, missing analytical
+covariates, projection outcomes, future-projection selection, fixed-2025 future
+geography and dynamic-stream 2025 quality conditioning. No corrected forecast
+estimate has been asserted: the ledgers diagnose how each published result is
+selected, and the next empirical step is to re-estimate prespecified ex-ante
+eligibility cohorts after regenerating the outputs from the registered raw files.
+
+The existing balanced WUP result remains an established-city estimand, not a repair
+for below-threshold missingness. Dynamic GHSL remains a changing-boundary
+sensitivity and cannot replace the fixed-polygon primary analysis.
+
 ## Fixed-2025-boundary sensitivity
 
 The GHSL fixed-boundary workflow uses all 11,422 quality-controlled urban-centre polygons at every five-year epoch. Historical population and built-up values are calculated inside the same 2025 polygon. The executable workflow also reconciles the fixed and multi-temporal products at their common 2025 point before forecasting; mismatched identifiers, countries, population beyond rounding tolerance, built-up area or polygon area fail validation. This validates the common 2025 cross-stream point and fixed-boundary semantics—not the historical accuracy of a 2025 polygon applied backward.
