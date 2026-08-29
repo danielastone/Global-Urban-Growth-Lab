@@ -25,6 +25,7 @@ class ForecastMetrics:
 REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
     "overall_90_v1": {
         "miscoverage": 0.10,
+        "calibration_weighting": "city",
         "minimum_calibration_rows": 100,
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": None,
@@ -32,6 +33,7 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
     },
     "overall_90_recent3_v1": {
         "miscoverage": 0.10,
+        "calibration_weighting": "city",
         "minimum_calibration_rows": 100,
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": 3,
@@ -39,6 +41,7 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
     },
     "size_bin_90_v1": {
         "miscoverage": 0.10,
+        "calibration_weighting": "city",
         "minimum_calibration_rows": 100,
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": None,
@@ -46,9 +49,26 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
     },
     "size_bin_90_recent3_v1": {
         "miscoverage": 0.10,
+        "calibration_weighting": "city",
         "minimum_calibration_rows": 100,
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": 3,
+        "group_columns": ["size_bin"],
+    },
+    "overall_90_equal_country_v1": {
+        "miscoverage": 0.10,
+        "calibration_weighting": "equal_country",
+        "minimum_calibration_rows": 100,
+        "minimum_calibration_origins": 2,
+        "maximum_calibration_origins": None,
+        "group_columns": [],
+    },
+    "size_bin_90_equal_country_v1": {
+        "miscoverage": 0.10,
+        "calibration_weighting": "equal_country",
+        "minimum_calibration_rows": 100,
+        "minimum_calibration_origins": 2,
+        "maximum_calibration_origins": None,
         "group_columns": ["size_bin"],
     },
 }
@@ -867,6 +887,7 @@ def sequential_interval_calibration(
     minimum_calibration_rows: int = 100,
     minimum_calibration_origins: int = 2,
     maximum_calibration_origins: int | None = None,
+    calibration_weighting: str = "city",
     group_columns: list[str] | None = None,
     policy_id: str = "ad_hoc_unregistered",
     stratification_prespecified: bool = False,
@@ -889,6 +910,8 @@ def sequential_interval_calibration(
         raise SourceSchemaError("Calibration minimums must be positive")
     if maximum_calibration_origins is not None and maximum_calibration_origins < 1:
         raise SourceSchemaError("Maximum calibration origins must be positive")
+    if calibration_weighting not in {"city", "equal_country"}:
+        raise SourceSchemaError("Unknown calibration weighting")
     working = errors.copy()
     if not np.isfinite(working[["error", "absolute_error"]]).all().all():
         raise SourceSchemaError("Interval calibration requires finite errors")
@@ -915,13 +938,28 @@ def sequential_interval_calibration(
             test = model_group.loc[model_group["origin"].eq(origin)]
             if test.empty:
                 continue
-            conformal_rank = int(
-                np.ceil((len(calibration) + 1) * (1 - miscoverage))
-            )
-            if conformal_rank > len(calibration):
-                continue
-            ordered_errors = np.sort(calibration["absolute_error"].to_numpy())
-            radius = float(ordered_errors[conformal_rank - 1])
+            conformal_rank: int | None = None
+            if calibration_weighting == "city":
+                conformal_rank = int(
+                    np.ceil((len(calibration) + 1) * (1 - miscoverage))
+                )
+                if conformal_rank > len(calibration):
+                    continue
+                ordered_errors = np.sort(calibration["absolute_error"].to_numpy())
+                radius = float(ordered_errors[conformal_rank - 1])
+            else:
+                country_counts = calibration.groupby("country_code")[
+                    "absolute_error"
+                ].transform("size")
+                country_count = calibration["country_code"].nunique()
+                weights = 1 / (country_count * country_counts)
+                order = np.argsort(calibration["absolute_error"].to_numpy())
+                ordered_errors = calibration["absolute_error"].to_numpy()[order]
+                cumulative_weight = np.cumsum(weights.to_numpy()[order])
+                weighted_index = int(
+                    np.searchsorted(cumulative_weight, 1 - miscoverage, side="left")
+                )
+                radius = float(ordered_errors[min(weighted_index, len(ordered_errors) - 1)])
             covered = test["absolute_error"].le(radius)
             lower_tail_miss = test["error"].gt(radius)
             upper_tail_miss = test["error"].lt(-radius)
@@ -953,6 +991,13 @@ def sequential_interval_calibration(
                     "test_countries": int(test["country_code"].nunique()),
                     "calibration_rows": len(calibration),
                     "calibration_order_statistic_rank": conformal_rank,
+                    "calibration_weighting": calibration_weighting,
+                    "calibration_countries": int(
+                        calibration["country_code"].nunique()
+                    ),
+                    "finite_sample_conformal_rank_applied": (
+                        calibration_weighting == "city"
+                    ),
                     "calibration_origins": int(calibration_origin_count),
                     "calibration_origin_start": int(calibration["origin"].min()),
                     "calibration_origin_end": int(calibration["origin"].max()),
@@ -989,6 +1034,7 @@ def registered_sequential_interval_calibration(
         minimum_calibration_rows=int(policy["minimum_calibration_rows"]),
         minimum_calibration_origins=int(policy["minimum_calibration_origins"]),
         maximum_calibration_origins=policy["maximum_calibration_origins"],
+        calibration_weighting=str(policy["calibration_weighting"]),
         group_columns=list(policy["group_columns"]),
         policy_id=policy_id,
         stratification_prespecified=True,
