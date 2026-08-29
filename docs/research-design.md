@@ -61,6 +61,22 @@ Forecasting does not require causal exogeneity, but interpretation of coefficien
 - Use paired block bootstrap intervals clustered at minimum by country; add time blocks when periods overlap.
 - Use leave-one-country-out and influential-city diagnostics.
 
+### Model selection and the exhausted 2020 holdout
+
+Model comparisons must separate origins used to select a specification from the origin
+used to estimate its final performance. The WUP workflow now selects the lowest-MAE
+candidate using pre-2020 origins and reports its 2020 MAE, rank and regret relative to
+the hindsight-best 2020 model. The hindsight-best model is diagnostic only and cannot
+replace the pre-2020 selection.
+
+This calculation does **not** restore 2020 as a pristine holdout. The project inspected
+2020 repeatedly while developing predictors, comparators and sensitivity tests, so the
+candidate set itself reflects knowledge of that outcome. Report the new table as a
+specification-search audit, not unbiased final generalization error. A defensible final
+performance claim requires freezing the data contract, candidate models, metric and
+weighting rule before evaluating a genuinely untouched later vintage or outcome period.
+Until then, all 2020 superiority claims remain development evidence.
+
 ### Vintage limitation
 
 A chronological holdout within WUP 2025 is **retrospective pseudo-out-of-sample validation**. It does not recreate a forecast made in an earlier year because the 2025 revision incorporates later censuses, revised methods, boundaries and national totals. Use “real-time” or “vintage-correct” only when each training input is drawn from the edition actually available at that forecast origin. Report current-revision holdouts and vintage tests separately.

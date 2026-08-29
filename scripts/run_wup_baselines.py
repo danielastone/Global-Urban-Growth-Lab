@@ -25,6 +25,7 @@ from urban_growth.forecast import (
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
+    locked_origin_model_evaluation,
     paired_error_comparison,
     rolling_baseline_errors,
     temporal_reversal_diagnostics,
@@ -140,6 +141,11 @@ def main() -> None:
         default=Path("outputs/wup_balanced_country_time_bootstrap_overall.csv"),
     )
     parser.add_argument(
+        "--locked-origin-output",
+        type=Path,
+        default=Path("outputs/wup_2020_locked_origin_evaluation.csv"),
+    )
+    parser.add_argument(
         "--aggregation-bootstrap-output",
         type=Path,
         default=Path("outputs/wup_aggregation_bootstrap_by_origin.csv"),
@@ -198,6 +204,7 @@ def main() -> None:
     equal_origin = equal_origin_forecast_metrics(errors)
     equal_country_origin = equal_country_origin_forecast_metrics(errors)
     balanced_pooled_equal_country = equal_country_forecast_metrics(balanced_errors)
+    locked_origin = locked_origin_model_evaluation(errors, locked_origin=2020)
     country_time_bootstrap = two_way_cluster_bootstrap_paired_difference(errors)
     country_time_size_bootstrap = two_way_cluster_bootstrap_paired_difference(
         errors,
@@ -268,6 +275,8 @@ def main() -> None:
     balanced_pooled_equal_country.to_csv(
         args.balanced_pooled_equal_country_output, index=False
     )
+    args.locked_origin_output.parent.mkdir(parents=True, exist_ok=True)
+    locked_origin.to_csv(args.locked_origin_output, index=False)
     args.country_time_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
     country_time_bootstrap.to_csv(args.country_time_bootstrap_output, index=False)
     args.country_time_size_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
@@ -300,6 +309,7 @@ def main() -> None:
     print(args.equal_origin_output)
     print(args.equal_country_origin_output)
     print(args.balanced_pooled_equal_country_output)
+    print(args.locked_origin_output)
     print(args.country_time_bootstrap_output)
     print(args.country_time_size_bootstrap_output)
     print(args.balanced_country_time_bootstrap_output)

@@ -826,6 +826,95 @@ def equal_country_origin_forecast_metrics(
     return result.sort_values(result_keys).reset_index(drop=True)
 
 
+
+def locked_origin_model_evaluation(
+    errors: pd.DataFrame,
+    *,
+    locked_origin: int,
+    development_origins: list[int] | None = None,
+) -> pd.DataFrame:
+    """Select on earlier origins and evaluate once on a declared locked origin.
+
+    The locked-origin best model is reported only as a hindsight diagnostic. It
+    must not replace the model selected from development origins.
+    """
+    required = {"origin", "model", "absolute_error"}
+    require_columns(errors, required, source_name="row-level forecast errors")
+    working = errors.copy()
+    if not np.isfinite(working["absolute_error"]).all():
+        raise SourceSchemaError("Locked-origin evaluation requires finite absolute errors")
+    available = set(working["origin"].unique())
+    if locked_origin not in available:
+        raise SourceSchemaError("Locked origin is absent from forecast errors")
+    if development_origins is None:
+        development = sorted(origin for origin in available if origin < locked_origin)
+    else:
+        if not development_origins or len(set(development_origins)) != len(
+            development_origins
+        ):
+            raise SourceSchemaError("Development origins must be unique and non-empty")
+        development = sorted(development_origins)
+        if locked_origin in development:
+            raise SourceSchemaError("Locked origin cannot be used for model selection")
+        if any(origin >= locked_origin for origin in development):
+            raise SourceSchemaError("Development origins must precede the locked origin")
+        missing = set(development) - available
+        if missing:
+            raise SourceSchemaError("A declared development origin is absent")
+    if not development:
+        raise SourceSchemaError("No development origins precede the locked origin")
+
+    development_rows = working.loc[working["origin"].isin(development)]
+    locked_rows = working.loc[working["origin"].eq(locked_origin)]
+    development_scores = development_rows.groupby("model", observed=True).agg(
+        development_mae=("absolute_error", "mean"),
+        development_n=("absolute_error", "size"),
+        development_origins=("origin", "nunique"),
+    )
+    locked_scores = locked_rows.groupby("model", observed=True).agg(
+        locked_mae=("absolute_error", "mean"),
+        locked_n=("absolute_error", "size"),
+    )
+    common = development_scores.join(locked_scores, how="inner")
+    if common.empty:
+        raise SourceSchemaError("No model is available in both development and locked origins")
+    common = common.reset_index().sort_values(
+        ["development_mae", "model"], kind="stable"
+    )
+    selected = common.iloc[0]
+    locked_order = common.sort_values(["locked_mae", "model"], kind="stable").reset_index(
+        drop=True
+    )
+    locked_order["locked_rank"] = np.arange(1, len(locked_order) + 1)
+    selected_locked_rank = int(
+        locked_order.loc[locked_order["model"].eq(selected["model"]), "locked_rank"].iloc[0]
+    )
+    hindsight_best = locked_order.iloc[0]
+    return pd.DataFrame(
+        [
+            {
+                "locked_origin": locked_origin,
+                "development_origin_start": min(development),
+                "development_origin_end": max(development),
+                "development_origins": int(selected["development_origins"]),
+                "selected_model": selected["model"],
+                "selection_metric": "pooled_city_origin_mae",
+                "development_mae": float(selected["development_mae"]),
+                "development_n": int(selected["development_n"]),
+                "locked_mae": float(selected["locked_mae"]),
+                "locked_n": int(selected["locked_n"]),
+                "locked_rank": selected_locked_rank,
+                "hindsight_best_model": hindsight_best["model"],
+                "hindsight_best_locked_mae": float(hindsight_best["locked_mae"]),
+                "selection_regret": float(
+                    selected["locked_mae"] - hindsight_best["locked_mae"]
+                ),
+                "hindsight_best_is_diagnostic_only": True,
+            }
+        ]
+    )
+
+
 def paired_error_comparison(
     errors: pd.DataFrame,
     *,
