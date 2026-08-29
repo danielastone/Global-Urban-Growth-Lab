@@ -75,9 +75,14 @@ the band), upper-tail misses (actual growth above the band), their imbalance, an
 equal-country tail rates. Size-stratified tables use only prior errors in the same
 size bin. Aggregate coverage is inadequate when misses concentrate directionally:
 such a band can meet its nominal rate while systematically understating decline risk
-or upside growth. The executable workflows use two versioned policies:
-`overall_90_v1` and `size_bin_90_v1`, each fixing nominal coverage, minimum
-calibration rows, minimum prior origins and grouping before outputs are opened.
+or upside growth. The executable workflows report four versioned policies. `overall_90_v1`
+and `size_bin_90_v1` use all prior origins; `overall_90_recent3_v1` and
+`size_bin_90_recent3_v1` retain only the three most recent eligible origins.
+Each fixes nominal coverage, minimum calibration rows, minimum prior origins,
+maximum prior origins and grouping before outputs are opened. The recent-window
+variants are sensitivity tests for residual-distribution drift, not alternatives to
+select after comparing coverage. Material disagreement means the expanding
+exchangeability assumption is not credible.
 Registered outputs carry the policy identifier and a prespecification flag. Arbitrary
 groupings produced by the lower-level function are labeled `ad_hoc_unregistered`
 and cannot be presented as confirmatory conditional-coverage tests.
