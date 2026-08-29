@@ -19,6 +19,7 @@ from urban_growth.forecast import (
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     rolling_baseline_errors,
+    sequential_interval_calibration,
     temporal_reversal_diagnostics,
 )
 
@@ -71,6 +72,16 @@ def main() -> None:
         default=Path("outputs/ghsl_fixed_hierarchy_model_metrics.csv"),
     )
     parser.add_argument(
+        "--interval-calibration-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_sequential_interval_calibration.csv"),
+    )
+    parser.add_argument(
+        "--interval-calibration-by-size-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_sequential_interval_calibration_by_size.csv"),
+    )
+    parser.add_argument(
         "--equal-origin-output",
         type=Path,
         default=Path("outputs/ghsl_fixed_equal_origin_metrics.csv"),
@@ -92,6 +103,10 @@ def main() -> None:
     errors = rolling_baseline_errors(intervals, origins)
     equal_origin = equal_origin_forecast_metrics(errors)
     equal_country_origin = equal_country_origin_forecast_metrics(errors)
+    interval_calibration = sequential_interval_calibration(errors)
+    interval_calibration_by_size = sequential_interval_calibration(
+        errors, group_columns=["size_bin"]
+    )
     temporal = temporal_reversal_diagnostics(intervals)
     gapped_intervals = build_ghsl_fixed_forecast_intervals(
         fixed,
@@ -114,6 +129,8 @@ def main() -> None:
         (args.hierarchy_output, hierarchy),
         (args.equal_origin_output, equal_origin),
         (args.equal_country_origin_output, equal_country_origin),
+        (args.interval_calibration_output, interval_calibration),
+        (args.interval_calibration_by_size_output, interval_calibration_by_size),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)
