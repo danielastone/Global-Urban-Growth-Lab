@@ -872,16 +872,13 @@ def sequential_interval_calibration(
             test = model_group.loc[model_group["origin"].eq(origin)]
             if test.empty:
                 continue
-            quantile_level = min(
-                1.0,
+            conformal_rank = int(
                 np.ceil((len(calibration) + 1) * (1 - miscoverage))
-                / len(calibration),
             )
-            radius = float(
-                np.quantile(
-                    calibration["absolute_error"], quantile_level, method="higher"
-                )
-            )
+            if conformal_rank > len(calibration):
+                continue
+            ordered_errors = np.sort(calibration["absolute_error"].to_numpy())
+            radius = float(ordered_errors[conformal_rank - 1])
             covered = test["absolute_error"].le(radius)
             country_coverage = covered.groupby(test["country_code"]).mean()
             row: dict[str, float | int | str] = dict(labels)
@@ -897,6 +894,7 @@ def sequential_interval_calibration(
                     "test_rows": len(test),
                     "test_countries": int(test["country_code"].nunique()),
                     "calibration_rows": len(calibration),
+                    "calibration_order_statistic_rank": conformal_rank,
                     "calibration_origins": int(calibration_origin_count),
                     "calibration_origin_end": int(calibration["origin"].max()),
                     "calibration_uses_current_or_future_origin": False,
