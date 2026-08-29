@@ -46,11 +46,15 @@ def attach_national_city_category_baseline(
     """Attach pre-origin national Cities-category growth from WUP F01.
 
     This is a revised-history demographic comparator. Both endpoints precede
-    or equal the city forecast origin; no future national value is used.
+    or equal the city forecast origin; no future national value is used. The
+    primary variant subtracts the focal F21 city from both F01 national endpoints.
+    The inclusive variant is retained only to measure mechanical self-inclusion.
     """
     require_columns(
         intervals,
-        {"country_code", "period_start"},
+        {
+            "country_code", "period_start", "population_lag", "population_start",
+        },
         source_name="forecast intervals",
     )
     require_columns(
@@ -104,8 +108,45 @@ def attach_national_city_category_baseline(
         how="left",
         validate="many_to_one",
     )
+    result["national_city_category_recent_growth_inclusive"] = result[
+        "national_city_category_recent_growth"
+    ]
+    national_origin = result["country_code"].map(
+        national_panel.loc[national_panel["year"].eq(0)]
+        .set_index("country_code")["national_city_category_population"]
+    )
+    national_lookup = national_panel.set_index(["country_code", "year"])[
+        "national_city_category_population"
+    ]
+    origin_lookup = pd.MultiIndex.from_frame(
+        result.rename(columns={"period_start": "year"})[["country_code", "year"]]
+    )
+    lag_result = result.assign(year=result["period_start"] - lookback_years)
+    lag_lookup = pd.MultiIndex.from_frame(lag_result[["country_code", "year"]])
+    national_origin = national_lookup.reindex(origin_lookup).to_numpy()
+    national_lag = national_lookup.reindex(lag_lookup).to_numpy()
+    residual_origin = national_origin - result["population_start"].to_numpy()
+    residual_lag = national_lag - result["population_lag"].to_numpy()
+    if (residual_origin <= 0).any() or (residual_lag <= 0).any():
+        raise SourceSchemaError(
+            "Focal city is not a strictly smaller positive component of national Cities totals"
+        )
+    result["national_city_category_recent_growth_leave_city_out"] = (
+        np.log(residual_origin) - np.log(residual_lag)
+    ) / lookback_years
+    result["national_focal_share_origin"] = (
+        result["population_start"].to_numpy() / national_origin
+    )
+    result["national_focal_share_lag"] = (
+        result["population_lag"].to_numpy() / national_lag
+    )
     result["national_baseline_revision_semantics"] = "WUP_2025_revised_history"
     result["national_baseline_uses_future_value"] = False
+    result["national_baseline_focal_city_excluded"] = True
+    result["national_focal_component_membership_assumed"] = True
+    result["national_focal_subtraction_semantics"] = (
+        "F21_city_subtracted_from_F01_Cities_same_revision"
+    )
     return result
 
 
@@ -420,8 +461,13 @@ def baseline_predictions(
     predictions["country_mean"] = test["country_code"].map(country_means).fillna(global_mean)
     national_column = "national_city_category_recent_growth"
     if national_column in test.columns:
-        predictions["national_city_category_persistence"] = pd.to_numeric(
+        predictions["national_city_category_persistence_inclusive"] = pd.to_numeric(
             test[national_column], errors="coerce"
+        )
+    national_loo_column = "national_city_category_recent_growth_leave_city_out"
+    if national_loo_column in test.columns:
+        predictions["national_city_category_persistence_leave_city_out"] = pd.to_numeric(
+            test[national_loo_column], errors="coerce"
         )
     if "city_id" in train.columns and "city_id" in test.columns:
         country_totals = valid_train.groupby("country_code")[outcome_column].agg(["sum", "count"])

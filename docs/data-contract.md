@@ -76,3 +76,18 @@ eligible for a like-for-like 2018 predictor ranking. Persistence recalculated fr
 WUP 2025 is labeled revised_2025_hindsight and is retained only to measure the
 advantage conferred by later revision. No output may label the cross-revision score
 as clean real-time forecast accuracy.
+
+
+## Focal-city exclusion from national Cities-category growth
+
+The primary WUP F01 national comparator subtracts the focal F21 city population from
+both the lag and origin national Cities-category totals before calculating growth.
+The unadjusted national comparator is retained only as a mechanical self-inclusion
+diagnostic. Residual national totals must remain strictly positive or the workflow
+fails.
+
+This subtraction uses F21 and F01 from the same WUP 2025 revision, but direct
+component membership is assumed rather than independently crosswalk-validated.
+Outputs therefore carry national_focal_component_membership_assumed. The diagnostic
+removes arithmetic self-inclusion; it does not create causal exogeneity or make the
+revised history vintage-correct.

@@ -199,7 +199,13 @@ def test_baselines_use_training_country_mean_and_global_fallback() -> None:
 
 def test_national_city_category_baseline_uses_only_pre_origin_values() -> None:
     intervals = pd.DataFrame(
-        {"country_code": ["A"], "period_start": [2020], "future_growth": [0.01]}
+        {
+            "country_code": ["A"],
+            "period_start": [2020],
+            "population_lag": [10.0],
+            "population_start": [20.0],
+            "future_growth": [0.01],
+        }
     )
     national = pd.DataFrame(
         {
@@ -218,10 +224,44 @@ def test_national_city_category_baseline_uses_only_pre_origin_values() -> None:
     assert attached["national_city_category_recent_growth"].iloc[0] == pytest.approx(
         expected
     )
+    expected_loo = (np.log(90.0) - np.log(90.0)) / 5
+    assert attached[
+        "national_city_category_recent_growth_leave_city_out"
+    ].iloc[0] == pytest.approx(expected_loo)
+    assert attached["national_focal_share_lag"].iloc[0] == pytest.approx(0.10)
+    assert attached["national_focal_share_origin"].iloc[0] == pytest.approx(20 / 110)
+    assert attached["national_baseline_focal_city_excluded"].iloc[0]
+    assert attached["national_focal_component_membership_assumed"].iloc[0]
     assert not attached["national_baseline_uses_future_value"].iloc[0]
     assert attached["subregion_id"].tolist() == [10]
     assert attached["region_id"].tolist() == [1]
 
+
+
+
+def test_national_leave_city_out_rejects_invalid_component_subtraction() -> None:
+    intervals = pd.DataFrame(
+        {
+            "country_code": ["A"],
+            "period_start": [2020],
+            "population_lag": [100.0],
+            "population_start": [120.0],
+        }
+    )
+    national = pd.DataFrame(
+        {
+            "country_code": ["A", "A"],
+            "year": [2015, 2020],
+            "national_city_category_population": [100.0, 110.0],
+            "revision_semantics": ["WUP_2025_revised_history"] * 2,
+            "subregion_id": [10] * 2,
+            "subregion_name": ["Example subregion"] * 2,
+            "region_id": [1] * 2,
+            "region_name": ["Example region"] * 2,
+        }
+    )
+    with pytest.raises(SourceSchemaError, match="strictly smaller positive component"):
+        attach_national_city_category_baseline(intervals, national)
 
 def test_baselines_include_attached_national_demographic_comparator() -> None:
     train = pd.DataFrame({"country_code": ["A"], "future_growth": [0.01]})
@@ -230,10 +270,14 @@ def test_baselines_include_attached_national_demographic_comparator() -> None:
             "country_code": ["A"],
             "recent_growth": [0.02],
             "national_city_category_recent_growth": [0.03],
+            "national_city_category_recent_growth_leave_city_out": [0.025],
         }
     )
     result = baseline_predictions(train, test)
-    assert result["national_city_category_persistence"].tolist() == [0.03]
+    assert result["national_city_category_persistence_inclusive"].tolist() == [0.03]
+    assert result[
+        "national_city_category_persistence_leave_city_out"
+    ].tolist() == [0.025]
 
 
 def test_baselines_include_leave_city_out_region_ladder() -> None:
