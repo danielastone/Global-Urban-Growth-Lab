@@ -827,6 +827,92 @@ def equal_country_origin_forecast_metrics(
 
 
 
+
+def sequential_interval_calibration(
+    errors: pd.DataFrame,
+    *,
+    miscoverage: float = 0.10,
+    minimum_calibration_rows: int = 100,
+    minimum_calibration_origins: int = 2,
+    group_columns: list[str] | None = None,
+) -> pd.DataFrame:
+    """Audit symmetric empirical error bands using strictly earlier origins.
+
+    These are sequential retrospective calibration bands. Coverage guarantees
+    still require exchangeability, which temporal drift and clustered cities may
+    violate; the output therefore reports realized coverage rather than claiming
+    distribution-free validity.
+    """
+    groups = group_columns or []
+    required = {
+        "origin", "model", "country_code", "absolute_error", *groups,
+    }
+    require_columns(errors, required, source_name="row-level forecast errors")
+    if not 0 < miscoverage < 1:
+        raise SourceSchemaError("Interval miscoverage must be between zero and one")
+    if minimum_calibration_rows < 1 or minimum_calibration_origins < 1:
+        raise SourceSchemaError("Calibration minimums must be positive")
+    working = errors.copy()
+    if not np.isfinite(working["absolute_error"]).all():
+        raise SourceSchemaError("Interval calibration requires finite absolute errors")
+    keys = [*groups, "model"]
+    rows: list[dict[str, float | int | str]] = []
+    grouper: str | list[str] = keys[0] if len(keys) == 1 else keys
+    for key, model_group in working.groupby(grouper, observed=True, sort=True):
+        key_values = (key,) if len(keys) == 1 else key
+        labels = dict(zip(keys, key_values, strict=True))
+        for origin in sorted(model_group["origin"].unique()):
+            calibration = model_group.loc[model_group["origin"] < origin]
+            calibration_origin_count = calibration["origin"].nunique()
+            if (
+                len(calibration) < minimum_calibration_rows
+                or calibration_origin_count < minimum_calibration_origins
+            ):
+                continue
+            test = model_group.loc[model_group["origin"].eq(origin)]
+            if test.empty:
+                continue
+            quantile_level = min(
+                1.0,
+                np.ceil((len(calibration) + 1) * (1 - miscoverage))
+                / len(calibration),
+            )
+            radius = float(
+                np.quantile(
+                    calibration["absolute_error"], quantile_level, method="higher"
+                )
+            )
+            covered = test["absolute_error"].le(radius)
+            country_coverage = covered.groupby(test["country_code"]).mean()
+            row: dict[str, float | int | str] = dict(labels)
+            row.update(
+                {
+                    "origin": int(origin),
+                    "nominal_coverage": 1 - miscoverage,
+                    "empirical_city_coverage": float(covered.mean()),
+                    "equal_country_coverage": float(country_coverage.mean()),
+                    "coverage_gap": float(covered.mean() - (1 - miscoverage)),
+                    "interval_radius": radius,
+                    "interval_width": 2 * radius,
+                    "test_rows": len(test),
+                    "test_countries": int(test["country_code"].nunique()),
+                    "calibration_rows": len(calibration),
+                    "calibration_origins": int(calibration_origin_count),
+                    "calibration_origin_end": int(calibration["origin"].max()),
+                    "calibration_uses_current_or_future_origin": False,
+                    "interval_semantics": (
+                        "symmetric_pre_origin_empirical_absolute_error_band"
+                    ),
+                }
+            )
+            rows.append(row)
+    if not rows:
+        raise SourceSchemaError("No origin had enough prior errors for interval calibration")
+    return pd.DataFrame(rows).sort_values([*groups, "origin", "model"]).reset_index(
+        drop=True
+    )
+
+
 def locked_origin_model_evaluation(
     errors: pd.DataFrame,
     *,

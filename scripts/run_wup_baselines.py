@@ -28,6 +28,7 @@ from urban_growth.forecast import (
     locked_origin_model_evaluation,
     paired_error_comparison,
     rolling_baseline_errors,
+    sequential_interval_calibration,
     temporal_reversal_diagnostics,
     two_way_cluster_bootstrap_paired_difference,
 )
@@ -146,6 +147,16 @@ def main() -> None:
         default=Path("outputs/wup_balanced_equal_country_pooled_metrics.csv"),
     )
     parser.add_argument(
+        "--interval-calibration-output",
+        type=Path,
+        default=Path("outputs/wup_sequential_interval_calibration.csv"),
+    )
+    parser.add_argument(
+        "--interval-calibration-by-size-output",
+        type=Path,
+        default=Path("outputs/wup_sequential_interval_calibration_by_size.csv"),
+    )
+    parser.add_argument(
         "--country-time-bootstrap-output",
         type=Path,
         default=Path("outputs/wup_country_time_bootstrap_overall.csv"),
@@ -230,6 +241,10 @@ def main() -> None:
     equal_country_origin = equal_country_origin_forecast_metrics(errors)
     balanced_pooled_equal_country = equal_country_forecast_metrics(balanced_errors)
     locked_origin = locked_origin_model_evaluation(errors, locked_origin=2020)
+    interval_calibration = sequential_interval_calibration(errors)
+    interval_calibration_by_size = sequential_interval_calibration(
+        errors, group_columns=["size_bin"]
+    )
     country_time_bootstrap = two_way_cluster_bootstrap_paired_difference(errors)
     country_time_size_bootstrap = two_way_cluster_bootstrap_paired_difference(
         errors,
@@ -308,6 +323,12 @@ def main() -> None:
     )
     args.locked_origin_output.parent.mkdir(parents=True, exist_ok=True)
     locked_origin.to_csv(args.locked_origin_output, index=False)
+    args.interval_calibration_output.parent.mkdir(parents=True, exist_ok=True)
+    interval_calibration.to_csv(args.interval_calibration_output, index=False)
+    args.interval_calibration_by_size_output.parent.mkdir(parents=True, exist_ok=True)
+    interval_calibration_by_size.to_csv(
+        args.interval_calibration_by_size_output, index=False
+    )
     args.country_time_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
     country_time_bootstrap.to_csv(args.country_time_bootstrap_output, index=False)
     args.country_time_size_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
@@ -344,6 +365,8 @@ def main() -> None:
     print(args.equal_country_origin_output)
     print(args.balanced_pooled_equal_country_output)
     print(args.locked_origin_output)
+    print(args.interval_calibration_output)
+    print(args.interval_calibration_by_size_output)
     print(args.country_time_bootstrap_output)
     print(args.country_time_size_bootstrap_output)
     print(args.balanced_country_time_bootstrap_output)

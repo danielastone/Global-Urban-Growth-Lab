@@ -61,6 +61,24 @@ Forecasting does not require causal exogeneity, but interpretation of coefficien
 - Use paired block bootstrap intervals clustered at minimum by country; add time blocks when periods overlap.
 - Use leave-one-country-out and influential-city diagnostics.
 
+### Sequential prediction-interval calibration
+
+Point-error rankings do not establish usable uncertainty. The WUP and fixed-GHSL
+workflows now construct symmetric 90% empirical error bands for each model and
+forecast origin using absolute errors from strictly earlier origins only. The finite-
+sample quantile is rounded upward. Outputs report interval radius and width, city-
+weighted realized coverage, equal-country realized coverage, coverage error, and the
+latest calibration origin. Size-stratified tables use only prior errors in the same
+size bin.
+
+These are retrospective sequential calibration diagnostics, not guaranteed conformal
+prediction intervals. Standard marginal coverage requires exchangeability; repeated
+cities, country clustering, changing samples and temporal shocks violate that premise.
+A band is commercially credible only if coverage remains near nominal across later
+origins, size groups and equal-country summaries. Do not repair undercoverage by
+recalibrating on the origin being evaluated, and do not pool WUP with GHSL to enlarge
+the calibration sample.
+
 ### Model selection and the exhausted 2020 holdout
 
 Model comparisons must separate origins used to select a specification from the origin
