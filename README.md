@@ -84,6 +84,14 @@ The GHSL workflow accepts only the fixed-2025 boundary product and first reconci
 
 The boundary-sensitivity workflow then restricts fixed and dynamic GHSL streams to identical identifiers, countries, origins and complete forecast rows. Their outcomes remain definition-specific and are never treated as interchangeable ground truth.
 
+Each primary workflow also writes a source-specific `*_selection_ledger.csv` and
+`*_selection_summary.csv` before forecast scoring. The ledgers retain excluded
+city-origin rows and machine-readable reasons; WUP threshold and projection
+selection, fixed-GHSL future-reference geography, and dynamic-GHSL 2025 quality
+conditioning are not collapsed into one generic missing-data category. Fixed and
+dynamic streams remain separate, and changing polygons remain a sensitivity rather
+than the primary geographic estimand.
+
 Generated CSVs remain outside Git, but the expected file hashes and dimensions are committed under `results/`. Verification therefore detects undocumented changes in default outputs. GitHub Actions validates code and unit tests only because raw source files are not committed; it does not reproduce the empirical tables.
 
 ## Minimum analytical panel

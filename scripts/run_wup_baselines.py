@@ -28,6 +28,7 @@ from urban_growth.forecast import (
     temporal_reversal_diagnostics,
     two_way_cluster_bootstrap_paired_difference,
 )
+from urban_growth.selection import selection_summary, wup_forecast_selection_ledger
 from urban_growth.wup_panel import build_wup_city_year_panel
 
 
@@ -137,6 +138,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_aggregation_country_time_bootstrap.csv"),
     )
+    parser.add_argument(
+        "--selection-ledger-output",
+        type=Path,
+        default=Path("outputs/wup_selection_ledger.csv"),
+    )
+    parser.add_argument(
+        "--selection-summary-output",
+        type=Path,
+        default=Path("outputs/wup_selection_summary.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     national = read_f01_country_city_population(
@@ -151,7 +162,12 @@ def main() -> None:
         raw / "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx"
     )
     city_year = build_wup_city_year_panel(population, area, built, density)
-    intervals = build_forecast_intervals(city_year, list(range(1980, 2025, 5)))
+    construction_origins = list(range(1980, 2025, 5))
+    selection_ledger = wup_forecast_selection_ledger(
+        population, city_year, construction_origins
+    )
+    selection_audit_summary = selection_summary(selection_ledger)
+    intervals = build_forecast_intervals(city_year, construction_origins)
     intervals = attach_national_city_category_baseline(intervals, national)
     metrics = evaluate_rolling_baselines(intervals, list(range(1985, 2025, 5)))
     errors = rolling_baseline_errors(intervals, list(range(1985, 2025, 5)))
@@ -264,6 +280,10 @@ def main() -> None:
     aggregation_bootstrap.to_csv(args.aggregation_bootstrap_output, index=False)
     args.aggregation_country_time_output.parent.mkdir(parents=True, exist_ok=True)
     aggregation_country_time.to_csv(args.aggregation_country_time_output, index=False)
+    args.selection_ledger_output.parent.mkdir(parents=True, exist_ok=True)
+    selection_ledger.to_csv(args.selection_ledger_output, index=False)
+    args.selection_summary_output.parent.mkdir(parents=True, exist_ok=True)
+    selection_audit_summary.to_csv(args.selection_summary_output, index=False)
     print(args.output)
     print(args.paired_output)
     print(args.bootstrap_output)
@@ -285,6 +305,8 @@ def main() -> None:
     print(args.balanced_country_time_bootstrap_output)
     print(args.aggregation_bootstrap_output)
     print(args.aggregation_country_time_output)
+    print(args.selection_ledger_output)
+    print(args.selection_summary_output)
 
 
 if __name__ == "__main__":

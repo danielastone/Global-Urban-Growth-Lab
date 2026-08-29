@@ -19,6 +19,7 @@ from urban_growth.forecast import (
     matched_boundary_forecast_panels,
     temporal_reversal_diagnostics,
 )
+from urban_growth.selection import ghsl_forecast_selection_ledger, selection_summary
 
 
 def main() -> None:
@@ -43,6 +44,12 @@ def main() -> None:
         fixed, origins, reconciliation=reconciliation
     )
     dynamic_intervals = build_ghsl_dynamic_forecast_intervals(dynamic, origins)
+    fixed_selection = ghsl_forecast_selection_ledger(
+        fixed, origins, boundary_mode="fixed"
+    )
+    dynamic_selection = ghsl_forecast_selection_ledger(
+        dynamic, origins, boundary_mode="dynamic"
+    )
     fixed_matched, dynamic_matched = matched_boundary_forecast_panels(
         fixed_intervals, dynamic_intervals
     )
@@ -63,6 +70,10 @@ def main() -> None:
         "ghsl_boundary_matched_coverage.csv": fixed_matched.groupby("period_start").agg(
             matched_rows=("city_id", "size"), countries=("country_code", "nunique")
         ).reset_index(),
+        "ghsl_boundary_fixed_selection_ledger.csv": fixed_selection,
+        "ghsl_boundary_fixed_selection_summary.csv": selection_summary(fixed_selection),
+        "ghsl_boundary_dynamic_selection_ledger.csv": dynamic_selection,
+        "ghsl_boundary_dynamic_selection_summary.csv": selection_summary(dynamic_selection),
     }
     args.output_dir.mkdir(parents=True, exist_ok=True)
     for name, frame in results.items():

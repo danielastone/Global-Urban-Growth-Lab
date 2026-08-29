@@ -60,3 +60,30 @@ Global, region, subregion, and country historical means are computed only from
 training outcomes. Their leave-city-out versions subtract every prior outcome for
 the focal city before scoring, preventing the aggregation ladder from inheriting a
 mechanical city-history advantage.
+
+## Forecast-sample selection ledger
+
+Every baseline workflow must emit a city-origin ledger before calculating forecast
+metrics. An absent city is an analytical result, not an ignorable missing row. The
+ledger universe is source-specific and the WUP, fixed-GHSL and dynamic-GHSL ledgers
+must never be pooled.
+
+The WUP ledger starts from every city exposed by F21, including records whose first
+nonblank population occurs in the projection period. It separately records exact
+population coverage, stricter F21/F25/F30/F34 analytical coverage, 2025 reference
+eligibility, projection-period presence and whether the outcome is an estimate.
+`future_projection_selected` requires both failure of 2025 reference eligibility
+and a projection-period record; 2025 ineligibility alone is not proof of future
+selection.
+
+The fixed-GHSL ledger identifies its geography as
+`fixed_2025_polygon_using_future_reference`. This is time-stable arithmetic but not
+historically available geography. The dynamic-GHSL ledger is a sensitivity only and
+identifies `conditioned_on_2025_quality`; changing polygons are not part of the
+primary estimand.
+
+Each ledger has one row per source city and declared forecast origin. `included` is
+accompanied by a mutually exclusive `primary_exclusion_reason`, while independent
+flags preserve overlapping selection mechanisms. Summaries use the complete
+source-origin universe as their denominator and report countries as coverage, not
+as a substitute denominator.

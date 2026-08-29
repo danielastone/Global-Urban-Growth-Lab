@@ -105,6 +105,15 @@ Applied to five-year origins from 1980–2020, the exact-year rule yields 72,857
 
 WUP F21 reports blank annual cells while a city is below 50,000. Therefore, WUP alone cannot identify behavior immediately below the threshold. Analyses must report entry cohorts and balanced samples; any regression-discontinuity-style interpretation around 50,000 is invalid without a separate source that observes both sides consistently.
 
+Balanced observation is not a selection correction. Requiring a city at every
+origin conditions on later threshold status and continued traceability. Before any
+balanced-cohort estimate is interpreted, report the city-origin selection ledger
+for the full publisher-exposed universe and separate contemporaneously eligible,
+threshold-entering, projection-selected and analytically incomplete records. Fixed
+GHSL and dynamic GHSL receive separate ledgers: fixed polygons use future 2025
+geography, while dynamic trajectories condition on 2025 quality control and are not
+eligible for the primary geographically stable estimand.
+
 ## Commercial decision rule
 
 Do not market point forecasts for individual small cities from aggregate fit statistics. A viable product requires calibrated prediction intervals, material improvement over public baselines, stable performance across geographies, and evidence that the target customer acts differently because of the forecast. Municipal financing applications may value risk bands and scenario diagnostics more than a single growth estimate.

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Add source-specific WUP and GHSL city-origin sample-selection ledgers.
+- Record threshold, projection, analytical-coverage, future-reference polygon and
+  2025 quality-conditioning flags before forecast scoring.
+- Keep fixed and changing boundary streams separate in both detailed and summary
+  selection outputs.
+
 ## 0.1.0 — 2026-08-28
 
 First reproducible research-foundation release.
