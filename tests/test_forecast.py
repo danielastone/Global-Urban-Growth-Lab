@@ -542,7 +542,7 @@ def test_sequential_intervals_use_only_prior_origins() -> None:
     )
     result = sequential_interval_calibration(
         errors,
-        miscoverage=0.25,
+        miscoverage=0.50,
         minimum_calibration_rows=2,
         minimum_calibration_origins=1,
     )
@@ -572,3 +572,22 @@ def test_sequential_intervals_report_city_and_equal_country_coverage() -> None:
     assert row["empirical_city_coverage"] == pytest.approx(1 / 3)
     assert row["equal_country_coverage"] == pytest.approx(0.25)
     assert row["interval_width"] == pytest.approx(0.20)
+
+
+def test_sequential_interval_uses_exact_conformal_order_statistic() -> None:
+    errors = pd.DataFrame(
+        {
+            "origin": [2000] * 4 + [2005],
+            "model": ["m"] * 5,
+            "country_code": ["A", "B", "C", "D", "A"],
+            "absolute_error": [0.10, 0.20, 0.30, 0.40, 0.25],
+        }
+    )
+    result = sequential_interval_calibration(
+        errors,
+        miscoverage=0.50,
+        minimum_calibration_rows=4,
+        minimum_calibration_origins=1,
+    )
+    assert result.loc[0, "calibration_order_statistic_rank"] == 3
+    assert result.loc[0, "interval_radius"] == pytest.approx(0.30)

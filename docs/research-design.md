@@ -65,8 +65,10 @@ Forecasting does not require causal exogeneity, but interpretation of coefficien
 
 Point-error rankings do not establish usable uncertainty. The WUP and fixed-GHSL
 workflows now construct symmetric 90% empirical error bands for each model and
-forecast origin using absolute errors from strictly earlier origins only. The finite-
-sample quantile is rounded upward. Outputs report interval radius and width, city-
+forecast origin using absolute errors from strictly earlier origins only. The radius is the exact
+order statistic at rank \(\lceil(n+1)(1-\alpha)\rceil\); origins with too few
+calibration rows to realize that rank are not reported. Outputs report the chosen
+rank, interval radius and width, city-
 weighted realized coverage, equal-country realized coverage, coverage error, and the
 latest calibration origin. Size-stratified tables use only prior errors in the same
 size bin.
