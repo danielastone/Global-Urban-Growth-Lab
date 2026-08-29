@@ -27,12 +27,28 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
         "miscoverage": 0.10,
         "minimum_calibration_rows": 100,
         "minimum_calibration_origins": 2,
+        "maximum_calibration_origins": None,
+        "group_columns": [],
+    },
+    "overall_90_recent3_v1": {
+        "miscoverage": 0.10,
+        "minimum_calibration_rows": 100,
+        "minimum_calibration_origins": 2,
+        "maximum_calibration_origins": 3,
         "group_columns": [],
     },
     "size_bin_90_v1": {
         "miscoverage": 0.10,
         "minimum_calibration_rows": 100,
         "minimum_calibration_origins": 2,
+        "maximum_calibration_origins": None,
+        "group_columns": ["size_bin"],
+    },
+    "size_bin_90_recent3_v1": {
+        "miscoverage": 0.10,
+        "minimum_calibration_rows": 100,
+        "minimum_calibration_origins": 2,
+        "maximum_calibration_origins": 3,
         "group_columns": ["size_bin"],
     },
 }
@@ -850,6 +866,7 @@ def sequential_interval_calibration(
     miscoverage: float = 0.10,
     minimum_calibration_rows: int = 100,
     minimum_calibration_origins: int = 2,
+    maximum_calibration_origins: int | None = None,
     group_columns: list[str] | None = None,
     policy_id: str = "ad_hoc_unregistered",
     stratification_prespecified: bool = False,
@@ -870,6 +887,8 @@ def sequential_interval_calibration(
         raise SourceSchemaError("Interval miscoverage must be between zero and one")
     if minimum_calibration_rows < 1 or minimum_calibration_origins < 1:
         raise SourceSchemaError("Calibration minimums must be positive")
+    if maximum_calibration_origins is not None and maximum_calibration_origins < 1:
+        raise SourceSchemaError("Maximum calibration origins must be positive")
     working = errors.copy()
     if not np.isfinite(working[["error", "absolute_error"]]).all().all():
         raise SourceSchemaError("Interval calibration requires finite errors")
@@ -881,6 +900,12 @@ def sequential_interval_calibration(
         labels = dict(zip(keys, key_values, strict=True))
         for origin in sorted(model_group["origin"].unique()):
             calibration = model_group.loc[model_group["origin"] < origin]
+            if maximum_calibration_origins is not None:
+                eligible_origins = sorted(calibration["origin"].unique())
+                retained_origins = eligible_origins[-maximum_calibration_origins:]
+                calibration = calibration.loc[
+                    calibration["origin"].isin(retained_origins)
+                ]
             calibration_origin_count = calibration["origin"].nunique()
             if (
                 len(calibration) < minimum_calibration_rows
@@ -929,7 +954,9 @@ def sequential_interval_calibration(
                     "calibration_rows": len(calibration),
                     "calibration_order_statistic_rank": conformal_rank,
                     "calibration_origins": int(calibration_origin_count),
+                    "calibration_origin_start": int(calibration["origin"].min()),
                     "calibration_origin_end": int(calibration["origin"].max()),
+                    "maximum_calibration_origins": maximum_calibration_origins,
                     "calibration_uses_current_or_future_origin": False,
                     "interval_semantics": (
                         "symmetric_pre_origin_empirical_absolute_error_band"
@@ -961,6 +988,7 @@ def registered_sequential_interval_calibration(
         miscoverage=float(policy["miscoverage"]),
         minimum_calibration_rows=int(policy["minimum_calibration_rows"]),
         minimum_calibration_origins=int(policy["minimum_calibration_origins"]),
+        maximum_calibration_origins=policy["maximum_calibration_origins"],
         group_columns=list(policy["group_columns"]),
         policy_id=policy_id,
         stratification_prespecified=True,

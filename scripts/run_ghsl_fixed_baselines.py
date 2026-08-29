@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+import pandas as pd
+
 from urban_growth.adapters.ghsl_ucdb import (
     fixed_2025_theme_panel,
     multitemporal_boundary_panel,
@@ -103,11 +105,27 @@ def main() -> None:
     errors = rolling_baseline_errors(intervals, origins)
     equal_origin = equal_origin_forecast_metrics(errors)
     equal_country_origin = equal_country_origin_forecast_metrics(errors)
-    interval_calibration = registered_sequential_interval_calibration(
-        errors, policy_id="overall_90_v1"
+    interval_calibration = pd.concat(
+        [
+            registered_sequential_interval_calibration(
+                errors, policy_id="overall_90_v1"
+            ),
+            registered_sequential_interval_calibration(
+                errors, policy_id="overall_90_recent3_v1"
+            ),
+        ],
+        ignore_index=True,
     )
-    interval_calibration_by_size = registered_sequential_interval_calibration(
-        errors, policy_id="size_bin_90_v1"
+    interval_calibration_by_size = pd.concat(
+        [
+            registered_sequential_interval_calibration(
+                errors, policy_id="size_bin_90_v1"
+            ),
+            registered_sequential_interval_calibration(
+                errors, policy_id="size_bin_90_recent3_v1"
+            ),
+        ],
+        ignore_index=True,
     )
     temporal = temporal_reversal_diagnostics(intervals)
     gapped_intervals = build_ghsl_fixed_forecast_intervals(

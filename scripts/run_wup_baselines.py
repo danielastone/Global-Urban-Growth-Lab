@@ -241,11 +241,27 @@ def main() -> None:
     equal_country_origin = equal_country_origin_forecast_metrics(errors)
     balanced_pooled_equal_country = equal_country_forecast_metrics(balanced_errors)
     locked_origin = locked_origin_model_evaluation(errors, locked_origin=2020)
-    interval_calibration = registered_sequential_interval_calibration(
-        errors, policy_id="overall_90_v1"
+    interval_calibration = pd.concat(
+        [
+            registered_sequential_interval_calibration(
+                errors, policy_id="overall_90_v1"
+            ),
+            registered_sequential_interval_calibration(
+                errors, policy_id="overall_90_recent3_v1"
+            ),
+        ],
+        ignore_index=True,
     )
-    interval_calibration_by_size = registered_sequential_interval_calibration(
-        errors, policy_id="size_bin_90_v1"
+    interval_calibration_by_size = pd.concat(
+        [
+            registered_sequential_interval_calibration(
+                errors, policy_id="size_bin_90_v1"
+            ),
+            registered_sequential_interval_calibration(
+                errors, policy_id="size_bin_90_recent3_v1"
+            ),
+        ],
+        ignore_index=True,
     )
     country_time_bootstrap = two_way_cluster_bootstrap_paired_difference(errors)
     country_time_size_bootstrap = two_way_cluster_bootstrap_paired_difference(
