@@ -119,6 +119,17 @@ Applied to five-year origins from 1980–2020, the exact-year rule yields 72,857
 | Spatial dependence | Compare country, region, distance, accessibility, border, and island specifications. |
 | COVID shock | Prespecify pre-COVID, shock, and post-shock evaluations. |
 
+The executable WUP selection ledger now separates late entry from outcome
+attrition. Outcome attrition is defined as a city with population observed at the
+forecast origin but missing at the required estimate outcome year. Its rate is reported
+against all origin-observed cities, rather than only against complete forecast rows.
+This missingness is plausibly outcome-dependent near the publication threshold, so
+complete-case accuracy must be described as conditional on remaining observable.
+Neither balanced cohorts nor equal weighting identify the errors of cities that
+disappear. The ledger also cannot distinguish genuine decline below 50,000 from a
+definition change or other publisher removal; those mechanisms require external
+stable-polygon population data.
+
 WUP F21 reports blank annual cells while a city is below 50,000. Therefore, WUP alone cannot identify behavior immediately below the threshold. Analyses must report entry cohorts and balanced samples; any regression-discontinuity-style interpretation around 50,000 is invalid without a separate source that observes both sides consistently.
 
 ## Commercial decision rule
