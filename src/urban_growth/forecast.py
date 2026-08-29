@@ -22,6 +22,22 @@ class ForecastMetrics:
     directional_accuracy: float
 
 
+REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
+    "overall_90_v1": {
+        "miscoverage": 0.10,
+        "minimum_calibration_rows": 100,
+        "minimum_calibration_origins": 2,
+        "group_columns": [],
+    },
+    "size_bin_90_v1": {
+        "miscoverage": 0.10,
+        "minimum_calibration_rows": 100,
+        "minimum_calibration_origins": 2,
+        "group_columns": ["size_bin"],
+    },
+}
+
+
 def rolling_origin_splits(
     panel: pd.DataFrame,
     origins: list[int],
@@ -835,6 +851,8 @@ def sequential_interval_calibration(
     minimum_calibration_rows: int = 100,
     minimum_calibration_origins: int = 2,
     group_columns: list[str] | None = None,
+    policy_id: str = "ad_hoc_unregistered",
+    stratification_prespecified: bool = False,
 ) -> pd.DataFrame:
     """Audit symmetric empirical error bands using strictly earlier origins.
 
@@ -901,6 +919,8 @@ def sequential_interval_calibration(
                     "interval_semantics": (
                         "symmetric_pre_origin_empirical_absolute_error_band"
                     ),
+                    "calibration_policy_id": policy_id,
+                    "stratification_prespecified": stratification_prespecified,
                 }
             )
             rows.append(row)
@@ -908,6 +928,27 @@ def sequential_interval_calibration(
         raise SourceSchemaError("No origin had enough prior errors for interval calibration")
     return pd.DataFrame(rows).sort_values([*groups, "origin", "model"]).reset_index(
         drop=True
+    )
+
+
+
+def registered_sequential_interval_calibration(
+    errors: pd.DataFrame,
+    *,
+    policy_id: str,
+) -> pd.DataFrame:
+    """Run a frozen calibration policy rather than analyst-chosen strata."""
+    if policy_id not in REGISTERED_INTERVAL_CALIBRATION_POLICIES:
+        raise SourceSchemaError("Unknown registered interval calibration policy")
+    policy = REGISTERED_INTERVAL_CALIBRATION_POLICIES[policy_id]
+    return sequential_interval_calibration(
+        errors,
+        miscoverage=float(policy["miscoverage"]),
+        minimum_calibration_rows=int(policy["minimum_calibration_rows"]),
+        minimum_calibration_origins=int(policy["minimum_calibration_origins"]),
+        group_columns=list(policy["group_columns"]),
+        policy_id=policy_id,
+        stratification_prespecified=True,
     )
 
 
