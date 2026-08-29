@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add equal-origin and equal-country-within-origin forecast estimands to prevent changing temporal coverage from silently determining pooled results.
+
 - Add a focal-city-excluded WUP F01 national Cities-category comparator and retain the inclusive version only as a diagnostic.
 
 - Decompose WUP 2018-to-2025 growth-score discrepancies into target and origin revision gaps.

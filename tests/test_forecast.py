@@ -11,6 +11,8 @@ from urban_growth.forecast import (
     build_ghsl_fixed_forecast_intervals,
     cluster_bootstrap_paired_difference,
     equal_country_forecast_metrics,
+    equal_country_origin_forecast_metrics,
+    equal_origin_forecast_metrics,
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
@@ -383,6 +385,42 @@ def test_balanced_cohort_and_equal_country_weighting() -> None:
     result = equal_country_forecast_metrics(errors)
     assert result.loc[0, "equal_country_mae"] == pytest.approx(0.06)
     assert result.loc[0, "countries"] == 2
+
+
+def test_equal_origin_metrics_do_not_let_larger_origins_dominate() -> None:
+    errors = pd.DataFrame(
+        {
+            "origin": [2000, 2000, 2005],
+            "model": ["m", "m", "m"],
+            "country_code": ["A", "B", "A"],
+            "error": [0.10, 0.10, 0.30],
+            "absolute_error": [0.10, 0.10, 0.30],
+        }
+    )
+    result = equal_origin_forecast_metrics(errors)
+    assert result.loc[0, "equal_origin_mae"] == pytest.approx(0.20)
+    assert result.loc[0, "origins"] == 2
+    assert result.loc[0, "minimum_origin_rows"] == 1
+    assert result.loc[0, "maximum_origin_rows"] == 2
+
+
+def test_equal_country_origin_metrics_apply_both_weighting_stages() -> None:
+    errors = pd.DataFrame(
+        {
+            "origin": [2000, 2000, 2000, 2005],
+            "model": ["m"] * 4,
+            "country_code": ["A", "A", "B", "A"],
+            "error": [0.10, 0.30, 0.50, 0.10],
+            "absolute_error": [0.10, 0.30, 0.50, 0.10],
+        }
+    )
+    result = equal_country_origin_forecast_metrics(errors)
+    assert result.loc[0, "equal_country_origin_mae"] == pytest.approx(0.225)
+    assert result.loc[0, "minimum_countries_per_origin"] == 1
+    assert result.loc[0, "maximum_countries_per_origin"] == 2
+    assert result.loc[0, "estimand"] == (
+        "origins_equal_countries_equal_within_origin"
+    )
 
 
 def test_country_cluster_bootstrap_is_reproducible() -> None:

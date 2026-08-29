@@ -166,6 +166,14 @@ The 2020 reversal is robust: all six size-bin intervals are entirely above zero,
 
 Within WUP, this defeats universal H1 because one broad and statistically supported period reversal is enough to violate “consistent across periods.” The fixed-polygon GHSL result does not reproduce that reversal, so the cross-source conclusion is sensitivity, not a settled global failure or success.
 
+## Pooled point-estimate weighting
+
+**Pending regeneration:** existing pooled point estimates are city-origin weighted,
+so WUP origins with more eligible cities receive more influence. The workflow now
+emits equal-origin and equal-country-within-origin point estimates. Until those
+outputs and expected hashes are regenerated, pooled claims should be described by
+their city-origin weighting rather than as generic global performance.
+
 ## Joint country-and-time uncertainty
 
 The two-way pigeonhole bootstrap independently resamples countries and forecast origins, applying the product of their resampling weights to each country-origin cell. It retains all city errors within a cell and uses the same 2,000 repetitions and seed. This targets sensitivity to both geographic composition and which historical periods were realized.
