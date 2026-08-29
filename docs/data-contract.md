@@ -38,6 +38,38 @@ A WUP–GHSL crosswalk requires `wup_city_id`, `ghsl_city_id`, `match_status`, `
 
 The outcome is future annualized log growth. Lagged growth must end at or before `period_start`. Random row splits are prohibited because they leak adjacent periods and common shocks. Forecast evaluation uses chronological rolling origins, with country-aware diagnostics.
 
+## Forecast-origin hierarchy and ILR contract
+
+Absolute-size and relative-rank tiers are assigned from origin population before outcome
+availability is inspected and remain fixed through the forecast interval. Endpoint rank and
+realized tier cannot overwrite origin membership. Relative tiers are identity/count based;
+they are not groups holding a fixed share of national population.
+
+Compositional analysis uses ordered tier ILR balances. A country-origin with an empty tier
+needed by a balance is marked ineligible with `empty_origin_fixed_tier_cell`; the missing cell
+must not be replaced by zero. Per-city leave-one-out share outcomes are prohibited.
+
+## Census boundary-cohort contract
+
+A threshold-audit row requires a stable settlement ID, two direct or explicitly classified
+population endpoints, and geography status of `stable`, `official_crosswalk`, or
+`harmonized_common_geography`. Unresolved geography is excluded before growth or crossing is
+calculated. Threshold crossing and WUP entry are interval-censored. If their intervals are
+`(t0,t1)` and `(w0,w1)`, delay is `(w0-t1,w1-t0)`, open at both ends.
+
+## Modern accessibility contract
+
+Rival-city mass excludes the focal city and is aggregated into left-closed, mutually exclusive
+`[0,1)`, `[1,2)`, `[2,4)`, and `[4,8)` hour bands. Every exposure carries its nominal friction
+surface vintage. Snapshot products cannot be silently expanded into a historical panel.
+
+## Urban-form timing contract
+
+`C1` is contemporaneous population-growth/form-change association. `C2` uses prior-interval
+population growth to predict later form change. `C3` uses prior-interval form change to predict
+later population growth. Lead-lag rows require adjacent intervals for the same city; gaps do not
+qualify without a separately registered timing design.
+
 ## WUP assembled panel
 
 The WUP city-year assembly is strictly internal to the WUP `City_Code` namespace. It joins F21 population, F25 land area, F30 built-up area per capita, and F34 population density only after exact city-year coverage and the F21/F25/F34 density identity pass validation.
