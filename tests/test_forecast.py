@@ -538,6 +538,7 @@ def test_sequential_intervals_use_only_prior_origins() -> None:
             "origin": [2000, 2000, 2005, 2005, 2010, 2010],
             "model": ["m"] * 6,
             "country_code": ["A", "B"] * 3,
+            "error": [0.10, -0.20, 0.20, -0.30, 99.0, -99.0],
             "absolute_error": [0.10, 0.20, 0.20, 0.30, 99.0, 99.0],
         }
     )
@@ -559,6 +560,7 @@ def test_sequential_intervals_report_city_and_equal_country_coverage() -> None:
             "origin": [2000] * 4 + [2005] * 3,
             "model": ["m"] * 7,
             "country_code": ["A", "A", "B", "B", "A", "A", "B"],
+            "error": [0.10, -0.10, 0.10, -0.10, 0.05, 0.20, -0.20],
             "absolute_error": [0.10, 0.10, 0.10, 0.10, 0.05, 0.20, 0.20],
         }
     )
@@ -573,6 +575,11 @@ def test_sequential_intervals_report_city_and_equal_country_coverage() -> None:
     assert row["empirical_city_coverage"] == pytest.approx(1 / 3)
     assert row["equal_country_coverage"] == pytest.approx(0.25)
     assert row["interval_width"] == pytest.approx(0.20)
+    assert row["lower_tail_miss_rate"] == pytest.approx(1 / 3)
+    assert row["upper_tail_miss_rate"] == pytest.approx(1 / 3)
+    assert row["tail_miss_imbalance"] == pytest.approx(0.0)
+    assert row["equal_country_lower_tail_miss_rate"] == pytest.approx(0.25)
+    assert row["equal_country_upper_tail_miss_rate"] == pytest.approx(0.50)
 
 
 def test_sequential_interval_uses_exact_conformal_order_statistic() -> None:
@@ -581,6 +588,7 @@ def test_sequential_interval_uses_exact_conformal_order_statistic() -> None:
             "origin": [2000] * 4 + [2005],
             "model": ["m"] * 5,
             "country_code": ["A", "B", "C", "D", "A"],
+            "error": [0.10, -0.20, 0.30, -0.40, 0.25],
             "absolute_error": [0.10, 0.20, 0.30, 0.40, 0.25],
         }
     )
@@ -604,6 +612,7 @@ def test_registered_interval_policy_freezes_strata_and_parameters() -> None:
                     "model": "m",
                     "country_code": f"C{city_id % 10}",
                     "size_bin": "50–150k",
+                    "error": 0.01 + city_id / 100_000,
                     "absolute_error": 0.01 + city_id / 100_000,
                 }
             )

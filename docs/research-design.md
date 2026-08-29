@@ -70,8 +70,12 @@ order statistic at rank \(\lceil(n+1)(1-\alpha)\rceil\); origins with too few
 calibration rows to realize that rank are not reported. Outputs report the chosen
 rank, interval radius and width, city-
 weighted realized coverage, equal-country realized coverage, coverage error, and the
-latest calibration origin. Size-stratified tables use only prior errors in the same
-size bin. The executable workflows use two versioned policies:
+latest calibration origin. They also report lower-tail misses (actual growth below
+the band), upper-tail misses (actual growth above the band), their imbalance, and
+equal-country tail rates. Size-stratified tables use only prior errors in the same
+size bin. Aggregate coverage is inadequate when misses concentrate directionally:
+such a band can meet its nominal rate while systematically understating decline risk
+or upside growth. The executable workflows use two versioned policies:
 `overall_90_v1` and `size_bin_90_v1`, each fixing nominal coverage, minimum
 calibration rows, minimum prior origins and grouping before outputs are opened.
 Registered outputs carry the policy identifier and a prespecification flag. Arbitrary
