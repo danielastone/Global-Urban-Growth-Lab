@@ -13,11 +13,14 @@ from urban_growth.sources import (
 
 def test_repository_catalog_is_valid() -> None:
     catalog = load_catalog("data/sources.json")
-    assert len(catalog["sources"]) == 9
+    assert len(catalog["sources"]) == 10
     ghsl = source_by_id(catalog, "ec_ghsl_ucdb_r2024a_v1_2")
     wup = source_by_id(catalog, "un_wup_2025_cities")
     assert "ec_ghsl_degurb_r2023a" in ghsl["upstream_dependencies"]
     assert "ec_ghsl_degurb_r2023a" in wup["upstream_dependencies"]
+    accessibility = source_by_id(catalog, "map_accessibility_2015")
+    assert accessibility["release"] == "2015 nominal year"
+    assert accessibility["status"] == "modern_validation"
 
 
 def test_duplicate_source_ids_fail() -> None:
