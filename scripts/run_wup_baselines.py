@@ -28,7 +28,7 @@ from urban_growth.forecast import (
     locked_origin_model_evaluation,
     paired_error_comparison,
     rolling_baseline_errors,
-    sequential_interval_calibration,
+    registered_sequential_interval_calibration,
     temporal_reversal_diagnostics,
     two_way_cluster_bootstrap_paired_difference,
 )
@@ -241,9 +241,11 @@ def main() -> None:
     equal_country_origin = equal_country_origin_forecast_metrics(errors)
     balanced_pooled_equal_country = equal_country_forecast_metrics(balanced_errors)
     locked_origin = locked_origin_model_evaluation(errors, locked_origin=2020)
-    interval_calibration = sequential_interval_calibration(errors)
-    interval_calibration_by_size = sequential_interval_calibration(
-        errors, group_columns=["size_bin"]
+    interval_calibration = registered_sequential_interval_calibration(
+        errors, policy_id="overall_90_v1"
+    )
+    interval_calibration_by_size = registered_sequential_interval_calibration(
+        errors, policy_id="size_bin_90_v1"
     )
     country_time_bootstrap = two_way_cluster_bootstrap_paired_difference(errors)
     country_time_size_bootstrap = two_way_cluster_bootstrap_paired_difference(
