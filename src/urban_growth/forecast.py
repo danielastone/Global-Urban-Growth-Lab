@@ -744,6 +744,88 @@ def equal_country_forecast_metrics(
     return result.sort_values(result_keys).reset_index(drop=True)
 
 
+def equal_origin_forecast_metrics(
+    errors: pd.DataFrame,
+    *,
+    group_columns: list[str] | None = None,
+) -> pd.DataFrame:
+    """Score models with every forecast origin receiving equal weight."""
+    groups = group_columns or []
+    required = {"origin", "model", "error", "absolute_error", *groups}
+    require_columns(errors, required, source_name="row-level forecast errors")
+    working = errors.copy()
+    if not np.isfinite(working[["error", "absolute_error"]]).all().all():
+        raise SourceSchemaError("Equal-origin metrics require finite errors")
+    working["squared_error"] = working["error"] ** 2
+    origin_keys = [*groups, "model", "origin"]
+    origin = working.groupby(origin_keys, observed=True).agg(
+        origin_mae=("absolute_error", "mean"),
+        origin_mse=("squared_error", "mean"),
+        origin_bias=("error", "mean"),
+        origin_rows=("error", "size"),
+    ).reset_index()
+    result_keys = [*groups, "model"]
+    result = origin.groupby(result_keys, observed=True).agg(
+        origins=("origin", "nunique"),
+        n_rows=("origin_rows", "sum"),
+        equal_origin_mae=("origin_mae", "mean"),
+        equal_origin_mse=("origin_mse", "mean"),
+        equal_origin_bias=("origin_bias", "mean"),
+        minimum_origin_rows=("origin_rows", "min"),
+        maximum_origin_rows=("origin_rows", "max"),
+    ).reset_index()
+    result["equal_origin_rmse"] = np.sqrt(result.pop("equal_origin_mse"))
+    result["estimand"] = "origins_equal_cities_equal_within_origin"
+    return result.sort_values(result_keys).reset_index(drop=True)
+
+
+def equal_country_origin_forecast_metrics(
+    errors: pd.DataFrame,
+    *,
+    group_columns: list[str] | None = None,
+) -> pd.DataFrame:
+    """Give countries equal weight within origin, then origins equal weight."""
+    groups = group_columns or []
+    required = {
+        "origin", "model", "country_code", "error", "absolute_error", *groups,
+    }
+    require_columns(errors, required, source_name="row-level forecast errors")
+    working = errors.copy()
+    if not np.isfinite(working[["error", "absolute_error"]]).all().all():
+        raise SourceSchemaError("Equal-country-origin metrics require finite errors")
+    working["squared_error"] = working["error"] ** 2
+    country_origin_keys = [*groups, "model", "origin", "country_code"]
+    country_origin = working.groupby(country_origin_keys, observed=True).agg(
+        country_origin_mae=("absolute_error", "mean"),
+        country_origin_mse=("squared_error", "mean"),
+        country_origin_bias=("error", "mean"),
+        country_origin_rows=("error", "size"),
+    ).reset_index()
+    origin_keys = [*groups, "model", "origin"]
+    origin = country_origin.groupby(origin_keys, observed=True).agg(
+        origin_equal_country_mae=("country_origin_mae", "mean"),
+        origin_equal_country_mse=("country_origin_mse", "mean"),
+        origin_equal_country_bias=("country_origin_bias", "mean"),
+        countries=("country_code", "nunique"),
+        origin_rows=("country_origin_rows", "sum"),
+    ).reset_index()
+    result_keys = [*groups, "model"]
+    result = origin.groupby(result_keys, observed=True).agg(
+        origins=("origin", "nunique"),
+        n_rows=("origin_rows", "sum"),
+        equal_country_origin_mae=("origin_equal_country_mae", "mean"),
+        equal_country_origin_mse=("origin_equal_country_mse", "mean"),
+        equal_country_origin_bias=("origin_equal_country_bias", "mean"),
+        minimum_countries_per_origin=("countries", "min"),
+        maximum_countries_per_origin=("countries", "max"),
+    ).reset_index()
+    result["equal_country_origin_rmse"] = np.sqrt(
+        result.pop("equal_country_origin_mse")
+    )
+    result["estimand"] = "origins_equal_countries_equal_within_origin"
+    return result.sort_values(result_keys).reset_index(drop=True)
+
+
 def paired_error_comparison(
     errors: pd.DataFrame,
     *,

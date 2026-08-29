@@ -20,6 +20,8 @@ from urban_growth.forecast import (
     build_forecast_intervals,
     cluster_bootstrap_paired_difference,
     equal_country_forecast_metrics,
+    equal_country_origin_forecast_metrics,
+    equal_origin_forecast_metrics,
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     leave_one_cluster_out_paired_difference,
@@ -108,6 +110,16 @@ def main() -> None:
         default=Path("outputs/wup_equal_country_pooled_metrics.csv"),
     )
     parser.add_argument(
+        "--equal-origin-output",
+        type=Path,
+        default=Path("outputs/wup_equal_origin_metrics.csv"),
+    )
+    parser.add_argument(
+        "--equal-country-origin-output",
+        type=Path,
+        default=Path("outputs/wup_equal_country_origin_metrics.csv"),
+    )
+    parser.add_argument(
         "--balanced-pooled-equal-country-output",
         type=Path,
         default=Path("outputs/wup_balanced_equal_country_pooled_metrics.csv"),
@@ -183,6 +195,8 @@ def main() -> None:
         balanced_errors, group_columns=["origin"]
     )
     pooled_equal_country = equal_country_forecast_metrics(errors)
+    equal_origin = equal_origin_forecast_metrics(errors)
+    equal_country_origin = equal_country_origin_forecast_metrics(errors)
     balanced_pooled_equal_country = equal_country_forecast_metrics(balanced_errors)
     country_time_bootstrap = two_way_cluster_bootstrap_paired_difference(errors)
     country_time_size_bootstrap = two_way_cluster_bootstrap_paired_difference(
@@ -246,6 +260,10 @@ def main() -> None:
     balanced_equal_country.to_csv(args.balanced_equal_country_output, index=False)
     args.pooled_equal_country_output.parent.mkdir(parents=True, exist_ok=True)
     pooled_equal_country.to_csv(args.pooled_equal_country_output, index=False)
+    args.equal_origin_output.parent.mkdir(parents=True, exist_ok=True)
+    equal_origin.to_csv(args.equal_origin_output, index=False)
+    args.equal_country_origin_output.parent.mkdir(parents=True, exist_ok=True)
+    equal_country_origin.to_csv(args.equal_country_origin_output, index=False)
     args.balanced_pooled_equal_country_output.parent.mkdir(parents=True, exist_ok=True)
     balanced_pooled_equal_country.to_csv(
         args.balanced_pooled_equal_country_output, index=False
@@ -279,6 +297,8 @@ def main() -> None:
     print(args.equal_country_output)
     print(args.balanced_equal_country_output)
     print(args.pooled_equal_country_output)
+    print(args.equal_origin_output)
+    print(args.equal_country_origin_output)
     print(args.balanced_pooled_equal_country_output)
     print(args.country_time_bootstrap_output)
     print(args.country_time_size_bootstrap_output)

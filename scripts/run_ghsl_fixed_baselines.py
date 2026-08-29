@@ -14,6 +14,8 @@ from urban_growth.adapters.ghsl_ucdb import (
 )
 from urban_growth.forecast import (
     build_ghsl_fixed_forecast_intervals,
+    equal_country_origin_forecast_metrics,
+    equal_origin_forecast_metrics,
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
     rolling_baseline_errors,
@@ -68,6 +70,16 @@ def main() -> None:
         type=Path,
         default=Path("outputs/ghsl_fixed_hierarchy_model_metrics.csv"),
     )
+    parser.add_argument(
+        "--equal-origin-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_equal_origin_metrics.csv"),
+    )
+    parser.add_argument(
+        "--equal-country-origin-output",
+        type=Path,
+        default=Path("outputs/ghsl_fixed_equal_country_origin_metrics.csv"),
+    )
     args = parser.parse_args()
     fixed = fixed_2025_theme_panel(read_ghsl_theme_csv(str(args.input)))
     dynamic = multitemporal_boundary_panel(read_ghsl_mtuc_csv(str(args.dynamic_input)))
@@ -78,6 +90,8 @@ def main() -> None:
     origins = list(range(1985, 2025, 5))
     metrics = evaluate_rolling_baselines(intervals, origins)
     errors = rolling_baseline_errors(intervals, origins)
+    equal_origin = equal_origin_forecast_metrics(errors)
+    equal_country_origin = equal_country_origin_forecast_metrics(errors)
     temporal = temporal_reversal_diagnostics(intervals)
     gapped_intervals = build_ghsl_fixed_forecast_intervals(
         fixed,
@@ -98,6 +112,8 @@ def main() -> None:
         (args.gapped_metrics_output, gapped_metrics),
         (args.gapped_temporal_output, gapped_temporal),
         (args.hierarchy_output, hierarchy),
+        (args.equal_origin_output, equal_origin),
+        (args.equal_country_origin_output, equal_country_origin),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)

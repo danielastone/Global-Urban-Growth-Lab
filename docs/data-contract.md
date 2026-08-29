@@ -91,3 +91,18 @@ component membership is assumed rather than independently crosswalk-validated.
 Outputs therefore carry national_focal_component_membership_assumed. The diagnostic
 removes arithmetic self-inclusion; it does not create causal exogeneity or make the
 revised history vintage-correct.
+
+
+## Temporal and geographic weighting estimands
+
+Pooled forecast metrics must identify their weighting estimand. City-origin weighting
+answers the average scored-city case but gives origins with more eligible cities more
+influence. Equal-origin metrics first calculate error within each origin and then
+average origins. Equal-country-origin metrics first give every country equal weight
+within an origin and then give every origin equal weight.
+
+These are distinct decision targets, not interchangeable robustness labels. Reports
+must present city-origin and equal-origin results together whenever source coverage
+changes across time. Equal-country-origin results are additionally required before
+calling a result globally representative. RMSE is calculated from the correspondingly
+weighted mean squared error, not by averaging origin-specific RMSE values.
