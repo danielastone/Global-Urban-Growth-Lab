@@ -60,3 +60,19 @@ Global, region, subregion, and country historical means are computed only from
 training outcomes. Their leave-city-out versions subtract every prior outcome for
 the focal city before scoring, preventing the aggregation ladder from inheriting a
 mechanical city-history advantage.
+
+
+## Cross-revision forecast-error decomposition
+
+A WUP 2018 projected growth rate scored against WUP 2025 estimated growth is not
+identified as pure forecast error. The executable vintage workflow decomposes the
+reported growth discrepancy exactly into a target log gap minus an origin log gap.
+The target log gap remains an inseparable mixture of true forecast error, target
+revision and urban-definition change; the origin log gap contains origin revision
+and definition change. The identity residual must be numerically zero.
+
+Only the published 2018 projection and persistence calculated from WUP 2018 are
+eligible for a like-for-like 2018 predictor ranking. Persistence recalculated from
+WUP 2025 is labeled revised_2025_hindsight and is retained only to measure the
+advantage conferred by later revision. No output may label the cross-revision score
+as clean real-time forecast accuracy.

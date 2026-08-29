@@ -228,6 +228,109 @@ def vintage_country_weighting_diagnostics(
     return summary, country
 
 
+def vintage_revision_decomposition(
+    vintage_panel: pd.DataFrame,
+    current_panel: pd.DataFrame,
+    crosswalk: pd.DataFrame,
+    *,
+    origin_year: int = 2018,
+    horizon_years: int = 5,
+    maximum_distance_km: float = 5.0,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Decompose the cross-revision growth-score discrepancy.
+
+    The target term remains a mixture of true forecast error, target revision,
+    and urban-definition change. No algebra using these two editions can identify
+    those components separately.
+    """
+    if horizon_years <= 0 or maximum_distance_km <= 0:
+        raise SourceSchemaError("Vintage decomposition horizon and distance must be positive")
+    target_year = origin_year + horizon_years
+    old = vintage_panel.loc[vintage_panel["year"].isin([origin_year, target_year])].pivot(
+        index="city_id", columns="year", values="population"
+    )
+    new = current_panel.loc[current_panel["year"].isin([origin_year, target_year])].pivot(
+        index="city_id", columns="year", values="population"
+    )
+    old = old.rename(columns={
+        origin_year: "vintage_origin_population",
+        target_year: "vintage_target_population",
+    })
+    new = new.rename(columns={
+        origin_year: "current_origin_population",
+        target_year: "current_target_population",
+    })
+    matched = crosswalk.loc[crosswalk["distance_km"].le(maximum_distance_km)].merge(
+        old, left_on="vintage_city_id", right_index=True, validate="one_to_one"
+    ).merge(new, left_on="current_city_id", right_index=True, validate="one_to_one")
+    values = [
+        "vintage_origin_population", "vintage_target_population",
+        "current_origin_population", "current_target_population",
+    ]
+    matched = matched.dropna(subset=values).copy()
+    if matched.empty or (matched[values] <= 0).any().any():
+        raise SourceSchemaError("Vintage decomposition requires positive complete populations")
+    matched["origin_revision_log_gap"] = (
+        np.log(matched["vintage_origin_population"])
+        - np.log(matched["current_origin_population"])
+    )
+    matched["target_total_log_gap"] = (
+        np.log(matched["vintage_target_population"])
+        - np.log(matched["current_target_population"])
+    )
+    matched["reported_growth_error"] = (
+        matched["target_total_log_gap"] - matched["origin_revision_log_gap"]
+    ) / horizon_years
+    published_growth = (
+        np.log(matched["vintage_target_population"])
+        - np.log(matched["vintage_origin_population"])
+    ) / horizon_years
+    revised_growth = (
+        np.log(matched["current_target_population"])
+        - np.log(matched["current_origin_population"])
+    ) / horizon_years
+    matched["direct_growth_error"] = published_growth - revised_growth
+    matched["decomposition_identity_residual"] = (
+        matched["reported_growth_error"] - matched["direct_growth_error"]
+    )
+    matched["target_component_identification"] = (
+        "forecast_error_plus_target_revision_plus_definition_change"
+    )
+    matched["origin_component_identification"] = (
+        "origin_revision_plus_definition_change"
+    )
+    matched["comparison_status"] = (
+        "cross_revision_cross_definition_not_clean_forecast_error"
+    )
+    summary = pd.DataFrame([{
+        "origin": origin_year,
+        "target_end": target_year,
+        "horizon_years": horizon_years,
+        "maximum_distance_km": maximum_distance_km,
+        "cities": len(matched),
+        "countries": matched["country_location_id"].nunique(),
+        "mean_origin_revision_log_gap": matched["origin_revision_log_gap"].mean(),
+        "mae_origin_revision_annualized": (
+            matched["origin_revision_log_gap"].abs().mean() / horizon_years
+        ),
+        "mean_target_total_log_gap": matched["target_total_log_gap"].mean(),
+        "mae_target_total_annualized": (
+            matched["target_total_log_gap"].abs().mean() / horizon_years
+        ),
+        "reported_growth_mae": matched["reported_growth_error"].abs().mean(),
+        "identity_residual_max_abs": (
+            matched["decomposition_identity_residual"].abs().max()
+        ),
+        "target_component_identification": (
+            "forecast_error_plus_target_revision_plus_definition_change"
+        ),
+        "comparison_status": (
+            "cross_revision_cross_definition_not_clean_forecast_error"
+        ),
+    }])
+    return matched.reset_index(drop=True), summary
+
+
 def evaluate_wup2018_vintage(
     vintage_panel: pd.DataFrame,
     current_panel: pd.DataFrame,
@@ -239,8 +342,11 @@ def evaluate_wup2018_vintage(
     distance_thresholds: tuple[float, ...] = (1.0, 5.0, 10.0),
     population_agreement_thresholds: tuple[float | None, ...] = (None, 0.1, 0.2, 0.5),
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Score the 2018 published projection against later revised estimates.
+    """Score 2018-vintage predictors against later revised estimates.
 
+    Only published projection versus vintage persistence is a like-for-like
+    predictor ranking. The target still changes revision and urban definition.
+    Retrospective persistence is a hindsight diagnostic, not a 2018 competitor.
     Population-agreement restrictions use later-revision information and are
     sensitivities, not valid real-time sample-selection rules.
     """
@@ -306,6 +412,15 @@ def evaluate_wup2018_vintage(
                         "origin_population_agreement": agreement_label,
                         "selection_uses_later_revision": agreement is not None,
                         "model": model,
+                        "predictor_information_set": (
+                            "revised_2025_hindsight"
+                            if model == "retrospective_persistence"
+                            else "available_in_2018"
+                        ),
+                        "eligible_for_like_for_like_2018_ranking": (
+                            model != "retrospective_persistence"
+                        ),
+                        "target_comparability": "cross_revision_cross_definition",
                         "n": metrics.n,
                         "countries": sample["country_location_id"].nunique(),
                         "mae": metrics.mae,
