@@ -270,9 +270,7 @@ def build_forecast_intervals(
         wide = wide.loc[has_population]
         outcome_start_type = wide[("observation_type", outcome_start_year)]
         outcome_end_type = wide[("observation_type", future_year)]
-        allowed_outcome = outcome_end_type.isin(allowed)
-        if outcome_gap_years:
-            allowed_outcome &= outcome_start_type.isin(allowed)
+        allowed_outcome = outcome_start_type.isin(allowed) & outcome_end_type.isin(allowed)
         wide = wide.loc[allowed_outcome]
         if wide.empty:
             continue
@@ -647,7 +645,7 @@ def evaluate_rolling_hierarchy_models(
     *,
     outcome_column: str = "future_growth",
 ) -> pd.DataFrame:
-    """Compare origin and pre-growth frozen hierarchy using country fixed effects."""
+    """Compare hierarchy models on identical training and test city-origin rows."""
     required = {
         "city_id", "country_code", "period_start", "period_end", outcome_column,
         "recent_growth", "population_lag", "population_start",
@@ -666,15 +664,34 @@ def evaluate_rolling_hierarchy_models(
     working = panel.copy()
     working["log_population_lag"] = np.log(working["population_lag"])
     working["log_population_start"] = np.log(working["population_start"])
+    reject_duplicate_keys(
+        working, ["city_id", "period_start", "period_end"],
+        source_name="hierarchy forecast intervals",
+    )
+    joint_columns = list(dict.fromkeys(
+        ["city_id", "country_code", "period_start", "period_end", outcome_column]
+        + [feature for features in specifications.values() for feature in features]
+    ))
     rows: list[dict[str, float | int | str]] = []
     for origin, train_index, test_index in rolling_origin_splits(working, origins):
-        train = working.loc[train_index]
-        test = working.loc[test_index]
+        candidate_train = working.loc[train_index]
+        candidate_test = working.loc[test_index]
+        train = candidate_train.dropna(subset=joint_columns).copy()
+        test = candidate_test.dropna(subset=joint_columns).copy()
+        train_numeric = train[joint_columns].select_dtypes(include="number")
+        test_numeric = test[joint_columns].select_dtypes(include="number")
+        train = train.loc[np.isfinite(train_numeric).all(axis=1)]
+        test = test.loc[np.isfinite(test_numeric).all(axis=1)]
+        if train.empty or test.empty:
+            continue
+        train_keys = train[["city_id", "period_start", "period_end"]]
+        test_keys = test[["city_id", "period_start", "period_end"]]
+        reject_duplicate_keys(train_keys, list(train_keys.columns), source_name="hierarchy train")
+        reject_duplicate_keys(test_keys, list(test_keys.columns), source_name="hierarchy test")
         baseline = baseline_predictions(train, test, outcome_column=outcome_column)
         for model, features in specifications.items():
             columns = ["country_code", outcome_column, *features]
-            fit = train[columns].dropna().copy()
-            fit = fit.loc[np.isfinite(fit.select_dtypes(include="number")).all(axis=1)]
+            fit = train[columns].copy()
             country_means = fit.groupby("country_code")[[outcome_column, *features]].mean()
             group_means = fit.groupby("country_code")[[outcome_column, *features]].transform(
                 "mean"
@@ -697,6 +714,10 @@ def evaluate_rolling_hierarchy_models(
                 test[features] - test_feature_means
             ).to_numpy() @ beta
             metrics = score_forecast(test[outcome_column], pd.Series(prediction, index=test.index))
+            if metrics.n != len(test):
+                raise SourceSchemaError(
+                    "Hierarchy model lost rows after joint train/test matching"
+                )
             rows.append(
                 {
                     "origin": origin,
@@ -707,11 +728,24 @@ def evaluate_rolling_hierarchy_models(
                     "median_absolute_error": metrics.median_absolute_error,
                     "bias": metrics.bias,
                     "directional_accuracy": metrics.directional_accuracy,
+                    "candidate_train_n": len(candidate_train),
+                    "matched_train_n": len(train),
+                    "candidate_test_n": len(candidate_test),
+                    "matched_test_n": len(test),
+                    "training_rows_identical_across_models": True,
+                    "test_rows_identical_across_models": True,
                 }
             )
     if not rows:
         raise SourceSchemaError("No rolling hierarchy evaluations were produced")
-    return pd.DataFrame(rows).sort_values(["origin", "model"]).reset_index(drop=True)
+    result = pd.DataFrame(rows)
+    for count_column in ("matched_train_n", "matched_test_n", "n"):
+        counts = result.pivot(index="origin", columns="model", values=count_column)
+        if counts.nunique(axis=1).gt(1).any():
+            raise SourceSchemaError(
+                f"Hierarchy models do not share identical {count_column} by origin"
+            )
+    return result.sort_values(["origin", "model"]).reset_index(drop=True)
 
 
 def rolling_baseline_errors(
@@ -765,7 +799,7 @@ def rolling_baseline_errors(
 
 
 def balanced_origin_cohort(panel: pd.DataFrame, origins: list[int]) -> pd.DataFrame:
-    """Restrict a forecast panel to cities observed at every declared origin."""
+    """Build a hindsight-defined cohort observed at every declared origin."""
     required = {"city_id", "period_start", "period_end"}
     require_columns(panel, required, source_name="forecast interval panel")
     if not origins or len(set(origins)) != len(origins):
@@ -780,7 +814,9 @@ def balanced_origin_cohort(panel: pd.DataFrame, origins: list[int]) -> pd.DataFr
     result = subset.loc[subset["city_id"].isin(eligible)].copy()
     if result.empty:
         raise SourceSchemaError("No cities have complete intervals at every declared origin")
-    result["cohort_selection"] = "balanced_all_declared_origins"
+    result["cohort_selection"] = "hindsight_balanced_all_declared_origins"
+    result["cohort_uses_future_origin_survival"] = True
+    result["cohort_deployable_at_origin"] = False
     return result.sort_values(["period_start", "city_id"]).reset_index(drop=True)
 
 
