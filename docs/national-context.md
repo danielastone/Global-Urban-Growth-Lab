@@ -88,3 +88,17 @@ national population, the row remains in the forecast panel but the derived natio
 controls are missing and national_context_loo_available is false. Models requiring
 these controls must report the resulting coverage loss rather than silently changing
 the evaluation population.
+
+## Reproduction
+
+With registered source files under `data/raw/`, run:
+
+```bash
+uv run --locked python scripts/run_national_envelope.py
+uv run --locked python scripts/verify_results.py \
+  results/national_envelope_expected_manifest.csv
+```
+
+The expected manifest binds all five generated CSV files to their dimensions, byte and
+canonical hashes, source manifest, environment lock, generation command, and producing code
+commit. Generated outputs and licensed raw inputs remain outside Git.
