@@ -234,6 +234,90 @@ def read_f01_country_city_population(path: str) -> pd.DataFrame:
     return panel.sort_values(["country_code", "year"]).reset_index(drop=True)
 
 
+def read_f01_country_degurb_population(path: str) -> pd.DataFrame:
+    """Read reconciled country Cities, Towns, and Rural populations from WUP F01."""
+    from urban_growth.io import read_table, require_columns
+
+    city = read_f01_country_city_population(path)
+    hierarchy_columns = [
+        "location_id", "country_code", "country_name", "ParentID", "subregion_id",
+        "subregion_name", "region_id", "region_name", "year", "observation_type",
+        "revision_semantics",
+    ]
+    hierarchy = city[hierarchy_columns].copy()
+    category_frames = [
+        city.rename(columns={"national_city_category_population": "population"}).assign(
+            category="city"
+        )
+    ]
+    required = {
+        "LocID", "ISO3_Code", "Location", "LocType", "LocTypeName",
+        "ParentID", "1950", "2025", "2050",
+    }
+    for sheet_name, category in (("Towns", "town_and_semi_dense"), ("Rural", "rural")):
+        frame = read_table(path, sheet_name=sheet_name)
+        require_columns(frame, required, source_name=f"WUP 2025 F01 {sheet_name}")
+        countries = frame.loc[frame["LocType"].eq(4)].copy()
+        if countries.empty or countries["LocTypeName"].ne("Country/Area").any():
+            raise SourceSchemaError(f"WUP F01 {sheet_name} has no valid Country/Area rows")
+        countries["category"] = category
+        panel = degree_of_urbanization_panel(
+            countries,
+            location_id_column="LocID",
+            category_column="category",
+            metadata_columns=["ISO3_Code", "Location"],
+        ).rename(
+            columns={"ISO3_Code": "country_code", "Location": "country_name"}
+        )
+        panel["observation_type"] = panel["year"].le(2025).map(
+            {True: "estimate", False: "projection"}
+        )
+        panel["revision_semantics"] = "WUP_2025_revised_history"
+        category_frames.append(
+            panel.merge(
+                hierarchy.drop(columns=["country_name", "observation_type", "revision_semantics"]),
+                on=["location_id", "country_code", "year"],
+                how="left",
+                validate="one_to_one",
+            )
+        )
+    result = pd.concat(category_frames, ignore_index=True)
+    result = result[
+        [
+            "location_id", "country_code", "country_name", "ParentID", "subregion_id",
+            "subregion_name", "region_id", "region_name", "year", "category", "population",
+            "observation_type", "revision_semantics",
+        ]
+    ]
+    if result[["country_code", "subregion_id", "region_id"]].isna().any().any():
+        raise SourceSchemaError("WUP F01 category sheets do not match the Cities hierarchy")
+    reject_duplicate_keys(
+        result, ["country_code", "year", "category"], source_name="WUP F01 DEGURBA"
+    )
+
+    total_frame = read_table(path, sheet_name="Total")
+    require_columns(total_frame, required, source_name="WUP 2025 F01 Total")
+    total_countries = total_frame.loc[total_frame["LocType"].eq(4)].copy()
+    total = wide_years_to_long(
+        total_countries,
+        id_columns=["LocID", "ISO3_Code"],
+        value_pattern=r"(?P<year>\d{4})",
+        value_name="reported_total",
+    ).rename(columns={"LocID": "location_id", "ISO3_Code": "country_code"})
+    total = _scale_population(total.rename(columns={"reported_total": "population"}), "thousands")
+    total = total.rename(columns={"population": "reported_total"})
+    computed = result.groupby(["location_id", "country_code", "year"], as_index=False)[
+        "population"
+    ].sum().rename(columns={"population": "computed_total"})
+    reconciliation = computed.merge(
+        total, on=["location_id", "country_code", "year"], validate="one_to_one"
+    )
+    difference = (reconciliation["computed_total"] - reconciliation["reported_total"]).abs()
+    if difference.gt(3).any():
+        raise SourceSchemaError("WUP F01 category populations do not reconcile to Total")
+    return result.sort_values(["country_code", "year", "category"]).reset_index(drop=True)
+
+
 def city_area_panel(
     frame: pd.DataFrame,
     *,
