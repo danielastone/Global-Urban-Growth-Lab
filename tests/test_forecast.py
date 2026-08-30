@@ -688,9 +688,43 @@ def test_registered_interval_policy_freezes_strata_and_parameters() -> None:
         pd.DataFrame(rows), policy_id="size_bin_90_v1"
     )
     assert result["calibration_policy_id"].eq("size_bin_90_v1").all()
-    assert result["stratification_prespecified"].all()
+    assert not result["stratification_prespecified"].any()
+    assert not result["policy_locked_before_first_results"].any()
+    assert result["policy_lock_commit"].eq(
+        "2e9d7784dfd623877a4ef6d9b25b515918f3fcf7"
+    ).all()
     assert result["nominal_coverage"].eq(0.90).all()
     assert result["size_bin"].eq("50–150k").all()
+
+
+def test_registered_interval_policy_retains_sparse_cells_as_ineligible() -> None:
+    rows = []
+    for origin, count in [(2000, 40), (2005, 40), (2010, 30), (2015, 5)]:
+        for city_id in range(count):
+            rows.append(
+                {
+                    "origin": origin,
+                    "model": "m",
+                    "country_code": f"C{city_id % 5}",
+                    "error": 0.10,
+                    "absolute_error": 0.10,
+                }
+            )
+
+    result = registered_sequential_interval_calibration(
+        pd.DataFrame(rows), policy_id="overall_90_v1"
+    )
+
+    assert result["origin"].tolist() == [2000, 2005, 2010, 2015]
+    assert not result.loc[result["origin"].eq(2000), "calibration_eligible"].iloc[0]
+    assert (
+        result.loc[result["origin"].eq(2010), "calibration_exclusion_reason"].iloc[0]
+        == "insufficient_calibration_rows"
+    )
+    eligible = result.loc[result["origin"].eq(2015)].iloc[0]
+    assert eligible["calibration_eligible"]
+    assert eligible["calibration_rows"] == 110
+    assert eligible["calibration_origins"] == 3
 
 
 def test_registered_interval_policy_rejects_analyst_defined_name() -> None:
