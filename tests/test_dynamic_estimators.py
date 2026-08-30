@@ -4,6 +4,7 @@ import pytest
 
 from urban_growth.dynamic_estimators import (
     _apply_coverage_gate,
+    _dense_design_reference,
     bootstrap_dynamic_hierarchy,
     common_dynamic_sample,
     estimator_disagreement_report,
@@ -69,6 +70,21 @@ def test_common_sample_rejects_duplicate_city_periods() -> None:
         )
 
 
+def test_common_sample_requires_support_in_both_jackknife_halves() -> None:
+    source = simulated_panel(cities=16, periods=8)
+    source = source.loc[
+        ~(source["city_id"].eq(0) & source["period"].isin([0, 1, 2]))
+    ]
+    sample = common_dynamic_sample(
+        source, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"]
+    )
+    assert 0 not in sample["city_id"].unique()
+    periods = sorted(sample["period"].unique())
+    midpoint = len(periods) // 2
+    for half in (periods[:midpoint], periods[midpoint:]):
+        assert sample.loc[sample["period"].isin(half)].groupby("city_id").size().min() >= 2
+
+
 def test_hierarchy_recovers_parameters_within_declared_single_panel_tolerances() -> None:
     sample = common_dynamic_sample(
         simulated_panel(), outcome="growth", lagged_outcome="lagged_growth", covariates=["x"]
@@ -84,6 +100,50 @@ def test_hierarchy_recovers_parameters_within_declared_single_panel_tolerances()
     assert abs(covariate.loc["half_panel_jackknife", "estimate"] - 0.3) < 0.08
     assert abs(persistence.loc["half_panel_jackknife", "estimate"] - 0.55) < 0.08
     assert persistence.loc["half_panel_jackknife", "n_rows"] == len(sample)
+
+
+@pytest.mark.parametrize("weighted", [False, True])
+@pytest.mark.parametrize("city_fixed_effects", [False, True])
+def test_absorbed_coefficients_match_dense_reference(
+    weighted: bool, city_fixed_effects: bool
+) -> None:
+    sample = common_dynamic_sample(
+        simulated_panel(cities=16, periods=6), outcome="growth",
+        lagged_outcome="lagged_growth", covariates=["x"],
+    )
+    weights = np.linspace(0.5, 1.5, len(sample)) if weighted else None
+    dense_y, dense_x, _ = _dense_design_reference(
+        sample, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"],
+        city="city_id", city_fixed_effects=city_fixed_effects,
+    )
+    if weights is None:
+        dense_beta = np.linalg.lstsq(dense_x, dense_y, rcond=None)[0][:2]
+    else:
+        root = np.sqrt(weights)
+        dense_beta = np.linalg.lstsq(
+            dense_x * root[:, None], dense_y * root, rcond=None
+        )[0][:2]
+    estimator = "city_fe_dynamic" if city_fixed_effects else "pooled_dynamic"
+    absorbed = fit_dynamic_hierarchy(
+        sample, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"],
+        weights=weights,
+    )
+    actual = absorbed.loc[absorbed["estimator_id"].eq(estimator), "estimate"].to_numpy()
+    np.testing.assert_allclose(actual, dense_beta, rtol=1e-8, atol=1e-9)
+
+
+def test_production_fit_does_not_construct_dummy_matrix(monkeypatch: pytest.MonkeyPatch) -> None:
+    sample = common_dynamic_sample(
+        simulated_panel(cities=16, periods=6), outcome="growth",
+        lagged_outcome="lagged_growth", covariates=["x"],
+    )
+    monkeypatch.setattr(
+        pd, "get_dummies", lambda *args, **kwargs: pytest.fail("dense dummies constructed")
+    )
+    result = fit_dynamic_hierarchy(
+        sample, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"]
+    )
+    assert len(result) == 6
 
 
 def test_disagreement_report_flags_sign_and_magnitude() -> None:
