@@ -9,6 +9,11 @@ Repository software is licensed under Apache-2.0. Third-party datasets are not.
 See [THIRD_PARTY_DATA.md](THIRD_PARTY_DATA.md) before acquiring, processing, or
 redistributing data.
 
+Contributions should begin with [CONTRIBUTING.md](CONTRIBUTING.md) and the
+[implementation roadmap](https://github.com/danielastone/Global-Urban-Growth-Lab/issues/33).
+The project accepts code, documentation, reproducibility, and falsification work, but
+manual data, licensing, geography, and governance blocks require evidence before code.
+
 ## Research question
 
 How much incremental out-of-sample forecasting value comes from a city's recent growth, initial size, hierarchy position, national demography, urbanization stage, spatial context, and common shocks?
