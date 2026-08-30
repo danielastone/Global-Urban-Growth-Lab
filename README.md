@@ -47,7 +47,10 @@ validation results, and test order.
 The [result-manifest audit](docs/result-manifest-audit-2026-08-30.md) separates
 historically reproducible outputs, intentional post-manifest specification changes,
 and pre-lock byte-level drift. Expected hashes must not be refreshed without following
-that audit's remediation steps.
+that audit's remediation steps. Current manifests record the generating code commit,
+locked-environment hash, source-manifest hash, generation command, exact byte hash,
+and a canonical numeric hash. The original `cfae942` manifests remain archived under
+`results/historical/cfae942/`.
 
 ## Repository structure
 
