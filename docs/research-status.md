@@ -242,6 +242,13 @@ The diagnostic cannot isolate measurement-error bias because inserting a gap als
 
 Within-country population rank and city count are calculated from every city observed in the source at the lag or origin year **before** filtering for a future outcome. This prevents future sample survival from determining historical hierarchy. Rank percentile is then compared in two country-fixed-effect specifications: origin hierarchy uses size and rank at \(t\), while frozen hierarchy uses their values at \(t-5\), before the recent-growth window. Both retain recent growth and use the leave-focal-city-out country mean as the prediction anchor.
 
+All hierarchy specifications are now fitted and scored on one joint-complete training frame
+and one joint-complete test frame at each origin. The registered WUP inputs lose no rows under
+this intersection: candidate and matched counts are identical at every origin, so the numerical
+table below is unchanged. The prior implementation nevertheless lacked this invariant and could
+have compared different cities if one hierarchy field were missing in another source or revision.
+Outputs now record candidate and matched train/test counts and fail if any model loses a row.
+
 | Panel and model | Weighted MAE | Pooled-equivalent RMSE |
 |---|---:|---:|
 | WUP: country-adjusted recent growth | 1.2081 pp | 1.9332 pp |
@@ -272,7 +279,7 @@ Negative differences favor persistence. The strongest pooled improvement occurs 
 
 ## Balanced-entry and equal-country sensitivity
 
-The balanced WUP cohort retains only cities with complete forecast intervals at all nine construction origins from 1980 through 2020. It contains 5,152 cities at each of the eight evaluated origins, compared with a changing sample that grows from 6,147 test rows in 1985 to 10,709 in 2020. The balanced cohort therefore removes later threshold entrants and intermittent coverage, but it selects established cities continuously above the reporting threshold.
+The balanced WUP cohort retains only cities with complete forecast intervals at all nine construction origins from 1980 through 2020. It contains 5,152 cities at each of the eight evaluated origins, compared with a changing sample that grows from 6,147 test rows in 1985 to 10,709 in 2020. This is a hindsight-defined sensitivity cohort: inclusion at an early origin depends on survival through later declared origins. It therefore removes later threshold entrants and intermittent coverage, but selects established cities retrospectively known to remain observable and is not a deployable forecast population.
 
 | Cohort | Persistence MAE | Leave-city-out country MAE | Persistence RMSE | Leave-city-out country RMSE |
 |---|---:|---:|---:|---:|
