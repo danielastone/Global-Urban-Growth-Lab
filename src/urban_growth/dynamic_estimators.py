@@ -312,6 +312,55 @@ def estimator_disagreement_report(
     return report
 
 
+def _simulate_dynamic_panel(
+    rng: np.random.Generator,
+    *,
+    persistence: float,
+    panel_length: int,
+    cities: int,
+    countries: int,
+) -> pd.DataFrame:
+    country = np.repeat(np.arange(countries), cities // countries)
+    city_effect = rng.normal(0, 0.35, cities)
+    state = city_effect / (1 - persistence) + rng.normal(0, 0.3, cities)
+    rows = []
+    for time in range(30 + panel_length):
+        country_shock = rng.normal(0, 0.08, countries)
+        covariate = rng.normal(size=cities)
+        outcome = (
+            persistence * state + 0.3 * covariate + city_effect
+            + country_shock[country] + rng.normal(0, 0.25, cities)
+        )
+        if time >= 30:
+            for index in range(cities):
+                rows.append(
+                    {
+                        "city_id": index,
+                        "country_code": country[index],
+                        "period": time - 30,
+                        "growth": outcome[index],
+                        "lagged_growth": state[index],
+                        "x": covariate[index],
+                    }
+                )
+        state = outcome
+    return pd.DataFrame(rows)
+
+
+def _validate_simulation_design(
+    persistence_values: tuple[float, ...],
+    panel_lengths: tuple[int, ...],
+    cities: int,
+    countries: int,
+) -> None:
+    if cities % countries or cities // countries < 2:
+        raise SourceSchemaError("Simulation requires at least two equal-count cities per country")
+    if min(panel_lengths) < 4:
+        raise SourceSchemaError("Simulation requires at least four panel periods")
+    if any(not 0 <= persistence < 1 for persistence in persistence_values):
+        raise SourceSchemaError("Simulation persistence must be in [0, 1)")
+
+
 def simulate_dynamic_hierarchy(
     *,
     persistence_values: tuple[float, ...] = (0.2, 0.6, 0.9),
@@ -322,44 +371,20 @@ def simulate_dynamic_hierarchy(
     seed: int = 1729,
 ) -> pd.DataFrame:
     """Evaluate finite-T bias and RMSE over a declared persistence/length grid."""
-    if cities % countries or cities // countries < 2:
-        raise SourceSchemaError("Simulation requires at least two equal-count cities per country")
-    if replications < 2 or min(panel_lengths) < 4:
-        raise SourceSchemaError("Simulation requires two replications and four panel periods")
+    _validate_simulation_design(persistence_values, panel_lengths, cities, countries)
+    if replications < 2:
+        raise SourceSchemaError("Simulation requires at least two replications")
     rng = np.random.default_rng(seed)
     records: list[dict[str, float | int | str]] = []
-    country = np.repeat(np.arange(countries), cities // countries)
     for persistence in persistence_values:
-        if not 0 <= persistence < 1:
-            raise SourceSchemaError("Simulation persistence must be in [0, 1)")
         for panel_length in panel_lengths:
             for replication in range(replications):
-                city_effect = rng.normal(0, 0.35, cities)
-                state = city_effect / (1 - persistence) + rng.normal(0, 0.3, cities)
-                rows = []
-                # Burn-in reduces dependence on an arbitrary initial condition.
-                for time in range(30 + panel_length):
-                    country_shock = rng.normal(0, 0.08, countries)
-                    covariate = rng.normal(size=cities)
-                    outcome = (
-                        persistence * state + 0.3 * covariate + city_effect
-                        + country_shock[country] + rng.normal(0, 0.25, cities)
-                    )
-                    if time >= 30:
-                        for index in range(cities):
-                            rows.append(
-                                {
-                                    "city_id": index,
-                                    "country_code": country[index],
-                                    "period": time - 30,
-                                    "growth": outcome[index],
-                                    "lagged_growth": state[index],
-                                    "x": covariate[index],
-                                }
-                            )
-                    state = outcome
+                panel = _simulate_dynamic_panel(
+                    rng, persistence=persistence, panel_length=panel_length,
+                    cities=cities, countries=countries,
+                )
                 sample = common_dynamic_sample(
-                    pd.DataFrame(rows), outcome="growth", lagged_outcome="lagged_growth",
+                    panel, outcome="growth", lagged_outcome="lagged_growth",
                     covariates=["x"],
                 )
                 estimates = fit_dynamic_hierarchy(
@@ -384,5 +409,97 @@ def simulate_dynamic_hierarchy(
     ))
     summary["replications"] = replications
     summary["cities"] = cities
+    summary["seed"] = seed
+    return summary
+
+
+def _wilson_interval(successes: int, trials: int, z: float = 1.959963984540054) -> tuple[float, float]:
+    rate = successes / trials
+    denominator = 1 + z**2 / trials
+    center = (rate + z**2 / (2 * trials)) / denominator
+    margin = z * np.sqrt(rate * (1 - rate) / trials + z**2 / (4 * trials**2)) / denominator
+    return center - margin, center + margin
+
+
+def simulate_bootstrap_coverage(
+    *,
+    persistence_values: tuple[float, ...] = (0.2, 0.6, 0.9),
+    panel_lengths: tuple[int, ...] = (6, 8, 10),
+    simulation_replications: int = 200,
+    bootstrap_replications: int = 399,
+    cities: int = 48,
+    countries: int = 6,
+    confidence_level: float = 0.95,
+    seed: int = 314159,
+) -> pd.DataFrame:
+    """Estimate interval coverage and apply the predeclared production gate.
+
+    A design cell is production-eligible only with at least 200 simulated panels and 399
+    bootstrap draws. Its Wilson interval for empirical coverage must lie wholly inside the
+    predeclared 0.90--0.99 adequacy band. This rejects both undercoverage and vacuous intervals.
+    """
+    _validate_simulation_design(persistence_values, panel_lengths, cities, countries)
+    if simulation_replications < 2:
+        raise SourceSchemaError("Coverage simulation requires at least two panels per cell")
+    if bootstrap_replications < 20:
+        raise SourceSchemaError("Coverage simulation requires at least 20 bootstrap draws")
+    rng = np.random.default_rng(seed)
+    records = []
+    for persistence in persistence_values:
+        for panel_length in panel_lengths:
+            for replication in range(simulation_replications):
+                panel = _simulate_dynamic_panel(
+                    rng, persistence=persistence, panel_length=panel_length,
+                    cities=cities, countries=countries,
+                )
+                sample = common_dynamic_sample(
+                    panel, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"]
+                )
+                bootstrap_seed = int(rng.integers(0, np.iinfo(np.int32).max))
+                intervals = bootstrap_dynamic_hierarchy(
+                    sample, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"],
+                    replications=bootstrap_replications, confidence_level=confidence_level,
+                    seed=bootstrap_seed,
+                )
+                intervals = intervals.loc[intervals["term"].eq("lagged_growth")]
+                for row in intervals.itertuples():
+                    records.append(
+                        {
+                            "persistence": persistence,
+                            "panel_length": panel_length,
+                            "simulation_replication": replication,
+                            "estimator_id": row.estimator_id,
+                            "covered": row.confidence_lower <= persistence <= row.confidence_upper,
+                            "interval_width": row.confidence_upper - row.confidence_lower,
+                        }
+                    )
+    raw = pd.DataFrame(records)
+    grouped = raw.groupby(["persistence", "panel_length", "estimator_id"], as_index=False)
+    summary = grouped.agg(
+        covered_panels=("covered", "sum"),
+        evaluated_panels=("covered", "size"),
+        empirical_coverage=("covered", "mean"),
+        median_interval_width=("interval_width", "median"),
+    )
+    wilson = summary.apply(
+        lambda row: _wilson_interval(int(row["covered_panels"]), int(row["evaluated_panels"])),
+        axis=1,
+    )
+    summary[["coverage_wilson_lower", "coverage_wilson_upper"]] = pd.DataFrame(
+        wilson.tolist(), index=summary.index
+    )
+    production = simulation_replications >= 200 and bootstrap_replications >= 399
+    summary["production_design"] = production
+    adequate = summary["coverage_wilson_lower"].ge(0.90) & summary[
+        "coverage_wilson_upper"
+    ].le(0.99)
+    summary["coverage_gate_pass"] = pd.array(
+        adequate if production else [pd.NA] * len(summary), dtype="boolean"
+    )
+    summary["nominal_confidence"] = confidence_level
+    summary["simulation_replications"] = simulation_replications
+    summary["bootstrap_replications"] = bootstrap_replications
+    summary["cities"] = cities
+    summary["countries"] = countries
     summary["seed"] = seed
     return summary
