@@ -15,6 +15,7 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 | WorldPop Global 2 | Robustness | Fine-grid population allocation | 2015-2030 is too short for the primary historical design |
 | Natural Earth Admin 0 | Spatial control | Borders and island geometry | Geometry does not measure migration-policy restrictiveness |
 | U.S. Decennial Census places | Threshold validation | Direct 2010/2020 place counts and official relationship file | Favorable single-country pipeline test; not Global South feasibility evidence |
+| Mexico INEGI locality census and geography | Threshold validation | Direct 2010/2020 locality counts, official equivalence records and vintage geometry | Exact files and national concordance coverage have not yet been audited |
 
 ## U.S. Decennial Census place pilot
 
@@ -31,6 +32,24 @@ comparability, not a claim that land overlap alone harmonizes population definit
 Exact files enter `data/manifest.csv` only after credentialed acquisition and hashing.
 The U.S. source validates pipeline behavior but cannot satisfy the separate Global
 South census-feasibility requirement.
+
+## Mexico INEGI locality-concordance pilot
+
+The first Mexico interval is 2010–2020. Direct locality population comes from INEGI
+SCITEL/ITER. Geographic-key relationships come from the Catálogo Único and are reviewed
+against the Archivo Histórico de Localidades. Comparable-geography screening uses the 2010
+and 2020 Marco Geoestadístico locality layers.
+
+The nine-digit locality key contains state, municipality and locality components. A municipal
+change can therefore rekey an otherwise related locality, while a repeated key does not rule
+out a boundary event. Key equality is only candidate evidence. Name and coordinate matching
+may locate candidates but cannot create an accepted concordance.
+
+These sources are not added to `data/sources.json` or `data/manifest.csv` until the exact
+downloads, product versions, redistribution terms and hashes are known. Source availability
+establishes feasibility in principle only; G2 remains open until count- and population-weighted
+coverage and every split/merge exclusion are reported. The full acquisition and acceptance
+contract is in `docs/mexico-locality-concordance-feasibility.md`.
 
 ## Verified WUP F01 national control
 

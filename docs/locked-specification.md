@@ -137,7 +137,7 @@ receives a machine-readable reason.
 
 | ID | Issue | Required output |
 |---|---|---|
-| O1 | Mexico locality concordance, 2000–2020 | Pilot feasibility report |
+| O1 | Mexico locality concordance | Run 2010–2020 first using official equivalence records and vintage geometry; extend to 2000 only after the first transition passes coverage review |
 | O2 | Brazil census-sector harmonization | Crosswalk coverage table |
 | O3 | South Africa and Ghana multiwave access | Access and coverage memo |
 | O4 | Absolute and relative tier definitions | Versioned tier registry |

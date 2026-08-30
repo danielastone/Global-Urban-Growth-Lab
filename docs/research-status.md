@@ -28,6 +28,21 @@ This is an implementation-validation pilot in a comparatively strong identifier 
 boundary-data environment. It does not satisfy the Global South country-pilot gate or
 close the Mexico/Brazil feasibility work. See `docs/us-census-threshold-pilot.md`.
 
+## Mexico locality-concordance feasibility
+
+INEGI's official infrastructure supports a 2010–2020 locality pilot in principle: SCITEL/ITER
+provides direct locality census counts, the Catálogo Único provides geographic-key equivalence
+records, the Archivo Histórico de Localidades provides review evidence, and census-vintage
+Marco Geoestadístico products provide geometry. This resolves the source-discovery question,
+not the comparable-geography question.
+
+The pilot is therefore registered as a manual acquisition block. It must measure coverage for
+the complete 2010 cohort from 25,000 through 100,000 residents before a parser or empirical
+result is treated as production. Same-key and name-only matches are prohibited; official
+relationships and vintage geometry determine acceptance. G2 remains open until the national
+concordance and exclusion tables pass an approved coverage gate. See
+`docs/mexico-locality-concordance-feasibility.md`.
+
 ## Dynamic-estimator implementation gate
 
 The locked hierarchy now has a machine-readable registry and one common-sample constructor.
