@@ -6,13 +6,24 @@ Module A now reads the registered WUP 2025 F01 `Cities`, `Towns`, `Rural`, and `
 sheets directly. Country-category sums must reconcile to the published total within three
 persons after conversion from thousands; failure stops the build. Five-year intervals report
 total growth, category growth availability, settlement shares, share changes, and a
-zero-summing reallocation decomposition. These are revised-history national estimates, not
-vintage-real-time observations.
+zero-summing reallocation decomposition. Origins are restricted to a five-year grid anchored
+at 1950, matching the city forecast cadence and preventing overlapping annual windows from
+being treated as independent time information. These are revised-history national estimates,
+not vintage-real-time observations.
+
+An interval receives `composition_discontinuity_flag` when any settlement category appears or
+disappears at an endpoint, or when any category share changes by at least 0.25 within five
+years. The threshold is a prespecified audit rule, not an estimate of demographic plausibility.
+All intervals remain in the `all` summaries; `stable_composition` summaries exclude flagged
+intervals as a sensitivity analysis. A flag can reflect real rapid change, classification
+change, or source revision and must not be interpreted as a data error without country-level
+source review.
 
 Forecast features are built separately. They contain origin settlement shares and growth or
 share change from the interval completed at the origin. Realized origin-to-endpoint envelope
 growth and share change are outcomes and are prohibited as forecast-origin features. Global
 and regional summaries report country-equal and population-at-origin weighting separately.
+They also identify whether they use all intervals or the stable-composition sensitivity sample.
 The direct envelope supersedes any attempt to treat recovered Module B country-period fixed
 effects as primary national demographic data; recovered effects remain diagnostic only.
 

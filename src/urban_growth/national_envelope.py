@@ -11,7 +11,13 @@ DEGURBA_CATEGORIES = ("city", "town_and_semi_dense", "rural")
 
 
 def national_envelope_intervals(
-    panel: pd.DataFrame, *, interval_years: int = 5, estimate_end_year: int = 2025
+    panel: pd.DataFrame,
+    *,
+    interval_years: int = 5,
+    origin_step_years: int = 5,
+    origin_anchor_year: int = 1950,
+    estimate_end_year: int = 2025,
+    large_share_change_threshold: float = 0.25,
 ) -> pd.DataFrame:
     """Decompose national population change and settlement-class reallocation."""
     required = {
@@ -22,8 +28,10 @@ def national_envelope_intervals(
     reject_duplicate_keys(
         panel, ["country_code", "year", "category"], source_name="national settlement panel"
     )
-    if interval_years <= 0:
-        raise SourceSchemaError("National-envelope interval must be positive")
+    if interval_years <= 0 or origin_step_years <= 0:
+        raise SourceSchemaError("National-envelope interval and origin step must be positive")
+    if not 0 < large_share_change_threshold <= 1:
+        raise SourceSchemaError("Large-share-change threshold must be in (0, 1]")
     unknown = set(panel["category"].dropna()) - set(DEGURBA_CATEGORIES)
     if unknown:
         raise SourceSchemaError(f"Unknown national settlement categories: {sorted(unknown)}")
@@ -53,7 +61,10 @@ def national_envelope_intervals(
     start["period_end"] = start["year"] + interval_years
     result = start.merge(end, on=["country_code", "period_end"], validate="one_to_one")
     result = result.rename(columns={"year": "period_start"})
-    result = result.loc[result["period_end"].le(estimate_end_year)].copy()
+    result = result.loc[
+        result["period_end"].le(estimate_end_year)
+        & result["period_start"].sub(origin_anchor_year).mod(origin_step_years).eq(0)
+    ].copy()
     result = result.merge(
         metadata.rename(columns={"year": "period_start", "observation_type": "start_status"}),
         on=["country_code", "period_start"], validate="many_to_one",
@@ -100,6 +111,19 @@ def national_envelope_intervals(
         raise SourceSchemaError("National settlement share changes do not sum to zero")
     if not np.allclose(result[reallocation_columns].sum(axis=1), 0, atol=1e-6):
         raise SourceSchemaError("National settlement reallocations do not sum to zero")
+    presence_transitions = []
+    for category in DEGURBA_CATEGORIES:
+        start_positive = result[f"{category}_population_start"].gt(0)
+        end_positive = result[f"{category}_population_end"].gt(0)
+        presence_transitions.append(start_positive.ne(end_positive))
+    result["category_presence_transition"] = pd.concat(presence_transitions, axis=1).any(axis=1)
+    result["large_share_change_threshold"] = large_share_change_threshold
+    result["large_share_change_flag"] = result[share_change_columns].abs().max(axis=1).ge(
+        large_share_change_threshold
+    )
+    result["composition_discontinuity_flag"] = (
+        result["category_presence_transition"] | result["large_share_change_flag"]
+    )
     result["interval_observation_status"] = np.where(
         result["start_status"].eq("estimate") & result["end_status"].eq("estimate"),
         "retrospective_revised_estimate", "contains_projection",
@@ -184,7 +208,7 @@ def national_envelope_summaries(intervals: pd.DataFrame) -> pd.DataFrame:
     ]
     required = {
         "country_code", "period_start", "period_end", "region_name",
-        "total_population_start", *metrics,
+        "total_population_start", "composition_discontinuity_flag", *metrics,
     }
     require_columns(intervals, required, source_name="national envelope intervals")
     records = []
@@ -192,28 +216,33 @@ def national_envelope_summaries(intervals: pd.DataFrame) -> pd.DataFrame:
         ("global", pd.Series("Global", index=intervals.index)),
         ("region", intervals["region_name"]),
     ]
-    for aggregation_level, labels in group_designs:
-        working = intervals.assign(_group=labels)
-        for (period_start, period_end, group_name), group in working.groupby(
-            ["period_start", "period_end", "_group"], sort=True
-        ):
-            weights = group["total_population_start"].to_numpy(dtype=float)
-            for weighting in ("country_equal", "population_start"):
-                row: dict[str, int | float | str] = {
-                    "aggregation_level": aggregation_level,
-                    "group_name": str(group_name),
-                    "period_start": int(period_start),
-                    "period_end": int(period_end),
-                    "weighting": weighting,
-                    "country_count": group["country_code"].nunique(),
-                }
-                for metric in metrics:
-                    values = group[metric].to_numpy(dtype=float)
-                    row[metric] = (
-                        float(values.mean()) if weighting == "country_equal"
-                        else float(np.average(values, weights=weights))
-                    )
-                records.append(row)
+    for sample_name, sample in (
+        ("all", intervals),
+        ("stable_composition", intervals.loc[~intervals["composition_discontinuity_flag"]]),
+    ):
+        for aggregation_level, labels in group_designs:
+            working = sample.assign(_group=labels.reindex(sample.index))
+            for (period_start, period_end, group_name), group in working.groupby(
+                ["period_start", "period_end", "_group"], sort=True
+            ):
+                weights = group["total_population_start"].to_numpy(dtype=float)
+                for weighting in ("country_equal", "population_start"):
+                    row: dict[str, int | float | str] = {
+                        "sample": sample_name,
+                        "aggregation_level": aggregation_level,
+                        "group_name": str(group_name),
+                        "period_start": int(period_start),
+                        "period_end": int(period_end),
+                        "weighting": weighting,
+                        "country_count": group["country_code"].nunique(),
+                    }
+                    for metric in metrics:
+                        values = group[metric].to_numpy(dtype=float)
+                        row[metric] = (
+                            float(values.mean()) if weighting == "country_equal"
+                            else float(np.average(values, weights=weights))
+                        )
+                    records.append(row)
     return pd.DataFrame(records).sort_values(
-        ["aggregation_level", "group_name", "period_start", "weighting"]
+        ["sample", "aggregation_level", "group_name", "period_start", "weighting"]
     ).reset_index(drop=True)
