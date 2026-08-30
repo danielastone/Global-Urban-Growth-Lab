@@ -1,0 +1,5 @@
+Locked production coverage run
+commit: 82766fad07e028374b7c421c3c3edeec1081a187
+simulation_replications: 200
+bootstrap_replications: 399
+seed: 314159
