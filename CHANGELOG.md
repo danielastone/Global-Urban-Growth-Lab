@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- License repository software under Apache-2.0 while explicitly excluding
+  third-party data from that grant.
+- Add a deny-by-default, machine-readable data-rights registry covering research,
+  commercial, redistribution, model-fitting, and customer-output uses.
+- Enforce catalog/license completeness in GitHub Actions and provide a failing
+  `check-license` gate for every decision not explicitly marked `permitted`.
+- Document attribution, IGO immunity, database-rights, IPUMS, and artifact-lineage
+  boundaries in `THIRD_PARTY_DATA.md`.
 - Adopt the 29 August 2026 locked empirical specification and encode its
   forecast-origin tier, ILR, census-threshold, accessibility-band, and C1/C2/C3
   form-timing contracts as tested utilities.

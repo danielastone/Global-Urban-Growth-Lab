@@ -6,8 +6,11 @@ from urban_growth.sources import (
     SourceCatalogError,
     inventory_file,
     load_catalog,
+    load_licenses,
+    require_permitted_use,
     source_by_id,
     validate_catalog,
+    validate_licenses,
 )
 
 
@@ -48,3 +51,46 @@ def test_inventory_hashes_exact_file(tmp_path) -> None:
         retrieved_at="2026-08-27",
     )
     assert record.sha256 == "492d5ea496056f1a6a6592241032fab764c321596317930b4fa0e1e8bc3b7470"
+
+
+def test_repository_license_registry_is_complete_and_fail_closed() -> None:
+    catalog = load_catalog("data/sources.json")
+    registry = load_licenses("data/licenses.json", catalog=catalog)
+    assert registry["default_policy"] == "deny"
+    assert len(registry["sources"]) == len(catalog["sources"])
+
+
+def test_permitted_ghsl_commercial_ingestion_passes() -> None:
+    registry = load_licenses("data/licenses.json")
+    record = require_permitted_use(
+        registry, "ec_ghsl_ucdb_r2024a_v1_2", "internal_commercial_use"
+    )
+    assert record["license_id"] == "CC-BY-4.0"
+
+
+@pytest.mark.parametrize(
+    ("source_id", "decision"),
+    [
+        ("un_wup_2025_cities", "legal_review_required"),
+        ("map_accessibility_2015", "unresolved"),
+    ],
+)
+def test_non_permitted_commercial_ingestion_fails(source_id: str, decision: str) -> None:
+    registry = load_licenses("data/licenses.json")
+    with pytest.raises(SourceCatalogError, match=decision):
+        require_permitted_use(registry, source_id, "internal_commercial_use")
+
+
+def test_license_registry_must_match_catalog() -> None:
+    catalog = load_catalog("data/sources.json")
+    registry = load_licenses("data/licenses.json")
+    registry = json.loads(json.dumps(registry))
+    registry["sources"].pop()
+    with pytest.raises(SourceCatalogError, match="mismatch"):
+        validate_licenses(registry, catalog=catalog)
+
+
+def test_unknown_license_use_fails() -> None:
+    registry = load_licenses("data/licenses.json")
+    with pytest.raises(SourceCatalogError, match="Unknown licensed use"):
+        require_permitted_use(registry, "un_wup_2025_cities", "generic_commercial_use")
