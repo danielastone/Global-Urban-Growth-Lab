@@ -1,0 +1,8 @@
+# Final review currently remains with the repository owner.
+* @danielastone
+
+# Changes to source rights need explicit owner review even when code is unchanged.
+/LICENSE @danielastone
+/THIRD_PARTY_DATA.md @danielastone
+/data/licenses.json @danielastone
+/data/sources.json @danielastone
