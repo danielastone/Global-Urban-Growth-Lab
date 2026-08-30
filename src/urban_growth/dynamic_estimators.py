@@ -83,6 +83,15 @@ def common_dynamic_sample(
         sample = sample.loc[
             sample.groupby(city)[city].transform("size").ge(min_city_periods)
         ]
+        periods = sorted(sample[period].unique())
+        if len(periods) < 4:
+            raise SourceSchemaError("Dynamic common sample needs at least four periods")
+        midpoint = len(periods) // 2
+        eligible_cities = set(sample[city].unique())
+        for half in (periods[:midpoint], periods[midpoint:]):
+            half_counts = sample.loc[sample[period].isin(half)].groupby(city).size()
+            eligible_cities &= set(half_counts.loc[half_counts.ge(2)].index)
+        sample = sample.loc[sample[city].isin(eligible_cities)]
         # A singleton country-period cell is absorbed perfectly and carries no allocation signal.
         sample = sample.loc[
             sample.groupby("country_period")["country_period"].transform("size").ge(2)
@@ -92,7 +101,7 @@ def common_dynamic_sample(
     return sample.sort_values([city, period]).reset_index(drop=True)
 
 
-def _design(
+def _dense_design_reference(
     sample: pd.DataFrame,
     *,
     outcome: str,
@@ -113,6 +122,48 @@ def _design(
     return sample[outcome].to_numpy(dtype=float), design.to_numpy(), list(design.columns)
 
 
+def _group_codes(groups: pd.Series) -> tuple[np.ndarray, int]:
+    codes, uniques = pd.factorize(groups, sort=False)
+    if (codes < 0).any():
+        raise SourceSchemaError("Fixed-effect groups cannot be missing")
+    return codes, len(uniques)
+
+
+def _weighted_group_demean(
+    values: np.ndarray, *, codes: np.ndarray, group_count: int, weights: np.ndarray
+) -> np.ndarray:
+    weighted_sums = np.zeros((group_count, values.shape[1]), dtype=float)
+    np.add.at(weighted_sums, codes, values * weights[:, None])
+    weight_sums = np.bincount(codes, weights=weights, minlength=group_count)
+    if (weight_sums <= 0).any():
+        raise SourceSchemaError("Every absorbed fixed-effect group needs positive weight")
+    return values - weighted_sums[codes] / weight_sums[codes, None]
+
+
+def _absorb_fixed_effects(
+    values: np.ndarray,
+    *,
+    groups: list[pd.Series],
+    weights: np.ndarray,
+    tolerance: float = 1e-10,
+    max_iterations: int = 10_000,
+) -> np.ndarray:
+    """Residualize columns by one or more fixed effects without dummy matrices."""
+    encoded = [_group_codes(group) for group in groups]
+    result = values.astype(float, copy=True)
+    for _ in range(max_iterations):
+        previous = result.copy()
+        for codes, group_count in encoded:
+            result = _weighted_group_demean(
+                result, codes=codes, group_count=group_count, weights=weights
+            )
+        change = float(np.max(np.abs(result - previous)))
+        scale = max(1.0, float(np.max(np.abs(previous))))
+        if change <= tolerance * scale:
+            return result
+    raise SourceSchemaError("Fixed-effect absorption did not converge")
+
+
 def _cluster_meat(x: np.ndarray, residual: np.ndarray, groups: pd.Series) -> np.ndarray:
     scores = x * residual[:, None]
     grouped = pd.DataFrame(scores).groupby(groups.astype(str).to_numpy(), sort=False).sum()
@@ -131,21 +182,27 @@ def _fit_ols(
     city_fixed_effects: bool,
     weights: np.ndarray | None = None,
 ) -> pd.DataFrame:
-    y, x, names = _design(
-        sample, outcome=outcome, lagged_outcome=lagged_outcome, covariates=covariates,
-        city=city, city_fixed_effects=city_fixed_effects,
-    )
+    names = [lagged_outcome, *covariates]
+    values = sample[[outcome, *names]].to_numpy(dtype=float)
     if weights is None:
-        fit_x, fit_y = x, y
+        row_weights = np.ones(len(sample), dtype=float)
     else:
-        weights = np.asarray(weights, dtype=float)
-        if len(weights) != len(sample) or not np.isfinite(weights).all() or (weights <= 0).any():
+        row_weights = np.asarray(weights, dtype=float)
+        if (
+            len(row_weights) != len(sample)
+            or not np.isfinite(row_weights).all()
+            or (row_weights <= 0).any()
+        ):
             raise SourceSchemaError("Estimator weights must be finite, positive, and row-aligned")
-        root_weight = np.sqrt(weights)
-        fit_x, fit_y = x * root_weight[:, None], y * root_weight
+    fixed_effects = [sample["country_period"]]
+    if city_fixed_effects:
+        fixed_effects.append(sample[city])
+    absorbed = _absorb_fixed_effects(values, groups=fixed_effects, weights=row_weights)
+    y, x = absorbed[:, 0], absorbed[:, 1:]
+    root_weight = np.sqrt(row_weights)
+    fit_x, fit_y = x * root_weight[:, None], y * root_weight
     beta = np.linalg.lstsq(fit_x, fit_y, rcond=None)[0]
     residual = y - x @ beta
-    target_count = 1 + len(covariates)
     if weights is None:
         bread = np.linalg.pinv(x.T @ x)
         country_meat = _cluster_meat(x, residual, sample[country])
@@ -154,13 +211,13 @@ def _fit_ols(
         covariance = bread @ (
             country_meat + period_meat - _cluster_meat(x, residual, intersection)
         ) @ bread
-        standard_errors = np.sqrt(np.maximum(np.diag(covariance)[:target_count], 0.0))
+        standard_errors = np.sqrt(np.maximum(np.diag(covariance), 0.0))
     else:
-        standard_errors = np.repeat(np.nan, target_count)
+        standard_errors = np.repeat(np.nan, len(names))
     return pd.DataFrame(
         {
-            "term": names[:target_count],
-            "estimate": beta[:target_count],
+            "term": names,
+            "estimate": beta,
             "std_error_country_period": standard_errors,
             "n_rows": len(sample),
             "n_cities": sample[city].nunique(),
