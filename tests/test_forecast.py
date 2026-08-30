@@ -236,6 +236,11 @@ def test_national_city_category_baseline_uses_only_pre_origin_values() -> None:
     assert attached["national_focal_share_lag"].iloc[0] == pytest.approx(0.10)
     assert attached["national_focal_share_origin"].iloc[0] == pytest.approx(20 / 110)
     assert attached["national_baseline_focal_city_excluded"].iloc[0]
+    assert attached["national_focal_subtraction_valid"].iloc[0]
+    assert (
+        attached["national_focal_subtraction_status"].iloc[0]
+        == "valid_positive_residuals"
+    )
     assert attached["national_focal_component_membership_assumed"].iloc[0]
     assert not attached["national_baseline_uses_future_value"].iloc[0]
     assert attached["subregion_id"].tolist() == [10]
@@ -244,7 +249,7 @@ def test_national_city_category_baseline_uses_only_pre_origin_values() -> None:
 
 
 
-def test_national_leave_city_out_rejects_invalid_component_subtraction() -> None:
+def test_national_leave_city_out_flags_invalid_component_subtraction() -> None:
     intervals = pd.DataFrame(
         {
             "country_code": ["A"],
@@ -265,8 +270,18 @@ def test_national_leave_city_out_rejects_invalid_component_subtraction() -> None
             "region_name": ["Example region"] * 2,
         }
     )
-    with pytest.raises(SourceSchemaError, match="strictly smaller positive component"):
-        attach_national_city_category_baseline(intervals, national)
+    attached = attach_national_city_category_baseline(intervals, national)
+    assert pd.isna(
+        attached["national_city_category_recent_growth_leave_city_out"].iloc[0]
+    )
+    assert not attached["national_focal_subtraction_valid"].iloc[0]
+    assert not attached["national_baseline_focal_city_excluded"].iloc[0]
+    assert (
+        attached["national_focal_subtraction_status"].iloc[0]
+        == "nonpositive_both_endpoints"
+    )
+    assert attached["national_focal_share_lag"].iloc[0] == pytest.approx(1.0)
+    assert attached["national_focal_share_origin"].iloc[0] == pytest.approx(120 / 110)
 
 def test_baselines_include_attached_national_demographic_comparator() -> None:
     train = pd.DataFrame({"country_code": ["A"], "future_growth": [0.01]})

@@ -175,13 +175,31 @@ def attach_national_city_category_baseline(
     national_lag = national_lookup.reindex(lag_lookup).to_numpy()
     residual_origin = national_origin - result["population_start"].to_numpy()
     residual_lag = national_lag - result["population_lag"].to_numpy()
-    if (residual_origin <= 0).any() or (residual_lag <= 0).any():
-        raise SourceSchemaError(
-            "Focal city is not a strictly smaller positive component of national Cities totals"
-        )
-    result["national_city_category_recent_growth_leave_city_out"] = (
-        np.log(residual_origin) - np.log(residual_lag)
+    valid_origin = residual_origin > 0
+    valid_lag = residual_lag > 0
+    valid_subtraction = valid_origin & valid_lag
+    leave_city_out = np.full(len(result), np.nan, dtype=float)
+    leave_city_out[valid_subtraction] = (
+        np.log(residual_origin[valid_subtraction])
+        - np.log(residual_lag[valid_subtraction])
     ) / lookback_years
+    result["national_city_category_recent_growth_leave_city_out"] = leave_city_out
+    result["national_focal_subtraction_valid"] = valid_subtraction
+    result["national_focal_subtraction_status"] = np.select(
+        [
+            valid_subtraction,
+            ~valid_origin & ~valid_lag,
+            ~valid_origin,
+            ~valid_lag,
+        ],
+        [
+            "valid_positive_residuals",
+            "nonpositive_both_endpoints",
+            "nonpositive_origin_residual",
+            "nonpositive_lag_residual",
+        ],
+        default="unclassified",
+    )
     result["national_focal_share_origin"] = (
         result["population_start"].to_numpy() / national_origin
     )
@@ -190,7 +208,7 @@ def attach_national_city_category_baseline(
     )
     result["national_baseline_revision_semantics"] = "WUP_2025_revised_history"
     result["national_baseline_uses_future_value"] = False
-    result["national_baseline_focal_city_excluded"] = True
+    result["national_baseline_focal_city_excluded"] = valid_subtraction
     result["national_focal_component_membership_assumed"] = True
     result["national_focal_subtraction_semantics"] = (
         "F21_city_subtracted_from_F01_Cities_same_revision"

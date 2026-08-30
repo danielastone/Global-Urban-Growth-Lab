@@ -115,14 +115,18 @@ as clean real-time forecast accuracy.
 The primary WUP F01 national comparator subtracts the focal F21 city population from
 both the lag and origin national Cities-category totals before calculating growth.
 The unadjusted national comparator is retained only as a mechanical self-inclusion
-diagnostic. Residual national totals must remain strictly positive or the workflow
-fails.
+diagnostic. Where either residual national total is nonpositive, the subtraction is
+not mathematically or compositionally valid: the leave-city-out value is missing and
+the row carries `national_focal_subtraction_valid = false` plus an endpoint-specific
+status. Rolling comparisons use the common sample on which every scored baseline is
+finite; they do not manufacture a residual for singleton, rounded-equal, or
+cross-border urban systems.
 
 This subtraction uses F21 and F01 from the same WUP 2025 revision, but direct
 component membership is assumed rather than independently crosswalk-validated.
-Outputs therefore carry national_focal_component_membership_assumed. The diagnostic
-removes arithmetic self-inclusion; it does not create causal exogeneity or make the
-revised history vintage-correct.
+Outputs therefore carry `national_focal_component_membership_assumed`. The diagnostic
+removes arithmetic self-inclusion only where `national_focal_subtraction_valid` is
+true; it does not create causal exogeneity or make the revised history vintage-correct.
 
 
 ## Temporal and geographic weighting estimands
