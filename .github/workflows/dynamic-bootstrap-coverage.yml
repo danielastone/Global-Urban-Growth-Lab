@@ -2,6 +2,9 @@ name: dynamic bootstrap coverage
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - "run/dynamic-bootstrap-coverage-*"
 
 permissions:
   contents: read
