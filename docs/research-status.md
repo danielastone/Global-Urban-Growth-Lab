@@ -64,6 +64,15 @@ result, not a workflow failure to retry. Thresholds were not changed and no clai
 the jackknife multiplier interval as validated uncertainty pending a separately specified
 estimator or interval redesign.
 
+The empirical hierarchy runner now absorbs country-period and city fixed effects by weighted
+alternating projections rather than materializing a global city-dummy matrix. Small-panel tests
+require absorbed coefficients to match the prior dense weighted and unweighted fits. The WUP
+runner also enforces at least two observations per city in each jackknife half and reports the
+resulting row and city retention. This makes the common-sample point-estimate comparison
+executable, but it increases survivorship selection. Numerical outputs remain unregistered
+until regeneration from the merged producing commit; no interim coefficient should be treated
+as a validated inferential result.
+
 ## Evidence state
 
 The direct Module A national-envelope pipeline is executable from the registered WUP F01
