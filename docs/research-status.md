@@ -33,6 +33,15 @@ identical full-sample rows, the multiplier interval's coverage is evaluated in t
 simulation grid, and the simulation gate is evaluated at production replication counts. The
 presence of a bootstrap interval is not evidence that its finite-sample coverage is adequate.
 
+The coverage gate is now executable through `scripts/run_dynamic_bootstrap_coverage.py` and
+was specified before opening a production result. Each persistence-by-panel-length cell needs
+at least 200 simulated panels and 399 bootstrap draws. A nominal 95% interval passes only when
+the 95% Wilson interval around empirical coverage lies wholly within 90% to 99%; this rejects
+both material undercoverage and vacuously wide intervals. Smaller runs return a missing gate
+decision rather than a provisional pass. The command accepts repeated `--persistence` and
+`--panel-length` arguments so long runs can be split into auditable cells. No production
+coverage run has yet been accepted or recorded.
+
 ## Evidence state
 
 The source and transformation pipeline is reproducible from registered local files, but all results remain **retrospective current-revision tests**. The WUP and GHSL exercises use different city definitions and must not be pooled. WUP supplies demographic city records without a verified stable-polygon restriction. GHSL supplies a balanced panel calculated inside fixed 2025 polygons, but that definition uses future geographic information and is not vintage-correct. Neither is sufficient for a commercial forecasting claim.

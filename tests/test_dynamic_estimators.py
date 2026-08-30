@@ -8,6 +8,7 @@ from urban_growth.dynamic_estimators import (
     estimator_disagreement_report,
     estimator_registry,
     fit_dynamic_hierarchy,
+    simulate_bootstrap_coverage,
     simulate_dynamic_hierarchy,
 )
 from urban_growth.io import SourceSchemaError
@@ -145,3 +146,15 @@ def test_multiplier_bootstrap_rejects_too_few_draws() -> None:
             sample, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"],
             replications=19,
         )
+
+
+def test_coverage_smoke_run_cannot_pass_production_gate() -> None:
+    result = simulate_bootstrap_coverage(
+        persistence_values=(0.6,), panel_lengths=(6,), simulation_replications=2,
+        bootstrap_replications=20, cities=24, countries=4, seed=4,
+    )
+    assert len(result) == 3
+    assert not result["production_design"].any()
+    assert result["coverage_gate_pass"].isna().all()
+    assert result["evaluated_panels"].eq(2).all()
+    assert result["median_interval_width"].gt(0).all()
