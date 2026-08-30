@@ -31,6 +31,37 @@ CATALOG_REQUIRED = {
     "notes",
 }
 
+LICENSE_USE_FIELDS = {
+    "internal_research_use",
+    "internal_commercial_use",
+    "raw_redistribution",
+    "derived_data_distribution",
+    "model_training_or_fitting",
+    "customer_output_use",
+}
+
+LICENSE_REQUIRED = {
+    "source_id",
+    "license_id",
+    "license_url",
+    "licensor",
+    "rights_holder",
+    *LICENSE_USE_FIELDS,
+    "attribution_required",
+    "attribution_spec",
+    "share_alike",
+    "license_election",
+    "copyright_coverage",
+    "sui_generis_database_rights_coverage",
+    "database_maker_eligibility",
+    "applicable_law",
+    "dispute_forum_or_mechanism",
+    "sovereign_or_igo_immunity",
+    "approval_reference",
+    "terms_snapshot_hash",
+    "notes",
+}
+
 MANIFEST_FIELDS = [
     "source_id", "publisher", "dataset", "release", "retrieved_at", "source_url",
     "license", "local_path", "sha256", "redistribution_allowed", "notes",
@@ -64,6 +95,15 @@ def load_catalog(path: str | Path = "data/sources.json") -> dict:
         catalog = json.load(handle)
     validate_catalog(catalog)
     return catalog
+
+
+def load_licenses(
+    path: str | Path = "data/licenses.json", *, catalog: dict | None = None
+) -> dict:
+    with Path(path).open(encoding="utf-8") as handle:
+        registry = json.load(handle)
+    validate_licenses(registry, catalog=catalog)
+    return registry
 
 
 def default_catalog_path() -> Path:
@@ -117,6 +157,74 @@ def validate_catalog(catalog: dict) -> None:
     )
     if dangling:
         raise SourceCatalogError(f"Unknown upstream dependencies: {', '.join(dangling)}")
+
+
+def validate_licenses(registry: dict, *, catalog: dict | None = None) -> None:
+    if registry.get("schema_version") != 1:
+        raise SourceCatalogError("Unsupported or missing license schema_version")
+    if registry.get("default_policy") != "deny":
+        raise SourceCatalogError("License registry default_policy must be deny")
+    allowed = set(registry.get("allowed_use_values", []))
+    required_allowed = {
+        "permitted", "prohibited", "permission_required", "legal_review_required", "unresolved"
+    }
+    if allowed != required_allowed:
+        raise SourceCatalogError("License registry has invalid allowed_use_values")
+    records = registry.get("sources")
+    if not isinstance(records, list) or not records:
+        raise SourceCatalogError("License registry must contain source records")
+    ids: list[str] = []
+    for index, record in enumerate(records):
+        missing = sorted(LICENSE_REQUIRED.difference(record))
+        if missing:
+            raise SourceCatalogError(
+                f"License source {index} missing fields: {', '.join(missing)}"
+            )
+        source_id = record["source_id"]
+        ids.append(source_id)
+        parsed = urlparse(record["license_url"])
+        if parsed.scheme != "https" or not parsed.netloc:
+            raise SourceCatalogError(f"{source_id} has invalid license_url")
+        invalid = sorted(
+            field for field in LICENSE_USE_FIELDS if record[field] not in allowed
+        )
+        if invalid:
+            raise SourceCatalogError(
+                f"{source_id} has invalid license decisions: {', '.join(invalid)}"
+            )
+        if record["attribution_required"] and not record["attribution_spec"].strip():
+            raise SourceCatalogError(f"{source_id} requires an attribution specification")
+    duplicates = sorted({source_id for source_id in ids if ids.count(source_id) > 1})
+    if duplicates:
+        raise SourceCatalogError(f"Duplicate license source_id values: {', '.join(duplicates)}")
+    if catalog is not None:
+        catalog_ids = {source["source_id"] for source in catalog["sources"]}
+        registry_ids = set(ids)
+        if catalog_ids != registry_ids:
+            missing = sorted(catalog_ids - registry_ids)
+            extra = sorted(registry_ids - catalog_ids)
+            raise SourceCatalogError(
+                f"License registry/catalog mismatch; missing={missing}, extra={extra}"
+            )
+
+
+def license_by_source_id(registry: dict, source_id: str) -> dict:
+    matches = [record for record in registry["sources"] if record["source_id"] == source_id]
+    if not matches:
+        raise SourceCatalogError(f"No license decision for source_id: {source_id}")
+    return matches[0]
+
+
+def require_permitted_use(registry: dict, source_id: str, use: str) -> dict:
+    if use not in LICENSE_USE_FIELDS:
+        raise SourceCatalogError(f"Unknown licensed use: {use}")
+    record = license_by_source_id(registry, source_id)
+    decision = record[use]
+    if decision != "permitted":
+        raise SourceCatalogError(
+            f"DENIED: {source_id} {use} is {decision}; fail-closed policy requires permitted"
+        )
+    return record
 
 
 def source_by_id(catalog: dict, source_id: str) -> dict:
@@ -179,9 +287,14 @@ def append_manifest(record: InventoryRecord, path: str | Path = "data/manifest.c
 def main() -> None:
     parser = argparse.ArgumentParser(description="Inspect and inventory urban-growth sources")
     parser.add_argument("--catalog")
+    parser.add_argument("--licenses")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("list")
     subparsers.add_parser("verify-catalog")
+    subparsers.add_parser("verify-licenses")
+    license_check = subparsers.add_parser("check-license")
+    license_check.add_argument("--source-id", required=True)
+    license_check.add_argument("--use", required=True, choices=sorted(LICENSE_USE_FIELDS))
     inventory = subparsers.add_parser("inventory")
     inventory.add_argument("file")
     inventory.add_argument("--source-id", required=True)
@@ -189,11 +302,22 @@ def main() -> None:
     inventory.add_argument("--manifest", default="data/manifest.csv")
     args = parser.parse_args()
     catalog = load_catalog(args.catalog or default_catalog_path())
+    license_path = args.licenses or default_catalog_path().with_name("licenses.json")
     if args.command == "list":
         for source in sorted(catalog["sources"], key=lambda item: item["priority"]):
             print(f"{source['priority']}\t{source['source_id']}\t{source['status']}\t{source['dataset']}")
     elif args.command == "verify-catalog":
         print(f"valid: {len(catalog['sources'])} sources")
+    elif args.command == "verify-licenses":
+        registry = load_licenses(license_path, catalog=catalog)
+        print(f"valid: {len(registry['sources'])} license decisions; default=deny")
+    elif args.command == "check-license":
+        registry = load_licenses(license_path, catalog=catalog)
+        try:
+            record = require_permitted_use(registry, args.source_id, args.use)
+        except SourceCatalogError as error:
+            raise SystemExit(str(error)) from error
+        print(f"permitted: {record['source_id']} {args.use} under {record['license_id']}")
     else:
         source = source_by_id(catalog, args.source_id)
         record = inventory_file(args.file, source, source_url=args.source_url)
