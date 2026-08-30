@@ -122,28 +122,39 @@ def _fit_ols(
     country: str,
     period: str,
     city_fixed_effects: bool,
+    weights: np.ndarray | None = None,
 ) -> pd.DataFrame:
     y, x, names = _design(
         sample, outcome=outcome, lagged_outcome=lagged_outcome, covariates=covariates,
         city=city, city_fixed_effects=city_fixed_effects,
     )
-    beta = np.linalg.lstsq(x, y, rcond=None)[0]
+    if weights is None:
+        fit_x, fit_y = x, y
+    else:
+        weights = np.asarray(weights, dtype=float)
+        if len(weights) != len(sample) or not np.isfinite(weights).all() or (weights <= 0).any():
+            raise SourceSchemaError("Estimator weights must be finite, positive, and row-aligned")
+        root_weight = np.sqrt(weights)
+        fit_x, fit_y = x * root_weight[:, None], y * root_weight
+    beta = np.linalg.lstsq(fit_x, fit_y, rcond=None)[0]
     residual = y - x @ beta
-    bread = np.linalg.pinv(x.T @ x)
-    country_meat = _cluster_meat(x, residual, sample[country])
-    period_meat = _cluster_meat(x, residual, sample[period])
-    intersection = sample[country].astype(str) + "::" + sample[period].astype(str)
-    covariance = bread @ (
-        country_meat + period_meat - _cluster_meat(x, residual, intersection)
-    ) @ bread
     target_count = 1 + len(covariates)
+    if weights is None:
+        bread = np.linalg.pinv(x.T @ x)
+        country_meat = _cluster_meat(x, residual, sample[country])
+        period_meat = _cluster_meat(x, residual, sample[period])
+        intersection = sample[country].astype(str) + "::" + sample[period].astype(str)
+        covariance = bread @ (
+            country_meat + period_meat - _cluster_meat(x, residual, intersection)
+        ) @ bread
+        standard_errors = np.sqrt(np.maximum(np.diag(covariance)[:target_count], 0.0))
+    else:
+        standard_errors = np.repeat(np.nan, target_count)
     return pd.DataFrame(
         {
             "term": names[:target_count],
             "estimate": beta[:target_count],
-            "std_error_country_period": np.sqrt(
-                np.maximum(np.diag(covariance)[:target_count], 0.0)
-            ),
+            "std_error_country_period": standard_errors,
             "n_rows": len(sample),
             "n_cities": sample[city].nunique(),
             "n_periods": sample[period].nunique(),
@@ -160,17 +171,18 @@ def fit_dynamic_hierarchy(
     city: str = "city_id",
     country: str = "country_code",
     period: str = "period",
+    weights: np.ndarray | None = None,
 ) -> pd.DataFrame:
     """Fit pooled, city-FE, and split-panel-jackknife estimates on one full sample."""
     required = {outcome, lagged_outcome, city, country, period, "country_period", *covariates}
     require_columns(sample, required, source_name="dynamic common sample")
     pooled = _fit_ols(
         sample, outcome=outcome, lagged_outcome=lagged_outcome, covariates=covariates,
-        city=city, country=country, period=period, city_fixed_effects=False,
+        city=city, country=country, period=period, city_fixed_effects=False, weights=weights,
     ).assign(estimator_id="pooled_dynamic")
     fixed = _fit_ols(
         sample, outcome=outcome, lagged_outcome=lagged_outcome, covariates=covariates,
-        city=city, country=country, period=period, city_fixed_effects=True,
+        city=city, country=country, period=period, city_fixed_effects=True, weights=weights,
     ).assign(estimator_id="city_fe_dynamic")
     periods = sorted(sample[period].unique())
     if len(periods) < 4:
@@ -179,7 +191,8 @@ def fit_dynamic_hierarchy(
     halves = [periods[:midpoint], periods[midpoint:]]
     half_estimates = []
     for half in halves:
-        half_sample = sample.loc[sample[period].isin(half)].copy()
+        half_mask = sample[period].isin(half).to_numpy()
+        half_sample = sample.loc[half_mask].copy()
         if half_sample.groupby(city)[city].size().min() < 2:
             raise SourceSchemaError("Each jackknife half requires two observations per city")
         half_estimates.append(
@@ -187,6 +200,7 @@ def fit_dynamic_hierarchy(
                 half_sample, outcome=outcome, lagged_outcome=lagged_outcome,
                 covariates=covariates, city=city, country=country, period=period,
                 city_fixed_effects=True,
+                weights=None if weights is None else np.asarray(weights)[half_mask],
             ).set_index("term")["estimate"]
         )
     corrected = fixed.copy()
@@ -204,6 +218,74 @@ def fit_dynamic_hierarchy(
     )
     registry = estimator_registry()[["estimator_id", "estimand", "role", "bias_correction"]]
     return result.merge(registry, on="estimator_id", validate="many_to_one")
+
+
+def bootstrap_dynamic_hierarchy(
+    sample: pd.DataFrame,
+    *,
+    outcome: str,
+    lagged_outcome: str,
+    covariates: list[str],
+    city: str = "city_id",
+    country: str = "country_code",
+    period: str = "period",
+    replications: int = 999,
+    confidence_level: float = 0.95,
+    seed: int = 2718,
+) -> pd.DataFrame:
+    """Infer uncertainty using country-by-period product multiplier weights.
+
+    Positive exponential multipliers preserve every city's ordered history and the fixed-effect
+    design while perturbing the two declared dependence dimensions independently. Runs below
+    399 replications are allowed for tests but are marked non-production.
+    """
+    if replications < 20:
+        raise SourceSchemaError("Dynamic bootstrap requires at least 20 replications")
+    if not 0.5 < confidence_level < 1:
+        raise SourceSchemaError("Bootstrap confidence_level must be between 0.5 and 1")
+    required = {outcome, lagged_outcome, city, country, period, "country_period", *covariates}
+    require_columns(sample, required, source_name="dynamic bootstrap sample")
+    countries = pd.Index(sample[country].drop_duplicates())
+    periods = pd.Index(sample[period].drop_duplicates())
+    if len(countries) < 2 or len(periods) < 4:
+        raise SourceSchemaError("Dynamic bootstrap requires two countries and four periods")
+    point = fit_dynamic_hierarchy(
+        sample, outcome=outcome, lagged_outcome=lagged_outcome, covariates=covariates,
+        city=city, country=country, period=period,
+    )[["estimator_id", "term", "estimate"]]
+    rng = np.random.default_rng(seed)
+    draws = []
+    for replication in range(replications):
+        country_weights = pd.Series(rng.exponential(size=len(countries)), index=countries)
+        period_weights = pd.Series(rng.exponential(size=len(periods)), index=periods)
+        country_weights /= country_weights.mean()
+        period_weights /= period_weights.mean()
+        row_weights = (
+            sample[country].map(country_weights).to_numpy()
+            * sample[period].map(period_weights).to_numpy()
+        )
+        estimate = fit_dynamic_hierarchy(
+            sample, outcome=outcome, lagged_outcome=lagged_outcome, covariates=covariates,
+            city=city, country=country, period=period, weights=row_weights,
+        )[["estimator_id", "term", "estimate"]]
+        estimate["replication"] = replication
+        draws.append(estimate)
+    draw_frame = pd.concat(draws, ignore_index=True)
+    alpha = (1 - confidence_level) / 2
+    summary = draw_frame.groupby(["estimator_id", "term"], as_index=False).agg(
+        bootstrap_std_error=("estimate", "std"),
+        confidence_lower=("estimate", lambda values: values.quantile(alpha)),
+        confidence_upper=("estimate", lambda values: values.quantile(1 - alpha)),
+    )
+    result = point.rename(columns={"estimate": "point_estimate"}).merge(
+        summary, on=["estimator_id", "term"], validate="one_to_one"
+    )
+    result["bootstrap_method"] = "country-period product exponential multiplier"
+    result["confidence_level"] = confidence_level
+    result["replications"] = replications
+    result["seed"] = seed
+    result["production_replications"] = replications >= 399
+    return result
 
 
 def estimator_disagreement_report(

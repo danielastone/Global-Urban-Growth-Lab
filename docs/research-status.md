@@ -20,16 +20,18 @@ The locked hierarchy now has a machine-readable registry and one common-sample c
 It fits the pooled predictive benchmark, the Nickell-biased city fixed-effect diagnostic, and
 a split-panel-jackknife finite-T correction with country-period fixed effects. The first two
 return a country-and-period two-way sandwich covariance. The corrected estimator deliberately
-returns no analytic standard error: a panel bootstrap must be implemented and validated rather
-than pretending the uncorrected sandwich applies to a nonlinear bias correction.
+returns no analytic standard error. A separate product-exponential multiplier bootstrap
+perturbs country and period dimensions independently while preserving city time order and
+recomputing the full correction. Runs below 399 replications are marked non-production.
 
 `scripts/run_dynamic_estimator_simulation.py` spans persistence values 0.2, 0.6, and 0.9 and
 panel lengths 6, 8, and 10 under a fixed seed. It reports estimator bias and RMSE rather than
 assuming the correction improves every draw. Restricted dynamic GMM remains registered but
 unimplemented; it is not an automatic fourth model and cannot be run unless instrument-strength
 and proliferation gates are specified. Issue #27 remains open until empirical estimates use
-identical full-sample rows, bootstrap inference is available for the corrected estimator, and
-the simulation gate is evaluated at production replication counts.
+identical full-sample rows, the multiplier interval's coverage is evaluated in the declared
+simulation grid, and the simulation gate is evaluated at production replication counts. The
+presence of a bootstrap interval is not evidence that its finite-sample coverage is adequate.
 
 ## Evidence state
 

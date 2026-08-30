@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from urban_growth.dynamic_estimators import (
+    bootstrap_dynamic_hierarchy,
     common_dynamic_sample,
     estimator_disagreement_report,
     estimator_registry,
@@ -110,3 +111,37 @@ def test_simulation_grid_reports_bias_without_guaranteeing_correction_wins() -> 
     }
     assert result["replications"].eq(2).all()
     assert result[["mean_estimate", "bias", "rmse"]].notna().all().all()
+
+
+def test_multiplier_bootstrap_is_deterministic_and_covers_corrected_estimator() -> None:
+    sample = common_dynamic_sample(
+        simulated_panel(cities=24), outcome="growth", lagged_outcome="lagged_growth",
+        covariates=["x"],
+    )
+    first = bootstrap_dynamic_hierarchy(
+        sample, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"],
+        replications=20, seed=11,
+    )
+    second = bootstrap_dynamic_hierarchy(
+        sample, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"],
+        replications=20, seed=11,
+    )
+    pd.testing.assert_frame_equal(first, second)
+    assert len(first) == 6
+    corrected = first.loc[first["estimator_id"].eq("half_panel_jackknife")]
+    assert corrected["bootstrap_std_error"].gt(0).all()
+    assert corrected["confidence_lower"].lt(corrected["point_estimate"]).all()
+    assert corrected["confidence_upper"].gt(corrected["point_estimate"]).all()
+    assert not first["production_replications"].any()
+
+
+def test_multiplier_bootstrap_rejects_too_few_draws() -> None:
+    sample = common_dynamic_sample(
+        simulated_panel(cities=16), outcome="growth", lagged_outcome="lagged_growth",
+        covariates=["x"],
+    )
+    with pytest.raises(SourceSchemaError, match="at least 20"):
+        bootstrap_dynamic_hierarchy(
+            sample, outcome="growth", lagged_outcome="lagged_growth", covariates=["x"],
+            replications=19,
+        )
