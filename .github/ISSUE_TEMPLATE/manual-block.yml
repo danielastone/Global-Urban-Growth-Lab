@@ -1,0 +1,46 @@
+name: Manual block or source decision
+description: Record work that cannot be resolved legitimately by code alone.
+title: "[Manual block] "
+body:
+  - type: dropdown
+    id: block_type
+    attributes:
+      label: Block type
+      options:
+        - Data acquisition or access
+        - Licensing or redistribution rights
+        - Geography or crosswave concordance
+        - Source-method or lineage review
+        - GitHub governance or permissions
+        - Future data or elapsed-time dependency
+    validations:
+      required: true
+  - type: textarea
+    id: decision
+    attributes:
+      label: Decision or evidence required
+      description: State exactly what a person must obtain, inspect, or approve.
+    validations:
+      required: true
+  - type: textarea
+    id: blocked
+    attributes:
+      label: Work and claims blocked
+      description: Link affected issues and identify claims that must remain unresolved.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptable
+    attributes:
+      label: Acceptable evidence
+      description: Define what must be attached or linked before the block can close.
+    validations:
+      required: true
+  - type: textarea
+    id: prohibited
+    attributes:
+      label: Prohibited workaround
+      description: Identify shortcuts that would create false completion.
+      placeholder: "For example: name-only boundary matching or assuming redistribution rights."
+    validations:
+      required: true

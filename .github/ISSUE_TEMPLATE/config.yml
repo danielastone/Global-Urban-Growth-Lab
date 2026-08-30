@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Implementation roadmap
+    url: https://github.com/danielastone/Global-Urban-Growth-Lab/issues/33
+    about: Check priorities, dependencies, and manual blocks before proposing work.
