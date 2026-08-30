@@ -69,9 +69,29 @@ alternating projections rather than materializing a global city-dummy matrix. Sm
 require absorbed coefficients to match the prior dense weighted and unweighted fits. The WUP
 runner also enforces at least two observations per city in each jackknife half and reports the
 resulting row and city retention. This makes the common-sample point-estimate comparison
-executable, but it increases survivorship selection. Numerical outputs remain unregistered
-until regeneration from the merged producing commit; no interim coefficient should be treated
-as a validated inferential result.
+executable, but it increases survivorship selection.
+
+The registered WUP common sample contains 55,793 of 72,857 candidate city-origin rows (76.6%)
+and 6,450 of 11,537 candidate cities (55.9%), across 142 of 191 candidate countries. Eligibility
+requires at least two observations for a city in each jackknife half. This is a selected panel
+of more continuously observed cities, not a correction for threshold entry or survivorship.
+
+| Term | Pooled predictive | City FE diagnostic | Half-panel jackknife |
+|---|---:|---:|---:|
+| Recent growth | 0.455 | 0.204 | 0.336 |
+| Origin log population | 0.001 | -0.032 | -0.023 |
+| Origin country-rank percentile | 0.002 | 0.005 | -0.008 |
+
+All three terms trigger the machine-readable disagreement rule. Persistence remains positive,
+but its magnitude depends materially on whether stable between-city differences are retained
+and whether finite-T bias is corrected. Size and hierarchy change sign across estimators. The
+within-city size coefficient is not a causal “size protection” result: current log population
+accumulates prior growth, and WUP city definitions change through time. No corrected-estimator
+confidence interval passed the production coverage gate, so these are point estimates only.
+Selecting one estimator because its sign fits the preferred story is prohibited.
+
+The three outputs are registered in `results/wup_dynamic_hierarchy_expected_manifest.csv`
+against producing commit `4314b4c99eaea65f18c958a6ce966434c257e74e`.
 
 ## Evidence state
 
@@ -501,6 +521,7 @@ python scripts/run_wup2018_vintage.py
 python scripts/run_ghsl_fixed_baselines.py
 python scripts/run_ghsl_boundary_sensitivity.py
 python scripts/run_national_envelope.py
+python scripts/run_wup_dynamic_hierarchy.py
 ```
 
 The commands write separate WUP and fixed-boundary GHSL metrics and diagnostics under `outputs/`. The GHSL command fails unless the fixed and dynamic products reconcile at 2025. Raw files and generated outputs remain outside Git.
@@ -514,7 +535,8 @@ python scripts/verify_results.py \
   results/ghsl_fixed_expected_manifest.csv \
   results/ghsl_boundary_expected_manifest.csv \
   results/national_envelope_expected_manifest.csv \
-  results/dynamic_bootstrap_coverage_expected_manifest.csv
+  results/dynamic_bootstrap_coverage_expected_manifest.csv \
+  results/wup_dynamic_hierarchy_expected_manifest.csv
 ```
 
 This closes result drift for the registered local files and locked code. It does not make the raw-data workflows executable in GitHub Actions or convert the retrospective estimates into vintage-correct forecasts.
