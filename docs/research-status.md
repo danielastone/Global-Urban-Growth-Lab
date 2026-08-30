@@ -92,6 +92,41 @@ The standard country mean is slightly optimistic, especially at early origins wi
 
 This result addresses one narrow endogeneity channel, not the entire problem. The next priority is shared-endpoint measurement error. Recent growth uses \(\log(P_t)-\log(P_{t-5})\), while the outcome uses \(\log(P_{t+5})-\log(P_t)\). An error or revision in \(P_t\) enters the predictor positively and the outcome negatively, mechanically inducing apparent mean reversion. Disjoint-window and alternative-source tests are required before interpreting persistence slopes structurally.
 
+### Corrected national-component common sample
+
+Exact-input regeneration found that the F01-minus-F21 national Cities residual is not
+positive at both endpoints for 264 city-origin rows across 55 countries. These are not
+missing downloads. They include singleton national city systems, one-person rounding
+differences, and cross-border urban centres whose F21 population is not a valid
+component of the focal country's F01 total. The leave-city-out national comparator is
+undefined for those rows. The workflow now flags them, leaves that diagnostic missing,
+and scores every baseline on the common finite sample.
+
+At the 2020 origin this removes 25 of 10,709 city rows (0.23%) but 25 of 189 countries
+(13.2%). Pooled metrics therefore move little, while equal-country metrics move more.
+The substantive ranking does not change:
+
+| 2020 comparison | Historical sample | Corrected common sample |
+|---|---:|---:|
+| Scored city rows | 10,709 | 10,684 |
+| Persistence MAE | 1.654 pp | 1.652 pp |
+| Leave-city-out country-mean MAE | 1.017 pp | 1.017 pp |
+| Persistence minus country-mean MAE | 0.637 pp | 0.634 pp |
+| Best pooled-MAE model | Subregion mean | Subregion mean |
+
+Persistence remains best by pooled MAE at six of eight rolling origins. It remains
+worse than the leave-city-out country mean in 2000 and sharply worse in 2020. At the
+2020 origin, persistence is worse in every initial-size band; the country-clustered
+95% interval for the persistence-minus-country difference remains above zero in all
+six bands. The smallest lower bound is 0.045 pp for the 1–2 million band.
+
+Across all eight origins, the two-way country-by-time bootstrap estimates a pooled
+persistence-minus-leave-city-out-country difference of -0.129 pp with a 95% interval
+from -0.426 to 0.193 pp. The point estimate favors persistence on average, but the
+interval crosses zero. The corrected analysis therefore supports a regime-dependent
+forecasting signal, not the unconditional claim that recent growth is always or
+uniformly the strongest predictor.
+
 ## Endogeneity audit: shared endpoint
 
 The disjoint-window diagnostic inserts a five-year gap. Recent growth remains \(t-5\) to \(t\), but the outcome is \(t+5\) to \(t+10\). The predictor and outcome therefore share no population observation. Comparisons use origins 1990–2015, for which an earlier completed gapped interval is available for training and estimate outcomes remain available.
