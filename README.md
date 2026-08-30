@@ -44,6 +44,11 @@ See [docs/locked-specification.md](docs/locked-specification.md) for the governi
 contract and [docs/research-design.md](docs/research-design.md) for the accumulated estimands,
 validation results, and test order.
 
+The [result-manifest audit](docs/result-manifest-audit-2026-08-30.md) separates
+historically reproducible outputs, intentional post-manifest specification changes,
+and pre-lock byte-level drift. Expected hashes must not be refreshed without following
+that audit's remediation steps.
+
 ## Repository structure
 
 ```text
