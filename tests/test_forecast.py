@@ -535,6 +535,9 @@ def test_two_way_cluster_bootstrap_resamples_country_and_time() -> None:
     pd.testing.assert_frame_equal(first, second)
     assert first.loc[0, "countries"] == 3
     assert first.loc[0, "time_clusters"] == 3
+    assert first.loc[0, "country_cluster_preserves_nested_city_trajectories"]
+    assert first.loc[0, "time_resampling_scheme"] == "exchangeable_origin_clusters"
+    assert not first.loc[0, "adjacent_origin_blocks_preserved"]
 
 
 def test_temporal_diagnostics_detect_reversal() -> None:

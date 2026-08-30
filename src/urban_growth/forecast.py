@@ -1340,7 +1340,13 @@ def two_way_cluster_bootstrap_paired_difference(
     seed: int = 20260827,
     confidence: float = 0.95,
 ) -> pd.DataFrame:
-    """Bootstrap paired MAE differences by independently resampling countries and origins."""
+    """Bootstrap paired MAE differences by independently resampling countries and origins.
+
+    Country draws retain each sampled country's complete city-by-origin matrix, so
+    arbitrary serial dependence for cities nested within a country is preserved.
+    Origin draws are exchangeable clusters rather than contiguous temporal blocks;
+    the output records that limitation explicitly.
+    """
     groups = group_columns or []
     required = {
         "city_id", "model", "absolute_error", country_column, time_column, *groups,
@@ -1395,6 +1401,9 @@ def two_way_cluster_bootstrap_paired_difference(
                 "n": len(group),
                 "countries": len(countries),
                 "time_clusters": len(times),
+                "country_cluster_preserves_nested_city_trajectories": True,
+                "time_resampling_scheme": "exchangeable_origin_clusters",
+                "adjacent_origin_blocks_preserved": False,
                 "observed_mean_difference": float(group["difference"].mean()),
                 "ci_lower": float(np.quantile(estimates, alpha)),
                 "ci_upper": float(np.quantile(estimates, 1 - alpha)),

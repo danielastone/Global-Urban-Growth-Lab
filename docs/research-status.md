@@ -327,6 +327,15 @@ their city-origin weighting rather than as generic global performance.
 
 The two-way pigeonhole bootstrap independently resamples countries and forecast origins, applying the product of their resampling weights to each country-origin cell. It retains all city errors within a cell and uses the same 2,000 repetitions and seed. This targets sensitivity to both geographic composition and which historical periods were realized.
 
+The country draw retains each selected country's entire city-by-origin matrix. Since
+cities are nested within countries, this preserves arbitrary within-city serial
+dependence, including dependence induced by adjacent intervals sharing a boundary-year
+population. A separate city resampling dimension is therefore not required for that
+dependence channel and would impose additional within-country exchangeability. The
+origin draw is different: it treats the eight origins as exchangeable clusters and
+does not preserve adjacency as a block feature. Output rows now state both assumptions
+explicitly.
+
 | Size bin | Difference | Two-way 95% interval |
 |---|---:|---:|
 | 50–150k | −0.151 pp | [−0.426, +0.165] pp |
@@ -339,6 +348,16 @@ The two-way pigeonhole bootstrap independently resamples countries and forecast 
 Every size-bin interval crosses zero. The overall persistence-minus-leave-city-out-country difference is −0.129 pp with interval [−0.406, +0.206] pp. In the balanced cohort it is −0.223 pp with interval [−0.466, +0.060] pp. The data therefore do not support a stable pooled persistence advantage across periods, overall or by size.
 
 This does not overturn the 2020 finding. A single-origin comparison has no across-time sampling dimension; its country-clustered intervals remain the relevant uncertainty calculation and remain adverse to persistence in every size bin. With only eight evaluated origins, the two-way intervals are necessarily coarse and should be treated as a warning against pooled generalization rather than precise time-series inference.
+
+A 20,000-draw diagnostic compared the registered WUP pooled interval with circular
+moving-origin blocks. The existing half-width is 0.310 pp, versus 0.243 pp for
+two-origin blocks and 0.231 pp for three-origin blocks. All intervals cross zero.
+Adjacent-origin correlations in the same-city paired error difference average 0.038,
+range from -0.289 to +0.259, and change sign across periods. The omitted adjacency
+structure therefore does not explain an artificially narrow registered interval in
+this sample; the block alternatives are narrower. With only eight origins, their
+width is highly block-length-dependent, so they remain diagnostics rather than a new
+primary estimator.
 
 ## National demographic comparator
 
