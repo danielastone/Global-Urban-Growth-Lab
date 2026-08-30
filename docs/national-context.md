@@ -1,5 +1,21 @@
 # National demographic and settlement context
 
+## Direct national envelope
+
+Module A now reads the registered WUP 2025 F01 `Cities`, `Towns`, `Rural`, and `Total`
+sheets directly. Country-category sums must reconcile to the published total within three
+persons after conversion from thousands; failure stops the build. Five-year intervals report
+total growth, category growth availability, settlement shares, share changes, and a
+zero-summing reallocation decomposition. These are revised-history national estimates, not
+vintage-real-time observations.
+
+Forecast features are built separately. They contain origin settlement shares and growth or
+share change from the interval completed at the origin. Realized origin-to-endpoint envelope
+growth and share change are outcomes and are prohibited as forecast-origin features. Global
+and regional summaries report country-equal and population-at-origin weighting separately.
+The direct envelope supersedes any attempt to treat recovered Module B country-period fixed
+effects as primary national demographic data; recovered effects remain diagnostic only.
+
 ## Purpose
 
 National population and the distribution of population across cities, towns and
