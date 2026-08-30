@@ -8,10 +8,28 @@ ILR eligibility, open interval-censored WUP-entry delay bounds, comparable-geogr
 cohorts, mutually exclusive modern travel-time bands, and distinct C1/C2/C3 urban-form timing.
 
 This is implementation of design constraints, not completion of the empirical program. The
-finite-T estimator simulation, country census pilots, independent-lineage morphology matrix,
-modern accessibility raster build and national-envelope forecast module remain open gates in
-`docs/locked-specification.md`. No new numerical result or causal claim follows from merging
-the contract code.
+dynamic-estimator core and reproducible finite-T simulation runner are implemented, but their
+empirical common-sample run and final simulation acceptance thresholds remain open. Country
+census pilots, the independent-lineage morphology matrix, modern accessibility raster build,
+and national-envelope forecast module also remain open gates in
+`docs/locked-specification.md`. No new causal claim follows from merging contract code.
+
+## Dynamic-estimator implementation gate
+
+The locked hierarchy now has a machine-readable registry and one common-sample constructor.
+It fits the pooled predictive benchmark, the Nickell-biased city fixed-effect diagnostic, and
+a split-panel-jackknife finite-T correction with country-period fixed effects. The first two
+return a country-and-period two-way sandwich covariance. The corrected estimator deliberately
+returns no analytic standard error: a panel bootstrap must be implemented and validated rather
+than pretending the uncorrected sandwich applies to a nonlinear bias correction.
+
+`scripts/run_dynamic_estimator_simulation.py` spans persistence values 0.2, 0.6, and 0.9 and
+panel lengths 6, 8, and 10 under a fixed seed. It reports estimator bias and RMSE rather than
+assuming the correction improves every draw. Restricted dynamic GMM remains registered but
+unimplemented; it is not an automatic fourth model and cannot be run unless instrument-strength
+and proliferation gates are specified. Issue #27 remains open until empirical estimates use
+identical full-sample rows, bootstrap inference is available for the corrected estimator, and
+the simulation gate is evaluated at production replication counts.
 
 ## Evidence state
 
