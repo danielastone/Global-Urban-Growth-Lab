@@ -13,6 +13,7 @@ from urban_growth.adapters.wup import (
     city_population_panel,
     degree_of_urbanization_panel,
     read_f01_country_city_population,
+    read_f01_country_degurb_population,
     validate_density_identity,
 )
 from urban_growth.io import SourceSchemaError
@@ -217,6 +218,31 @@ def test_wup_f01_repairs_only_omitted_northern_america_parent(tmp_path) -> None:
             "region_name": "NORTHERN AMERICA",
         }
     ]
+
+
+def test_wup_f01_reads_and_reconciles_all_country_categories(tmp_path) -> None:
+    metadata = {
+        "LocID": [905, 840], "ISO3_Code": [None, "USA"],
+        "Location": ["NORTHERN AMERICA", "United States"], "LocType": [2, 4],
+        "LocTypeName": ["Geographic region", "Country/Area"], "ParentID": [5505, 918],
+    }
+    values = {
+        "Cities": ([6.0, 5.0], [12.0, 10.0], [18.0, 15.0]),
+        "Towns": ([3.0, 2.0], [5.0, 4.0], [7.0, 6.0]),
+        "Rural": ([2.0, 1.0], [3.0, 2.0], [4.0, 3.0]),
+        "Total": ([11.0, 8.0], [20.0, 16.0], [29.0, 24.0]),
+    }
+    path = tmp_path / "f01.xlsx"
+    with pd.ExcelWriter(path) as writer:
+        for sheet, years in values.items():
+            frame = pd.DataFrame(metadata).assign(**{"1950": years[0], "2025": years[1], "2050": years[2]})
+            frame.to_excel(writer, sheet_name=sheet, index=False)
+    result = read_f01_country_degurb_population(path)
+    usa_2025 = result.loc[result["country_code"].eq("USA") & result["year"].eq(2025)]
+    assert usa_2025.set_index("category")["population"].to_dict() == {
+        "city": 10_000.0, "rural": 2_000.0, "town_and_semi_dense": 4_000.0,
+    }
+    assert usa_2025["region_name"].eq("NORTHERN AMERICA").all()
 
 
 def test_wup_city_panel_preserves_prethreshold_history_and_marks_projections() -> None:
