@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from urban_growth.dynamic_estimators import (
+    _apply_coverage_gate,
     bootstrap_dynamic_hierarchy,
     common_dynamic_sample,
     estimator_disagreement_report,
@@ -155,6 +156,23 @@ def test_coverage_smoke_run_cannot_pass_production_gate() -> None:
     )
     assert len(result) == 3
     assert not result["production_design"].any()
+    assert not result["coverage_gate_eligible"].any()
     assert result["coverage_gate_pass"].isna().all()
     assert result["evaluated_panels"].eq(2).all()
     assert result["median_interval_width"].gt(0).all()
+
+
+def test_structural_coverage_gate_applies_only_to_corrected_estimator() -> None:
+    summary = pd.DataFrame(
+        {
+            "estimator_id": [
+                "pooled_dynamic", "city_fe_dynamic", "half_panel_jackknife",
+                "half_panel_jackknife",
+            ],
+            "coverage_wilson_lower": [0.92, 0.92, 0.92, 0.85],
+            "coverage_wilson_upper": [0.98, 0.98, 0.98, 0.98],
+        }
+    )
+    result = _apply_coverage_gate(summary, production=True)
+    assert result["coverage_gate_eligible"].tolist() == [False, False, True, True]
+    assert result["coverage_gate_pass"].tolist() == [pd.NA, pd.NA, True, False]

@@ -42,6 +42,14 @@ decision rather than a provisional pass. The command accepts repeated `--persist
 `--panel-length` arguments so long runs can be split into auditable cells. No production
 coverage run has yet been accepted or recorded.
 
+Only the split-panel-jackknife estimator is eligible for this structural-persistence coverage
+gate. Pooled prediction has a different between-and-within estimand, so coverage of the DGP's
+within-city persistence parameter is not a coherent success criterion for it. The uncorrected
+city-FE estimator remains a known Nickell-biased diagnostic. Their simulated coverage is
+reported, but neither can receive a gate pass. The manual Actions workflow runs the nine locked
+cells independently, uploads each artifact, validates the complete 27-row grid, and uploads the
+combined result before evaluating the corrected-estimator gate.
+
 ## Evidence state
 
 The source and transformation pipeline is reproducible from registered local files, but all results remain **retrospective current-revision tests**. The WUP and GHSL exercises use different city definitions and must not be pooled. WUP supplies demographic city records without a verified stable-polygon restriction. GHSL supplies a balanced panel calculated inside fixed 2025 polygons, but that definition uses future geographic information and is not vintage-correct. Neither is sufficient for a commercial forecasting claim.

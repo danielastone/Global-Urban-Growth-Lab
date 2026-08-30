@@ -1,0 +1,79 @@
+name: dynamic bootstrap coverage
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage-cell:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {tag: "02_06", persistence: "0.2", panel_length: "6"}
+          - {tag: "02_08", persistence: "0.2", panel_length: "8"}
+          - {tag: "02_10", persistence: "0.2", panel_length: "10"}
+          - {tag: "06_06", persistence: "0.6", panel_length: "6"}
+          - {tag: "06_08", persistence: "0.6", panel_length: "8"}
+          - {tag: "06_10", persistence: "0.6", panel_length: "10"}
+          - {tag: "09_06", persistence: "0.9", panel_length: "6"}
+          - {tag: "09_08", persistence: "0.9", panel_length: "8"}
+          - {tag: "09_10", persistence: "0.9", panel_length: "10"}
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: "0.11.33"
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Run locked coverage cell
+        run: >-
+          uv run --locked python scripts/run_dynamic_bootstrap_coverage.py
+          --simulation-replications 200 --bootstrap-replications 399
+          --cities 48 --countries 6 --seed 314159
+          --persistence ${{ matrix.persistence }} --panel-length ${{ matrix.panel_length }}
+          --output outputs/dynamic_bootstrap_coverage_${{ matrix.tag }}.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dynamic-bootstrap-coverage-${{ matrix.tag }}
+          path: outputs/dynamic_bootstrap_coverage_${{ matrix.tag }}.csv
+          if-no-files-found: error
+
+  combine:
+    needs: coverage-cell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: "0.11.33"
+          enable-cache: true
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dynamic-bootstrap-coverage-*
+          path: coverage-artifacts
+      - name: Combine and validate cells
+        run: >-
+          uv run --locked python scripts/combine_dynamic_bootstrap_coverage.py
+          --input-dir coverage-artifacts
+          --output outputs/dynamic_bootstrap_coverage.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dynamic-bootstrap-coverage-combined
+          path: outputs/dynamic_bootstrap_coverage.csv
+          if-no-files-found: error
+      - name: Evaluate locked coverage gate
+        run: >-
+          uv run --locked python scripts/check_dynamic_bootstrap_coverage.py
+          outputs/dynamic_bootstrap_coverage.csv
