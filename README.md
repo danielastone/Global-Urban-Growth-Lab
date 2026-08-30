@@ -5,6 +5,10 @@ A reproducible research program testing what can—and cannot—forecast populat
 For version history and citation metadata, see [CHANGELOG.md](CHANGELOG.md) and
 [CITATION.cff](CITATION.cff).
 
+Repository software is licensed under Apache-2.0. Third-party datasets are not.
+See [THIRD_PARTY_DATA.md](THIRD_PARTY_DATA.md) before acquiring, processing, or
+redistributing data.
+
 ## Research question
 
 How much incremental out-of-sample forecasting value comes from a city's recent growth, initial size, hierarchy position, national demography, urbanization stage, spatial context, and common shocks?
@@ -63,6 +67,7 @@ Inspect the authoritative source catalog and inventory local downloads with:
 ```bash
 urban-growth-sources list
 urban-growth-sources verify-catalog
+urban-growth-sources verify-licenses
 urban-growth-sources inventory data/raw/<file> --source-id <source_id>
 ```
 
@@ -106,4 +111,7 @@ A numerical claim may move from “reconstruction target” to “result” only
 
 ## Data and licensing
 
-Do not commit restricted, employer-owned, or redistribution-uncertain data. Dataset terms remain controlling. No project-wide license has yet been selected, so reuse rights are not implied.
+Do not commit restricted, employer-owned, or redistribution-uncertain data. Dataset
+terms remain controlling. Apache-2.0 covers software only; no project-data license has
+been selected and data reuse rights are not implied. `data/licenses.json` denies an
+operation unless its source-specific decision is explicitly `permitted`.
