@@ -39,8 +39,7 @@ at least 200 simulated panels and 399 bootstrap draws. A nominal 95% interval pa
 the 95% Wilson interval around empirical coverage lies wholly within 90% to 99%; this rejects
 both material undercoverage and vacuously wide intervals. Smaller runs return a missing gate
 decision rather than a provisional pass. The command accepts repeated `--persistence` and
-`--panel-length` arguments so long runs can be split into auditable cells. No production
-coverage run has yet been accepted or recorded.
+`--panel-length` arguments so long runs can be split into auditable cells.
 
 Only the split-panel-jackknife estimator is eligible for this structural-persistence coverage
 gate. Pooled prediction has a different between-and-within estimand, so coverage of the DGP's
@@ -49,6 +48,21 @@ city-FE estimator remains a known Nickell-biased diagnostic. Their simulated cov
 reported, but neither can receive a gate pass. The manual Actions workflow runs the nine locked
 cells independently, uploads each artifact, validates the complete 27-row grid, and uploads the
 combined result before evaluating the corrected-estimator gate.
+
+The production run at Actions run `33312725082`, head commit
+`ba02a4d2f5d2975cef141babf62570c51de917e4`, completed all nine locked cells with 200
+simulated panels and 399 bootstrap draws per cell. The eligible half-panel-jackknife interval
+covered 200 of 200 panels in every cell. Its Wilson interval was [0.9812, 1.0000] throughout,
+which is not wholly inside the prespecified [0.90, 0.99] acceptance band. All nine eligible
+cells therefore fail for overcoverage: the interval is too conservative to be treated as
+calibrated uncertainty. The pooled and uncorrected city-FE rows remain diagnostic and were
+ineligible for this gate; their coverage values are not additional gate failures.
+
+The combined 27-row output is registered in
+`results/dynamic_bootstrap_coverage_expected_manifest.csv`. The failed gate is a statistical
+result, not a workflow failure to retry. Thresholds were not changed and no claim should use
+the jackknife multiplier interval as validated uncertainty pending a separately specified
+estimator or interval redesign.
 
 ## Evidence state
 
@@ -490,7 +504,8 @@ python scripts/verify_results.py \
   results/wup2018_vintage_expected_manifest.csv \
   results/ghsl_fixed_expected_manifest.csv \
   results/ghsl_boundary_expected_manifest.csv \
-  results/national_envelope_expected_manifest.csv
+  results/national_envelope_expected_manifest.csv \
+  results/dynamic_bootstrap_coverage_expected_manifest.csv
 ```
 
 This closes result drift for the registered local files and locked code. It does not make the raw-data workflows executable in GitHub Actions or convert the retrospective estimates into vintage-correct forecasts.
