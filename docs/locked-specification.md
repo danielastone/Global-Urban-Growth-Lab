@@ -147,6 +147,7 @@ receives a machine-readable reason.
 | O8 | Modern accessibility window | Accessibility protocol |
 | O9 | Forecastable national envelope | Separate forecast-module specification |
 | O10 | India census scope | Test 2001–2011 as historical-only; defer modern validation until Census 2027 locality outputs and crosswave concordances exist |
+| O11 | U.S. Census place pipeline | Validate code on direct 2010/2020 enumerations and official one-to-one boundary relationships; does not close O1–O3 |
 
 No shrinkage model can manufacture missing within-country information. The recovered
 country-period effect diagnostic excludes cells with fewer than three eligible cities and

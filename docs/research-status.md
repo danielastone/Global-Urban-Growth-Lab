@@ -14,6 +14,20 @@ census pilots, the independent-lineage morphology matrix, modern accessibility r
 and national-envelope forecast module also remain open gates in
 `docs/locked-specification.md`. No new causal claim follows from merging contract code.
 
+## U.S. Census threshold-pipeline validation
+
+The first national-census implementation uses official 2010 and 2020 U.S. decennial
+place counts and the Census Bureau's 2020-place to 2010-place relationship file. The
+cohort is fixed at 25,000–100,000 residents in 2010. It retains only one-to-one place
+relationships with at least 99.5% land overlap against both endpoint places, records
+direct-enumeration status, and interval-censors threshold crossings in `(2010, 2020)`.
+Synthetic contract tests pass, but the empirical acquisition is awaiting a local
+`CENSUS_API_KEY`; no U.S. result is currently registered.
+
+This is an implementation-validation pilot in a comparatively strong identifier and
+boundary-data environment. It does not satisfy the Global South country-pilot gate or
+close the Mexico/Brazil feasibility work. See `docs/us-census-threshold-pilot.md`.
+
 ## Dynamic-estimator implementation gate
 
 The locked hierarchy now has a machine-readable registry and one common-sample constructor.

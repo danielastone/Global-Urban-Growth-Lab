@@ -14,6 +14,23 @@ The machine-readable catalog is `data/sources.json`. It records analytical role,
 | OECD FUA | Mechanism | Urban core versus commuting zone | Restricted country/sample comparability |
 | WorldPop Global 2 | Robustness | Fine-grid population allocation | 2015-2030 is too short for the primary historical design |
 | Natural Earth Admin 0 | Spatial control | Borders and island geometry | Geometry does not measure migration-policy restrictiveness |
+| U.S. Decennial Census places | Threshold validation | Direct 2010/2020 place counts and official relationship file | Favorable single-country pipeline test; not Global South feasibility evidence |
+
+## U.S. Decennial Census place pilot
+
+The initial threshold-pipeline validation uses the 2010 Decennial Census SF1 total
+population field `P001001`, the 2020 Decennial Census PL 94-171 total population field
+`P1_001N`, and the official national 2020-place to 2010-place relationship file. The
+population calls cover the 50 states and District of Columbia. The raw API responses
+are retained rather than replacing them with derived estimates.
+
+The relationship file supplies both place GEOIDs, both endpoint land areas, and the
+intersection land area. Analysis is restricted to one-to-one mappings with at least
+99.5% land overlap against each endpoint. This is an auditable screen for boundary
+comparability, not a claim that land overlap alone harmonizes population definitions.
+Exact files enter `data/manifest.csv` only after credentialed acquisition and hashing.
+The U.S. source validates pipeline behavior but cannot satisfy the separate Global
+South census-feasibility requirement.
 
 ## Verified WUP F01 national control
 
