@@ -47,6 +47,7 @@ def test_national_envelope_decomposes_growth_and_reallocation() -> None:
         "city", "town_and_semi_dense", "rural"
     )) == pytest.approx(0.0)
     assert result["interval_observation_status"].eq("retrospective_revised_estimate").all()
+    assert not result["composition_discontinuity_flag"].any()
 
 
 def test_national_envelope_rejects_incomplete_composition() -> None:
@@ -83,9 +84,26 @@ def test_summaries_separate_country_equal_and_population_weights() -> None:
     )
     summaries = national_envelope_summaries(pd.concat([intervals, second_country]))
     global_first = summaries.loc[
-        summaries["aggregation_level"].eq("global") & summaries["period_start"].eq(2000)
+        summaries["sample"].eq("all") & summaries["aggregation_level"].eq("global")
+        & summaries["period_start"].eq(2000)
     ].set_index("weighting")
     assert global_first.loc["population_start", "total_annualized_log_growth"] > global_first.loc[
         "country_equal", "total_annualized_log_growth"
     ]
     assert global_first["country_count"].eq(2).all()
+
+
+def test_origin_grid_is_nonoverlapping_and_discontinuities_are_flagged() -> None:
+    source = envelope_panel()
+    extra_start = source.loc[source["year"].eq(2005)].assign(year=2001)
+    extra_end = source.loc[source["year"].eq(2010)].assign(year=2006)
+    result = national_envelope_intervals(pd.concat([source, extra_start, extra_end]))
+    assert 2001 not in result["period_start"].tolist()
+    source.loc[source["year"].eq(2005) & source["category"].eq("city"), "population"] = 1000
+    source.loc[
+        source["year"].eq(2005) & source["category"].eq("town_and_semi_dense"), "population"
+    ] = 0
+    flagged = national_envelope_intervals(source).iloc[0]
+    assert flagged["category_presence_transition"]
+    assert flagged["large_share_change_flag"]
+    assert flagged["composition_discontinuity_flag"]
