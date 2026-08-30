@@ -75,10 +75,21 @@ def test_forecast_intervals_exclude_projection_outcomes_by_default() -> None:
     with pytest.raises(SourceSchemaError, match="No complete"):
         build_forecast_intervals(city_year_source(), [2025])
     result = build_forecast_intervals(
-        city_year_source(), [2025], allowed_outcome_types={"projection"}
+        city_year_source(), [2025], allowed_outcome_types={"estimate", "projection"}
     )
     assert result["period_end"].tolist() == [2030]
     assert result["outcome_observation_type"].tolist() == ["projection"]
+
+
+def test_forecast_intervals_validate_zero_gap_origin_outcome_type() -> None:
+    source = city_year_source()
+    source.loc[source["year"].eq(2020), "observation_type"] = "projection"
+    with pytest.raises(SourceSchemaError, match="No complete"):
+        build_forecast_intervals(source, [2020])
+    result = build_forecast_intervals(
+        source, [2020], allowed_outcome_types={"estimate", "projection"}
+    )
+    assert result["outcome_start_observation_type"].tolist() == ["projection"]
 
 
 def test_forecast_intervals_require_exact_lag_year() -> None:
@@ -365,6 +376,43 @@ def test_hierarchy_models_compare_origin_and_frozen_features() -> None:
         "country_loo_plus_recent_growth", "origin_hierarchy", "frozen_hierarchy"
     }
     assert result["n"].unique().tolist() == [2]
+    assert result["matched_train_n"].unique().tolist() == [2]
+    assert result["matched_test_n"].unique().tolist() == [2]
+    assert result["training_rows_identical_across_models"].all()
+    assert result["test_rows_identical_across_models"].all()
+
+
+def test_hierarchy_models_jointly_match_feature_missingness() -> None:
+    rows = []
+    for origin in [2000, 2005]:
+        for city_id in [1, 2, 3]:
+            rows.append(
+                {
+                    "city_id": city_id, "country_code": "A",
+                    "period_start": origin, "period_end": origin + 5,
+                    "future_growth": 0.01 * city_id,
+                    "recent_growth": 0.005 * city_id,
+                    "population_lag": 50_000 + city_id * 1_000,
+                    "population_start": 55_000 + city_id * 1_000,
+                    "country_rank_percentile_lag": city_id / 4,
+                    "country_rank_percentile_origin": city_id / 4,
+                }
+            )
+    panel = pd.DataFrame(rows)
+    panel.loc[
+        panel["period_start"].eq(2000) & panel["city_id"].eq(3),
+        "country_rank_percentile_lag",
+    ] = np.nan
+    panel.loc[
+        panel["period_start"].eq(2005) & panel["city_id"].eq(2),
+        "country_rank_percentile_origin",
+    ] = np.nan
+    result = evaluate_rolling_hierarchy_models(panel, [2005])
+    assert result["candidate_train_n"].unique().tolist() == [3]
+    assert result["matched_train_n"].unique().tolist() == [2]
+    assert result["candidate_test_n"].unique().tolist() == [3]
+    assert result["matched_test_n"].unique().tolist() == [2]
+    assert result["n"].unique().tolist() == [2]
 
 
 def test_row_errors_support_paired_size_comparison() -> None:
@@ -394,6 +442,11 @@ def test_balanced_cohort_and_equal_country_weighting() -> None:
     )
     balanced = balanced_origin_cohort(panel, [2000, 2005])
     assert balanced["city_id"].unique().tolist() == [1]
+    assert balanced["cohort_selection"].eq(
+        "hindsight_balanced_all_declared_origins"
+    ).all()
+    assert balanced["cohort_uses_future_origin_survival"].all()
+    assert not balanced["cohort_deployable_at_origin"].any()
     errors = pd.DataFrame(
         {
             "model": ["m", "m", "m"], "country_code": ["A", "A", "B"],
