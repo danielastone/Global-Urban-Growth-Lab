@@ -54,11 +54,15 @@ combined result before evaluating the corrected-estimator gate.
 
 The direct Module A national-envelope pipeline is executable from the registered WUP F01
 workbook. It reconciles Cities, Towns, and Rural country totals to the publisher's Total sheet,
-constructs five-year reallocation intervals, separates retrospective outcomes from
-origin-available forecast features, and produces country-equal and population-weighted
-regional/global summaries. This is an implementation result, not evidence that a national
-envelope improves city forecasts. Numerical interpretation and provenance-bound result
-registration remain open under issue #29.
+constructs 3,555 non-overlapping five-year reallocation intervals on the forecast-origin grid,
+separates retrospective outcomes from origin-available forecast features, and produces
+country-equal and population-weighted regional/global summaries. The audit flags 85 intervals
+(2.39%) for category appearance/disappearance or an absolute category-share change of at least
+0.25; summaries retain the complete sample and report a stable-composition sensitivity that
+excludes those intervals. A flag is not proof of source error or demographic impossibility.
+This is an implementation and numerical-audit result, not evidence that a national envelope
+improves city forecasts or a causal interpretation of settlement reallocation. Provenance-bound
+result registration remains open under issue #29.
 
 The source and transformation pipeline is reproducible from registered local files, but all results remain **retrospective current-revision tests**. The WUP and GHSL exercises use different city definitions and must not be pooled. WUP supplies demographic city records without a verified stable-polygon restriction. GHSL supplies a balanced panel calculated inside fixed 2025 polygons, but that definition uses future geographic information and is not vintage-correct. Neither is sufficient for a commercial forecasting claim.
 
