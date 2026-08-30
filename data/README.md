@@ -19,6 +19,8 @@ No analytical data have been committed yet.
 - Document boundary, definition, and name changes.
 - Separate reported observations from interpolated or modeled estimates.
 - Generate processed data only through code.
+- Pass the intended operation through `urban-growth-sources check-license` before
+  commercial ingestion, redistribution, model fitting, or customer delivery.
 
 ## Required manifest fields
 
@@ -35,3 +37,7 @@ sha256
 redistribution_allowed
 notes
 ```
+
+The manifest records acquired files. It does not grant permission. Source-level legal
+decisions and attribution requirements are maintained separately in
+`data/licenses.json`; see [THIRD_PARTY_DATA.md](../THIRD_PARTY_DATA.md).
