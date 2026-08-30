@@ -32,5 +32,8 @@ jobs:
       - name: Lint
         run: uv run --locked --extra dev ruff check .
 
+      - name: Validate source licensing registry
+        run: uv run --locked --extra dev urban-growth-sources verify-licenses
+
       - name: Test
         run: uv run --locked --extra dev pytest -q
