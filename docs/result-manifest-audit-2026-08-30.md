@@ -86,24 +86,31 @@ historical replay.
 
 ## Required remediation
 
-1. Preserve the original manifests as historical evidence; do not overwrite them in
-   place without recording their `cfae942` scope.
-2. Review the regenerated WUP metric changes, especially the 2020 ranking and the
-   effect of dropping undefined national residuals.
-3. Create new current-specification manifests only after that numerical review.
-4. Bind future manifests to the code commit, `uv.lock` hash, source-manifest hash, and
-   generation command.
-5. For floating-point diagnostic tables, store a canonical numeric comparison with
-   declared tolerances in addition to a byte hash. A raw CSV hash alone cannot
-   distinguish a substantive change from formatting or library-level floating-point
-   drift.
-6. Add every current generated output to an explicit manifest or mark it diagnostic
-   and intentionally unmanifested. The existing partial coverage is easy to mistake
-   for complete result verification.
+The remediation was completed after the numerical review of the corrected common
+sample:
+
+1. The original manifests are preserved unchanged under
+   `results/historical/cfae942/` as evidence of their historical scope.
+2. The current WUP result changes, including the 2020 ranking and undefined national
+   residual exclusions, were reviewed before new expectations were recorded.
+3. Current manifests bind each artifact to the generating code commit, `uv.lock`
+   hash, source-manifest hash, and generation command.
+4. Each current entry stores both the exact CSV byte hash and a canonical numeric hash
+   after floating-point values are rounded to 12 decimal places. Exact hashes still
+   detect serialization changes; canonical hashes help identify whether those changes
+   survive the declared numeric normalization.
+5. The manifest builder records every CSV produced by each of the four registered
+   generation commands. Outputs outside those four families remain outside this
+   verification claim.
+
+The current manifests can be rebuilt with `scripts/build_result_manifest.py` and
+verified with `scripts/verify_results.py`. Updating an expectation is a reviewable
+change: rerun the registered generation command, inspect the numerical diff, then
+record the reviewed generating commit and provenance.
 
 ## Claim consequence
 
-The exact inputs are recovered and executable, but issue #1 is not complete. Current
-WUP numerical claims require review on the corrected common sample, and six historical
-temporal byte hashes remain non-reproducible because the environment was locked after
-the expectations were created.
+The exact inputs are recovered and executable, and current WUP claims have been
+reviewed on the corrected common sample. Six historical temporal byte hashes remain
+non-reproducible because the environment was locked after the expectations were
+created; archiving those manifests preserves that limitation instead of rewriting it.
