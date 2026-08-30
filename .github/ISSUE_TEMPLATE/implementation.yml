@@ -1,0 +1,56 @@
+name: Implementation task
+description: Propose a bounded code, test, documentation, or reproducibility change.
+title: "[Implementation] "
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Use one issue for one bounded outcome. Do not use this form to bypass a manual
+        source, licensing, geography, or governance decision.
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: State the concrete outcome, not a broad topic.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or failure being addressed
+      description: Link the result, test, specification section, or reproducible failure.
+    validations:
+      required: true
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Proposed implementation
+      description: Identify expected code, tests, and documentation changes.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and manual blocks
+      description: Name blocking issues and any required human decision or source acquisition.
+      placeholder: "None identified, or #issue and required evidence"
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of done
+      description: List observable completion and falsification criteria.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safeguards
+    attributes:
+      label: Safeguards
+      options:
+        - label: I searched existing issues and pull requests for overlap.
+          required: true
+        - label: This issue does not require committing restricted or uncertain data.
+          required: true
+        - label: The proposed result language will not exceed the evidence.
+          required: true
