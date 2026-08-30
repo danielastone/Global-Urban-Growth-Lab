@@ -62,7 +62,9 @@ country-equal and population-weighted regional/global summaries. The audit flags
 excludes those intervals. A flag is not proof of source error or demographic impossibility.
 This is an implementation and numerical-audit result, not evidence that a national envelope
 improves city forecasts or a causal interpretation of settlement reallocation. Provenance-bound
-result registration remains open under issue #29.
+outputs are registered in `results/national_envelope_expected_manifest.csv` against producing
+commit `a63aa47dcfc385b0fd4ba86813dfb6990ac51b05`. This closes output drift for the reviewed
+Module A transformation; predictive evaluation remains open under issue #29.
 
 The source and transformation pipeline is reproducible from registered local files, but all results remain **retrospective current-revision tests**. The WUP and GHSL exercises use different city definitions and must not be pooled. WUP supplies demographic city records without a verified stable-polygon restriction. GHSL supplies a balanced panel calculated inside fixed 2025 polygons, but that definition uses future geographic information and is not vintage-correct. Neither is sufficient for a commercial forecasting claim.
 
@@ -475,6 +477,7 @@ python scripts/run_wup_baselines.py
 python scripts/run_wup2018_vintage.py
 python scripts/run_ghsl_fixed_baselines.py
 python scripts/run_ghsl_boundary_sensitivity.py
+python scripts/run_national_envelope.py
 ```
 
 The commands write separate WUP and fixed-boundary GHSL metrics and diagnostics under `outputs/`. The GHSL command fails unless the fixed and dynamic products reconcile at 2025. Raw files and generated outputs remain outside Git.
@@ -486,7 +489,8 @@ python scripts/verify_results.py \
   results/wup_expected_manifest.csv \
   results/wup2018_vintage_expected_manifest.csv \
   results/ghsl_fixed_expected_manifest.csv \
-  results/ghsl_boundary_expected_manifest.csv
+  results/ghsl_boundary_expected_manifest.csv \
+  results/national_envelope_expected_manifest.csv
 ```
 
 This closes result drift for the registered local files and locked code. It does not make the raw-data workflows executable in GitHub Actions or convert the retrospective estimates into vintage-correct forecasts.
