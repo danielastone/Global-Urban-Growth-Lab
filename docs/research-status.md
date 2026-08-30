@@ -518,6 +518,30 @@ Single-city influence is negligible at the pooled level. The largest deletion ch
 
 This diagnostic addresses dependence on one observed cluster; it does not repair unequal country representation, threshold selection or common WUP revision error. Balanced-country weighting and balanced-entry cohorts remain separate required tests.
 
+## Interval-policy audit
+
+The sequential mechanics pass the leakage check: every evaluated origin uses only
+strictly earlier residuals, and recent-window policies retain only the latest three
+eligible prior origins. The policy-selection provenance does not pass a prospective
+registration claim. Git history shows sequential calibration was implemented before
+the base registry; recent-window and equal-country variants were added later, and the
+locked specification followed all of them. Source history cannot date the first
+uncommitted real-data run, and no contemporaneous preregistration artifact is present.
+The six policies must therefore be treated as retrospectively frozen sensitivity
+analyses unless external timestamped evidence resolves the process question. They are
+reproducible, but none currently qualifies as a clean holdout-confirmatory policy.
+
+Registered calibration outputs now retain every origin/model/stratum candidate.
+Cells below the minimum row or prior-origin thresholds are marked ineligible with an
+explicit reason and have no coverage statistic. This prevents calibration summaries
+from silently describing only well-powered cells. Any aggregate must report both the
+eligible-cell coverage result and the fraction of candidate cells eligible.
+On the registered rerun, each table is 75% eligible: WUP retains coverage statistics
+for 216 of 288 overall candidate cells and 1,296 of 1,728 size-stratified cells;
+fixed-boundary GHSL retains 90 of 120 and 630 of 840, respectively. The omitted
+quarter consists of early cells lacking the two required prior origins, sometimes
+also lacking 100 prior rows. These are availability exclusions, not observed misses.
+
 ## Reproduction
 
 With the registered raw files under `data/raw/`, run:

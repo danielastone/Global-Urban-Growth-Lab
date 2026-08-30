@@ -30,6 +30,7 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": None,
         "group_columns": [],
+        "policy_lock_commit": "2e9d7784dfd623877a4ef6d9b25b515918f3fcf7",
     },
     "overall_90_recent3_v1": {
         "miscoverage": 0.10,
@@ -38,6 +39,7 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": 3,
         "group_columns": [],
+        "policy_lock_commit": "bd2be2e5aaf5e809bfbcddaed0c38b9826650cac",
     },
     "size_bin_90_v1": {
         "miscoverage": 0.10,
@@ -46,6 +48,7 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": None,
         "group_columns": ["size_bin"],
+        "policy_lock_commit": "2e9d7784dfd623877a4ef6d9b25b515918f3fcf7",
     },
     "size_bin_90_recent3_v1": {
         "miscoverage": 0.10,
@@ -54,6 +57,7 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": 3,
         "group_columns": ["size_bin"],
+        "policy_lock_commit": "bd2be2e5aaf5e809bfbcddaed0c38b9826650cac",
     },
     "overall_90_equal_country_v1": {
         "miscoverage": 0.10,
@@ -62,6 +66,7 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": None,
         "group_columns": [],
+        "policy_lock_commit": "5fd82b646cdb46c70369184dfab757b81b9592ac",
     },
     "size_bin_90_equal_country_v1": {
         "miscoverage": 0.10,
@@ -70,6 +75,7 @@ REGISTERED_INTERVAL_CALIBRATION_POLICIES = {
         "minimum_calibration_origins": 2,
         "maximum_calibration_origins": None,
         "group_columns": ["size_bin"],
+        "policy_lock_commit": "5fd82b646cdb46c70369184dfab757b81b9592ac",
     },
 }
 
@@ -945,6 +951,9 @@ def sequential_interval_calibration(
     group_columns: list[str] | None = None,
     policy_id: str = "ad_hoc_unregistered",
     stratification_prespecified: bool = False,
+    policy_locked_before_first_results: bool = False,
+    policy_lock_commit: str = "",
+    include_ineligible: bool = False,
 ) -> pd.DataFrame:
     """Audit symmetric empirical error bands using strictly earlier origins.
 
@@ -970,7 +979,7 @@ def sequential_interval_calibration(
     if not np.isfinite(working[["error", "absolute_error"]]).all().all():
         raise SourceSchemaError("Interval calibration requires finite errors")
     keys = [*groups, "model"]
-    rows: list[dict[str, float | int | str]] = []
+    rows: list[dict[str, object]] = []
     grouper: str | list[str] = keys[0] if len(keys) == 1 else keys
     for key, model_group in working.groupby(grouper, observed=True, sort=True):
         key_values = (key,) if len(keys) == 1 else key
@@ -984,12 +993,51 @@ def sequential_interval_calibration(
                     calibration["origin"].isin(retained_origins)
                 ]
             calibration_origin_count = calibration["origin"].nunique()
+            test = model_group.loc[model_group["origin"].eq(origin)]
+            base_row: dict[str, float | int | str | bool | None] = dict(labels)
+            base_row.update(
+                {
+                    "origin": int(origin),
+                    "nominal_coverage": 1 - miscoverage,
+                    "test_rows": len(test),
+                    "test_countries": int(test["country_code"].nunique()),
+                    "calibration_rows": len(calibration),
+                    "calibration_weighting": calibration_weighting,
+                    "calibration_countries": int(
+                        calibration["country_code"].nunique()
+                    ),
+                    "calibration_origins": int(calibration_origin_count),
+                    "maximum_calibration_origins": maximum_calibration_origins,
+                    "calibration_uses_current_or_future_origin": False,
+                    "interval_semantics": (
+                        "symmetric_pre_origin_empirical_absolute_error_band"
+                    ),
+                    "calibration_policy_id": policy_id,
+                    "stratification_prespecified": stratification_prespecified,
+                    "policy_locked_before_first_results": (
+                        policy_locked_before_first_results
+                    ),
+                    "policy_lock_commit": policy_lock_commit,
+                }
+            )
             if (
                 len(calibration) < minimum_calibration_rows
                 or calibration_origin_count < minimum_calibration_origins
             ):
+                if include_ineligible:
+                    reasons = []
+                    if len(calibration) < minimum_calibration_rows:
+                        reasons.append("insufficient_calibration_rows")
+                    if calibration_origin_count < minimum_calibration_origins:
+                        reasons.append("insufficient_calibration_origins")
+                    base_row.update(
+                        {
+                            "calibration_eligible": False,
+                            "calibration_exclusion_reason": ";".join(reasons),
+                        }
+                    )
+                    rows.append(base_row)
                 continue
-            test = model_group.loc[model_group["origin"].eq(origin)]
             if test.empty:
                 continue
             conformal_rank: int | None = None
@@ -998,6 +1046,17 @@ def sequential_interval_calibration(
                     np.ceil((len(calibration) + 1) * (1 - miscoverage))
                 )
                 if conformal_rank > len(calibration):
+                    if include_ineligible:
+                        base_row.update(
+                            {
+                                "calibration_eligible": False,
+                                "calibration_exclusion_reason": (
+                                    "unrealizable_conformal_rank"
+                                ),
+                                "calibration_order_statistic_rank": conformal_rank,
+                            }
+                        )
+                        rows.append(base_row)
                     continue
                 ordered_errors = np.sort(calibration["absolute_error"].to_numpy())
                 radius = float(ordered_errors[conformal_rank - 1])
@@ -1020,11 +1079,11 @@ def sequential_interval_calibration(
             country_coverage = covered.groupby(test["country_code"]).mean()
             country_lower_tail = lower_tail_miss.groupby(test["country_code"]).mean()
             country_upper_tail = upper_tail_miss.groupby(test["country_code"]).mean()
-            row: dict[str, float | int | str] = dict(labels)
+            row = dict(base_row)
             row.update(
                 {
-                    "origin": int(origin),
-                    "nominal_coverage": 1 - miscoverage,
+                    "calibration_eligible": True,
+                    "calibration_exclusion_reason": "",
                     "empirical_city_coverage": float(covered.mean()),
                     "equal_country_coverage": float(country_coverage.mean()),
                     "coverage_gap": float(covered.mean() - (1 - miscoverage)),
@@ -1041,27 +1100,12 @@ def sequential_interval_calibration(
                     ),
                     "interval_radius": radius,
                     "interval_width": 2 * radius,
-                    "test_rows": len(test),
-                    "test_countries": int(test["country_code"].nunique()),
-                    "calibration_rows": len(calibration),
                     "calibration_order_statistic_rank": conformal_rank,
-                    "calibration_weighting": calibration_weighting,
-                    "calibration_countries": int(
-                        calibration["country_code"].nunique()
-                    ),
                     "finite_sample_conformal_rank_applied": (
                         calibration_weighting == "city"
                     ),
-                    "calibration_origins": int(calibration_origin_count),
                     "calibration_origin_start": int(calibration["origin"].min()),
                     "calibration_origin_end": int(calibration["origin"].max()),
-                    "maximum_calibration_origins": maximum_calibration_origins,
-                    "calibration_uses_current_or_future_origin": False,
-                    "interval_semantics": (
-                        "symmetric_pre_origin_empirical_absolute_error_band"
-                    ),
-                    "calibration_policy_id": policy_id,
-                    "stratification_prespecified": stratification_prespecified,
                 }
             )
             rows.append(row)
@@ -1091,7 +1135,10 @@ def registered_sequential_interval_calibration(
         calibration_weighting=str(policy["calibration_weighting"]),
         group_columns=list(policy["group_columns"]),
         policy_id=policy_id,
-        stratification_prespecified=True,
+        stratification_prespecified=False,
+        policy_locked_before_first_results=False,
+        policy_lock_commit=str(policy["policy_lock_commit"]),
+        include_ineligible=True,
     )
 
 

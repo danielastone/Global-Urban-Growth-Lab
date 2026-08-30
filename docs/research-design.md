@@ -66,8 +66,10 @@ Forecasting does not require causal exogeneity, but interpretation of coefficien
 Point-error rankings do not establish usable uncertainty. The WUP and fixed-GHSL
 workflows now construct symmetric 90% empirical error bands for each model and
 forecast origin using absolute errors from strictly earlier origins only. The radius is the exact
-order statistic at rank \(\lceil(n+1)(1-\alpha)\rceil\); origins with too few
-calibration rows to realize that rank are not reported. Outputs report the chosen
+order statistic at rank \(\lceil(n+1)(1-\alpha)\rceil\). Origins with too few
+calibration rows or prior origins are retained as ineligible ledger rows with an
+explicit exclusion reason; they carry no coverage statistic and must remain in
+denominators used to report calibration availability. Eligible rows report the chosen
 rank, interval radius and width, city-
 weighted realized coverage, equal-country realized coverage, coverage error, and the
 latest calibration origin. They also report lower-tail misses (actual growth below
@@ -78,8 +80,14 @@ such a band can meet its nominal rate while systematically understating decline 
 or upside growth. The executable workflows report four versioned policies. `overall_90_v1`
 and `size_bin_90_v1` use all prior origins; `overall_90_recent3_v1` and
 `size_bin_90_recent3_v1` retain only the three most recent eligible origins.
-Each fixes nominal coverage, minimum calibration rows, minimum prior origins,
-maximum prior origins and grouping before outputs are opened. The recent-window
+Each now fixes nominal coverage, minimum calibration rows, minimum prior origins,
+maximum prior origins and grouping for reproducible reruns. This is a retrospective
+lock, not preregistration: calibration-capable code preceded the policy registry,
+and no committed timestamped artifact establishes that the six policies preceded
+the first real-data calibration run. The recent-window and equal-country variants
+were committed after the base registry.
+Accordingly, registered outputs mark `stratification_prespecified` and
+`policy_locked_before_first_results` false and identify the policy-lock commit. The recent-window
 variants are sensitivity tests for residual-distribution drift, not alternatives to
 select after comparing coverage. Material disagreement means the expanding
 exchangeability assumption is not credible. Two additional registered sensitivities,
@@ -89,7 +97,7 @@ whether countries with many reported cities determine the radius. These weighted
 empirical quantiles do not receive the ordinary finite-sample conformal rank guarantee
 and are labeled accordingly; they must be compared with, not substituted for, the
 city-weighted policies.
-Registered outputs carry the policy identifier and a prespecification flag. Arbitrary
+Registered outputs carry the policy identifier and honest timing metadata. Arbitrary
 groupings produced by the lower-level function are labeled `ad_hoc_unregistered`
 and cannot be presented as confirmatory conditional-coverage tests.
 
