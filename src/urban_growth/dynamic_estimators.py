@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
+
+EXPECTED_COVERAGE_PERSISTENCE = {0.2, 0.6, 0.9}
+EXPECTED_COVERAGE_LENGTHS = {6, 8, 10}
+EXPECTED_COVERAGE_ESTIMATORS = {
+    "pooled_dynamic", "city_fe_dynamic", "half_panel_jackknife"
+}
 
 
 @dataclass(frozen=True)
@@ -421,6 +428,20 @@ def _wilson_interval(successes: int, trials: int, z: float = 1.959963984540054) 
     return center - margin, center + margin
 
 
+def _apply_coverage_gate(summary: pd.DataFrame, *, production: bool) -> pd.DataFrame:
+    result = summary.copy()
+    adequate = result["coverage_wilson_lower"].ge(0.90) & result[
+        "coverage_wilson_upper"
+    ].le(0.99)
+    eligible = result["estimator_id"].eq("half_panel_jackknife") & production
+    result["production_design"] = production
+    result["coverage_gate_eligible"] = eligible
+    result["coverage_gate_pass"] = pd.array(
+        adequate.where(eligible, pd.NA), dtype="boolean"
+    )
+    return result
+
+
 def simulate_bootstrap_coverage(
     *,
     persistence_values: tuple[float, ...] = (0.2, 0.6, 0.9),
@@ -489,13 +510,7 @@ def simulate_bootstrap_coverage(
         wilson.tolist(), index=summary.index
     )
     production = simulation_replications >= 200 and bootstrap_replications >= 399
-    summary["production_design"] = production
-    adequate = summary["coverage_wilson_lower"].ge(0.90) & summary[
-        "coverage_wilson_upper"
-    ].le(0.99)
-    summary["coverage_gate_pass"] = pd.array(
-        adequate if production else [pd.NA] * len(summary), dtype="boolean"
-    )
+    summary = _apply_coverage_gate(summary, production=production)
     summary["nominal_confidence"] = confidence_level
     summary["simulation_replications"] = simulation_replications
     summary["bootstrap_replications"] = bootstrap_replications
@@ -503,3 +518,56 @@ def simulate_bootstrap_coverage(
     summary["countries"] = countries
     summary["seed"] = seed
     return summary
+
+
+def combine_coverage_artifacts(input_dir: Path) -> pd.DataFrame:
+    """Return one validated production grid from nine cell files."""
+    paths = sorted(input_dir.rglob("dynamic_bootstrap_coverage_*.csv"))
+    if len(paths) != 9:
+        raise SourceSchemaError(f"Expected nine coverage artifacts, found {len(paths)}")
+    result = pd.concat([pd.read_csv(path) for path in paths], ignore_index=True)
+    required = {
+        "persistence", "panel_length", "estimator_id", "production_design",
+        "coverage_gate_eligible", "coverage_gate_pass",
+    }
+    require_columns(result, required, source_name="bootstrap coverage artifacts")
+    for column in ("production_design", "coverage_gate_eligible", "coverage_gate_pass"):
+        result[column] = result[column].map(
+            {True: True, False: False, "True": True, "False": False}
+        ).astype("boolean")
+    if set(result["persistence"]) != EXPECTED_COVERAGE_PERSISTENCE:
+        raise SourceSchemaError("Coverage artifacts do not span the locked persistence grid")
+    if set(result["panel_length"]) != EXPECTED_COVERAGE_LENGTHS:
+        raise SourceSchemaError("Coverage artifacts do not span the locked panel-length grid")
+    if set(result["estimator_id"]) != EXPECTED_COVERAGE_ESTIMATORS:
+        raise SourceSchemaError("Coverage artifacts do not span the implemented estimators")
+    keys = ["persistence", "panel_length", "estimator_id"]
+    if len(result) != 27 or result.duplicated(keys).any():
+        raise SourceSchemaError("Coverage artifacts must contain 27 unique design-estimator rows")
+    if not result["production_design"].all():
+        raise SourceSchemaError("At least one coverage artifact is not a production design")
+    eligible = result["estimator_id"].eq("half_panel_jackknife")
+    if not result.loc[eligible, "coverage_gate_eligible"].all():
+        raise SourceSchemaError("Every corrected-estimator cell must be gate eligible")
+    if result.loc[~eligible, "coverage_gate_eligible"].any():
+        raise SourceSchemaError("Diagnostic estimators cannot receive a structural coverage gate")
+    return result.sort_values(keys).reset_index(drop=True)
+
+
+def check_coverage_gate(result: pd.DataFrame) -> None:
+    """Raise unless all nine eligible corrected-estimator cells pass."""
+    require_columns(
+        result,
+        {"persistence", "panel_length", "estimator_id", "coverage_gate_eligible",
+         "coverage_gate_pass"},
+        source_name="combined bootstrap coverage",
+    )
+    eligible = result.loc[result["coverage_gate_eligible"]]
+    if len(eligible) != 9:
+        raise SourceSchemaError("Expected nine eligible corrected-estimator cells")
+    failed = eligible.loc[~eligible["coverage_gate_pass"].astype("boolean").fillna(False)]
+    if not failed.empty:
+        cells = ", ".join(
+            f"rho={row.persistence}, T={row.panel_length}" for row in failed.itertuples()
+        )
+        raise SourceSchemaError(f"Bootstrap coverage gate failed: {cells}")
