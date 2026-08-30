@@ -58,7 +58,11 @@ Forecasting does not require causal exogeneity, but interpretation of coefficien
 - Report MAE, RMSE, median absolute error, bias, and directional accuracy.
 - Report results overall and by prespecified size, region, data-quality, and urbanization-stage strata.
 - Compare errors on identical observations; coverage gains are reported separately.
-- Use paired block bootstrap intervals clustered at minimum by country; add time blocks when periods overlap.
+- Cluster at minimum by country so each sampled cluster retains complete nested-city
+  trajectories across origins. For pooled inference, also resample origins to reflect
+  common period shocks. Because only eight WUP origins are available, treat contiguous
+  moving-origin blocks as a sensitivity analysis rather than a replacement estimator;
+  report the block length and whether conclusions change.
 - Use leave-one-country-out and influential-city diagnostics.
 
 ### Sequential prediction-interval calibration
