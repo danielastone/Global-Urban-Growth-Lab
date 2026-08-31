@@ -44,7 +44,7 @@ def test_missing_population_wave_fails_closed():
     registry = registry.loc[~((registry["role"] == "population") & (registry["event_year"] == 1995))]
     checked = validate_mexico_acquisition_registry(registry)
     assert checked.attrs["missing_population_years"] == [1995]
-    with pytest.raises(SourceSchemaError, match="population years=\[1995\]"):
+    with pytest.raises(SourceSchemaError, match=r"population years=\[1995\]"):
         require_mexico_acquisition_ready(registry)
 
 
@@ -67,5 +67,5 @@ def test_missing_vintage_geometry_blocks_readiness():
     registry = registry.loc[
         ~((registry["role"] == "vintage_geometry") & (registry["event_year"] == 2005))
     ]
-    with pytest.raises(SourceSchemaError, match="geometry years=\[2005\]"):
+    with pytest.raises(SourceSchemaError, match=r"geometry years=\[2005\]"):
         require_mexico_acquisition_ready(registry)
