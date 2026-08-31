@@ -20,6 +20,17 @@ UNRESOLVED_BOUNDARY = {
     "unresolved",
     "unknown",
 }
+FITNESS_OUTPUT_COLUMNS = (
+    "level_eligible",
+    "level_exclusion_reasons",
+    "growth_eligible",
+    "growth_exclusion_reasons",
+    "spatial_eligible",
+    "spatial_exclusion_reasons",
+    "headline_eligible",
+    "headline_exclusion_reasons",
+    "fitness_reasons",
+)
 
 
 def _norm(value: object) -> str:
@@ -76,6 +87,8 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
     temporal_comparable = _truthy(row.get("temporal_comparable"))
     boundary_fixed = _truthy(row.get("boundary_temporally_fixed"))
     harmonized = concordance_status == "harmonized_common_geography"
+    officially_crosswalked = concordance_status == "official_crosswalk"
+    boundary_resolved = boundary_fixed or harmonized or officially_crosswalked
 
     if not geographic_comparable:
         level_reasons.append("geography_not_comparable")
@@ -87,7 +100,7 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
         growth_reasons.append("concordance_not_accepted")
         spatial_reasons.append("concordance_not_accepted")
 
-    if not boundary_fixed and not harmonized:
+    if not boundary_resolved:
         growth_reasons.append("boundary_not_stable_or_harmonized")
 
     if boundary_change_status in UNRESOLVED_BOUNDARY and not harmonized:
@@ -151,20 +164,12 @@ def evaluate_city_data_fitness(frame: pd.DataFrame) -> pd.DataFrame:
 
     The function never edits source values and never computes a composite quality score.
     Missing evidence fails only the analytical dimensions that require that evidence.
+    Existing fitness outputs are replaced so repeated evaluation is idempotent rather
+    than creating duplicate columns.
     """
-    out = frame.copy()
+    out = frame.drop(columns=list(FITNESS_OUTPUT_COLUMNS), errors="ignore").copy()
     if out.empty:
-        for column in (
-            "level_eligible",
-            "level_exclusion_reasons",
-            "growth_eligible",
-            "growth_exclusion_reasons",
-            "spatial_eligible",
-            "spatial_exclusion_reasons",
-            "headline_eligible",
-            "headline_exclusion_reasons",
-            "fitness_reasons",
-        ):
+        for column in FITNESS_OUTPUT_COLUMNS:
             out[column] = pd.Series(dtype="bool" if column.endswith("eligible") else "object")
         return out
 
