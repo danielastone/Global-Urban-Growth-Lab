@@ -4,7 +4,6 @@ from collections.abc import Iterable
 
 import pandas as pd
 
-
 ACCEPTED_CONCORDANCE = {
     "stable",
     "official_crosswalk",
@@ -132,9 +131,7 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
 
     headline_eligible = not headline_reasons
 
-    all_reasons = (
-        level_reasons + growth_reasons + spatial_reasons + headline_reasons
-    )
+    all_reasons = level_reasons + growth_reasons + spatial_reasons + headline_reasons
 
     return {
         "level_eligible": level_eligible,
