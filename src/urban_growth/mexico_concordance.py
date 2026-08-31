@@ -180,7 +180,7 @@ def mexico_transition_coverage(
             {
                 "origin_year": int(origin_year),
                 "endpoint_year": int(endpoint_year),
-                "origin_localities": int(len(group)),
+                "origin_localities": len(group),
                 "eligible_localities": int(eligible.sum()),
                 "count_coverage": float(eligible.mean()),
                 "origin_population": float(population.sum()),
