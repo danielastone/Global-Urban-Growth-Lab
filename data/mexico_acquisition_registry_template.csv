@@ -1,0 +1,15 @@
+role,event_year,event_type,publisher,dataset,retrieved_at,source_url,local_path,sha256,license_reviewed,completeness_verified,national_record_cap_avoided,status
+population,1990,census,INEGI,SCITEL/ITER locality population 1990,,,,,false,false,false,required_unresolved
+population,1995,population_count,INEGI,SCITEL/ITER locality population 1995,,,,,false,false,false,required_unresolved
+population,2000,census,INEGI,SCITEL/ITER locality population 2000,,,,,false,false,false,required_unresolved
+population,2005,population_count,INEGI,SCITEL/ITER locality population 2005,,,,,false,false,false,required_unresolved
+population,2010,census,INEGI,SCITEL/ITER locality population 2010,,,,,false,false,false,required_unresolved
+population,2020,census,INEGI,SCITEL/ITER locality population 2020,,,,,false,false,false,required_unresolved
+vintage_geometry,1990,census,INEGI,Marco Geoestadistico locality geometry 1990,,,,,false,false,false,required_unresolved
+vintage_geometry,1995,population_count,INEGI,Marco Geoestadistico locality geometry 1995,,,,,false,false,false,required_unresolved
+vintage_geometry,2000,census,INEGI,Marco Geoestadistico locality geometry 2000,,,,,false,false,false,required_unresolved
+vintage_geometry,2005,population_count,INEGI,Marco Geoestadistico locality geometry 2005,,,,,false,false,false,required_unresolved
+vintage_geometry,2010,census,INEGI,Marco Geoestadistico locality geometry 2010,,,,,false,false,false,required_unresolved
+vintage_geometry,2020,census,INEGI,Marco Geoestadistico locality geometry 2020,,,,,false,false,false,required_unresolved
+official_relationships,2020,census,INEGI,Official locality equivalence relationships,,,,,false,false,false,required_unresolved
+locality_history,2020,census,INEGI,Archivo Historico de Localidades export,,,,,false,false,false,required_unresolved
