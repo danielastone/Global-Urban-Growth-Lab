@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
@@ -15,12 +16,7 @@ ALLOWED_EVENT_TYPES = {"census", "population_count"}
 
 
 def validate_mexico_locality_transition(transition: pd.DataFrame) -> pd.DataFrame:
-    """Validate one locality transition without borrowing future geography.
-
-    Each row represents one origin-locality analytical unit for a single adjacent
-    observation transition. Harmonized rows may aggregate identified components, but
-    the evidence used to define the origin-side history cannot post-date the transition.
-    """
+    """Validate one locality transition without borrowing future geography."""
     required = {
         "analysis_id",
         "origin_year",
@@ -59,7 +55,8 @@ def validate_mexico_locality_transition(transition: pd.DataFrame) -> pd.DataFram
         numeric = pd.to_numeric(out[column], errors="coerce")
         if numeric.isna().any() or numeric.le(0).any():
             raise SourceSchemaError(f"{column} must contain positive direct counts")
-    if (pd.to_numeric(out["evidence_reference_year"], errors="coerce") > out["endpoint_year"]).any():
+    evidence_year = pd.to_numeric(out["evidence_reference_year"], errors="coerce")
+    if evidence_year.isna().any() or (evidence_year > out["endpoint_year"]).any():
         raise SourceSchemaError(
             "Mexico concordance evidence may not post-date its transition endpoint"
         )
@@ -97,35 +94,39 @@ def validate_mexico_locality_transition(transition: pd.DataFrame) -> pd.DataFram
 
     out["transition_eligible"] = accepted & methodology
     out["transition_exclusion_reason"] = out["exclusion_reason"].fillna("").astype(str)
-    out.loc[accepted & ~methodology, "transition_exclusion_reason"] = "methodology_not_comparable"
-    out.loc[~accepted & out["transition_exclusion_reason"].eq(""), "transition_exclusion_reason"] = (
+    out.loc[accepted & ~methodology, "transition_exclusion_reason"] = (
+        "methodology_not_comparable"
+    )
+    unresolved_without_reason = ~accepted & out["transition_exclusion_reason"].eq("")
+    out.loc[unresolved_without_reason, "transition_exclusion_reason"] = (
         "unresolved_concordance"
     )
     return out
 
 
 def build_mexico_multiwave_history(transitions: pd.DataFrame) -> pd.DataFrame:
-    """Build adjacent-transition histories without future-boundary leakage.
+    """Build adjacent-transition forecast rows without future-boundary leakage.
 
-    A locality is eligible for a historical growth predictor only if the immediately
-    preceding transition passed on its own evidence. Later transitions cannot repair or
-    redefine an earlier predictor interval.
+    A forecast row is eligible only when both its outcome transition and the immediately
+    preceding transition used for recent growth pass independently. Later geography cannot
+    repair an earlier predictor interval.
     """
     checked = validate_mexico_locality_transition(transitions)
     checked = checked.sort_values(["analysis_id", "origin_year", "endpoint_year"]).copy()
-    checked["history_growth"] = (
-        pd.Series(pd.to_numeric(checked["endpoint_population"]))
-        .groupby(checked["analysis_id"])
-        .transform(lambda _: pd.NA)
-    )
     duration = checked["endpoint_year"] - checked["origin_year"]
     checked["interval_log_growth"] = (
-        pd.to_numeric(checked["endpoint_population"]).map(float).map(__import__("math").log)
-        - pd.to_numeric(checked["origin_population"]).map(float).map(__import__("math").log)
+        np.log(pd.to_numeric(checked["endpoint_population"]))
+        - np.log(pd.to_numeric(checked["origin_population"]))
     ) / duration
 
     previous = checked[
-        ["analysis_id", "origin_year", "endpoint_year", "interval_log_growth", "transition_eligible"]
+        [
+            "analysis_id",
+            "origin_year",
+            "endpoint_year",
+            "interval_log_growth",
+            "transition_eligible",
+        ]
     ].rename(
         columns={
             "origin_year": "previous_origin_year",
@@ -174,6 +175,7 @@ def mexico_transition_coverage(
     for (origin_year, endpoint_year), group in cohort.groupby(["origin_year", "endpoint_year"]):
         eligible = group["transition_eligible"]
         population = pd.to_numeric(group["origin_population"])
+        eligible_population = population.loc[eligible].sum()
         rows.append(
             {
                 "origin_year": int(origin_year),
@@ -182,8 +184,8 @@ def mexico_transition_coverage(
                 "eligible_localities": int(eligible.sum()),
                 "count_coverage": float(eligible.mean()),
                 "origin_population": float(population.sum()),
-                "eligible_origin_population": float(population.loc[eligible].sum()),
-                "population_coverage": float(population.loc[eligible].sum() / population.sum()),
+                "eligible_origin_population": float(eligible_population),
+                "population_coverage": float(eligible_population / population.sum()),
             }
         )
     return pd.DataFrame(rows).sort_values(["origin_year", "endpoint_year"]).reset_index(drop=True)
