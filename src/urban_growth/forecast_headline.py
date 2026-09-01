@@ -71,12 +71,58 @@ def _validate_origin_coverage(
     return coverage.sort_values("origin").reset_index(drop=True)
 
 
+def _apply_registered_coverage_policy(
+    coverage: pd.DataFrame,
+    *,
+    minimum_observed_outcome_share: float,
+    coverage_policy_reference: str,
+) -> pd.DataFrame:
+    """Require a preregistered minimum observed-outcome share for headline qualification."""
+    try:
+        minimum = float(minimum_observed_outcome_share)
+    except (TypeError, ValueError) as exc:
+        raise SourceSchemaError("minimum_observed_outcome_share must be numeric") from exc
+    if not 0 < minimum <= 1:
+        raise SourceSchemaError("minimum_observed_outcome_share must be in (0, 1]")
+    reference = str(coverage_policy_reference).strip()
+    if not reference:
+        raise SourceSchemaError("coverage_policy_reference must document the registered coverage rule")
+
+    result = coverage.copy()
+    result["minimum_observed_outcome_share"] = minimum
+    result["coverage_policy_reference"] = reference
+    result["coverage_policy_passed"] = result["observed_outcome_share"].ge(minimum)
+    failed = result.loc[~result["coverage_policy_passed"], "origin"].tolist()
+    if failed:
+        raise SourceSchemaError(
+            "Observed-outcome coverage is below the registered headline minimum for origins: "
+            f"{failed}"
+        )
+    return result
+
+
+def _headline_coverage(
+    coverage_summary: pd.DataFrame,
+    origins: list[int],
+    *,
+    minimum_observed_outcome_share: float,
+    coverage_policy_reference: str,
+) -> pd.DataFrame:
+    coverage = _validate_origin_coverage(coverage_summary, origins)
+    return _apply_registered_coverage_policy(
+        coverage,
+        minimum_observed_outcome_share=minimum_observed_outcome_share,
+        coverage_policy_reference=coverage_policy_reference,
+    )
+
+
 def _attach_coverage_to_metrics(
     metrics: pd.DataFrame,
     coverage: pd.DataFrame,
 ) -> pd.DataFrame:
     result = metrics.merge(coverage, on="origin", how="left", validate="many_to_one")
-    if result[list(COVERAGE_COLUMNS - {"origin"})].isna().any().any():
+    required_attached = COVERAGE_COLUMNS - {"origin"}
+    if result[list(required_attached)].isna().any().any():
         raise SourceSchemaError("Persistence metrics could not be matched to origin risk-set coverage")
     max_scored = result.groupby("origin")["n"].max()
     observed = coverage.set_index("origin")["observed_outcome_rows"]
@@ -84,6 +130,7 @@ def _attach_coverage_to_metrics(
         raise SourceSchemaError("Scored persistence rows exceed observed outcomes in the origin risk set")
     result["origin_risk_set_coverage_enforced"] = True
     result["headline_coverage_contract_enforced"] = True
+    result["headline_coverage_minimum_enforced"] = True
     result["benchmark_stage"] = "point_in_time_persistence_with_origin_coverage"
     return result.sort_values(["origin", "model"]).reset_index(drop=True)
 
@@ -92,12 +139,20 @@ def evaluate_headline_point_in_time_persistence(
     panel: pd.DataFrame,
     origins: list[int],
     coverage_summary: pd.DataFrame,
+    *,
+    minimum_observed_outcome_share: float,
+    coverage_policy_reference: str,
     **kwargs: object,
 ) -> pd.DataFrame:
-    """Evaluate point-in-time persistence while preserving the origin risk-set denominator."""
+    """Evaluate point-in-time persistence only when registered origin coverage passes."""
     from urban_growth.forecast_fitness import evaluate_point_in_time_persistence_baselines
 
-    coverage = _validate_origin_coverage(coverage_summary, origins)
+    coverage = _headline_coverage(
+        coverage_summary,
+        origins,
+        minimum_observed_outcome_share=minimum_observed_outcome_share,
+        coverage_policy_reference=coverage_policy_reference,
+    )
     metrics = evaluate_point_in_time_persistence_baselines(panel, origins, **kwargs)
     return _attach_coverage_to_metrics(metrics, coverage)
 
@@ -106,15 +161,24 @@ def headline_point_in_time_persistence_errors(
     panel: pd.DataFrame,
     origins: list[int],
     coverage_summary: pd.DataFrame,
+    *,
+    minimum_observed_outcome_share: float,
+    coverage_policy_reference: str,
     **kwargs: object,
 ) -> pd.DataFrame:
-    """Return row-level point-in-time errors with origin risk-set coverage attached."""
+    """Return row-level errors only when registered origin coverage passes."""
     from urban_growth.forecast_fitness import point_in_time_persistence_errors
 
-    coverage = _validate_origin_coverage(coverage_summary, origins)
+    coverage = _headline_coverage(
+        coverage_summary,
+        origins,
+        minimum_observed_outcome_share=minimum_observed_outcome_share,
+        coverage_policy_reference=coverage_policy_reference,
+    )
     errors = point_in_time_persistence_errors(panel, origins, **kwargs)
     result = errors.merge(coverage, on="origin", how="left", validate="many_to_one")
-    if result[list(COVERAGE_COLUMNS - {"origin"})].isna().any().any():
+    required_attached = COVERAGE_COLUMNS - {"origin"}
+    if result[list(required_attached)].isna().any().any():
         raise SourceSchemaError("Persistence errors could not be matched to origin risk-set coverage")
     scored = result.groupby(["origin", "model"])["city_id"].nunique()
     observed = coverage.set_index("origin")["observed_outcome_rows"]
@@ -125,5 +189,6 @@ def headline_point_in_time_persistence_errors(
             )
     result["origin_risk_set_coverage_enforced"] = True
     result["headline_coverage_contract_enforced"] = True
+    result["headline_coverage_minimum_enforced"] = True
     result["benchmark_stage"] = "point_in_time_persistence_with_origin_coverage"
     return result.reset_index(drop=True)
