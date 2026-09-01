@@ -1,5 +1,4 @@
 """Evaluate whether recent city growth adds information beyond country context in WUP."""
-# ruff: noqa: I001
 
 from __future__ import annotations
 
