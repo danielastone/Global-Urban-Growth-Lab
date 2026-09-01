@@ -4,6 +4,8 @@
 
 The GHSL R2024A v1.2 thematic stream is the first repository source with enough multi-origin coverage and an internally stable geographic unit to exercise the fitness-gated persistence benchmark. It is admitted only as a **retrospective stable-footprint sensitivity**, not as headline or deployable-at-origin evidence.
 
+It is also **not an independent replication of real-world city-growth persistence**. Historical population inside each footprint is a modeled spatial allocation of census/administrative population using GHSL built-up information. The built-up time series is itself modeled from multitemporal satellite observations. This construction lineage can smooth local histories and is observationally entangled with genuine demographic persistence. See `docs/ghsl-construction-lineage-audit.md`.
+
 ## Why this source can enter the persistence benchmark
 
 Every historical GHSL thematic statistic is calculated inside the same 2025 urban-centre footprint. The repository has already reconciled the fixed thematic and multi-temporal streams at their documented common 2025 epoch, requiring one-to-one identifier/country agreement, exact area agreement, and population agreement within publisher rounding precision.
@@ -32,7 +34,15 @@ For that reason the source-specific adapter forcibly sets:
 - `boundary_information_leakage = true`;
 - `benchmark_interpretation = retrospective_stable_footprint_sensitivity`.
 
-The runner repeats these labels on every metrics/error output. A good persistence result here would establish that the persistence signal survives a stable-footprint definition. It would **not** establish a deployable historical forecast or remove survivorship concerns.
+The runner repeats these labels on every metrics/error output. A good persistence result here establishes only that persistence survives **within the GHSL fixed-footprint modeled population surface**. It does not establish a deployable historical forecast, an independent demographic replication, or the real-world magnitude of persistence.
+
+## Construction-lineage threat
+
+GHSL population grids distribute census or administrative-unit population across space using built-up information. For a fixed urban-centre footprint, the resulting historical population is therefore not a direct census enumeration of that footprint. JRC also documents the built-up surface series as a spatial-temporal interpolation of a limited set of observed satellite-image collections.
+
+The repository's own matched fixed-versus-dynamic comparison already demonstrates that construction choices materially change the apparent persistence signal: fixed footprints are substantially smoother and persistence is materially stronger than on matched dynamic-footprint rows. That is evidence of **construction sensitivity**, not proof that either footprint recovers the latent demographic process more accurately.
+
+The required falsification is an external direct-count comparison using national census locality/place histories and defensible concordances. Until then, GHSL cannot upgrade H1 beyond the support available from direct-count or vintage-correct sources.
 
 ## Remaining selection problem
 
@@ -52,4 +62,4 @@ The script rebuilds both streams, validates their 2025 reconciliation, construct
 
 ## Next evidence requirement
 
-After this sensitivity path, the next headline-capable persistence result still requires a source with multiple historical origins whose geographic identity can be established without future-boundary information and whose threshold/survivorship exposure is acceptable for the intended claim. National census locality concordances remain the preferred route for that test.
+After this sensitivity path, the next headline-capable persistence result still requires a source with multiple historical origins whose geographic identity can be established without future-boundary information and whose threshold/survivorship exposure is acceptable for the intended claim. National census locality concordances remain the preferred route for that test, and now serve a second purpose: testing whether GHSL persistence is materially stronger than persistence in direct locality counts on matched places and periods.
