@@ -12,8 +12,9 @@ def _panel() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "city_id": ["A", "B"],
-            "period_start": ["2000-01-01", "2000-01-01"],
-            "period_end": ["2005-01-01", "2005-01-01"],
+            "period_start": [2000, 2000],
+            "period_end": [2005, 2005],
+            "forecast_origin_date": ["2000-01-01", "2000-01-01"],
             "predictor_available_date": ["1999-12-01", "2000-06-01"],
             "concordance_available_date": ["1999-11-01", "1999-11-01"],
         }
@@ -40,6 +41,18 @@ def test_availability_gate_requires_known_dates() -> None:
     frame["predictor_available_date"] = None
     with pytest.raises(SourceSchemaError, match="must be known"):
         apply_forecast_availability_gate(frame)
+
+
+def test_integer_period_start_is_not_used_as_timestamp() -> None:
+    frame = _panel().iloc[[0]].drop(columns=["forecast_origin_date"])
+    with pytest.raises(SourceSchemaError, match="forecast_origin_date"):
+        apply_forecast_availability_gate(frame)
+
+
+def test_explicit_origin_column_can_be_overridden() -> None:
+    frame = _panel().iloc[[0]].rename(columns={"forecast_origin_date": "as_of_date"})
+    result = apply_forecast_availability_gate(frame, origin_column="as_of_date")
+    assert bool(result.loc[0, "point_in_time_available"])
 
 
 def test_point_in_time_sample_cannot_reintroduce_late_rows() -> None:
