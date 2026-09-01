@@ -163,13 +163,23 @@ def _origin_specific_point_in_time_panel(
     *,
     forecast_origin_date_column: str,
     outcome_available_column: str,
+    outcome_available_reference_column: str,
 ) -> tuple[pd.DataFrame, int, int]:
-    """Return one origin's test rows plus only training outcomes published by its as-of date."""
+    """Return one origin's test rows plus only auditable, published training outcomes."""
     require_columns(
         panel,
-        {forecast_origin_date_column, outcome_available_column},
+        {
+            forecast_origin_date_column,
+            outcome_available_column,
+            outcome_available_reference_column,
+        },
         source_name="point-in-time persistence panel",
     )
+    references = panel[outcome_available_reference_column].fillna("").astype(str).str.strip()
+    if references.eq("").any():
+        raise SourceSchemaError(
+            f"{outcome_available_reference_column} must provide provenance for every outcome release date"
+        )
     test = panel.loc[panel["period_start"].eq(origin)].copy()
     if test.empty:
         raise SourceSchemaError(f"Point-in-time panel lacks test rows for origin {origin}")
@@ -248,6 +258,7 @@ def evaluate_point_in_time_persistence_baselines(
     provenance_column: str = "availability_provenance_verified",
     forecast_origin_date_column: str = "forecast_origin_date",
     outcome_available_column: str = "outcome_available_date",
+    outcome_available_reference_column: str = "outcome_available_reference",
     outcome_column: str = "future_growth",
 ) -> pd.DataFrame:
     """Evaluate deployable persistence baselines with auditable timing gates."""
@@ -267,6 +278,7 @@ def evaluate_point_in_time_persistence_baselines(
                 origin,
                 forecast_origin_date_column=forecast_origin_date_column,
                 outcome_available_column=outcome_available_column,
+                outcome_available_reference_column=outcome_available_reference_column,
             )
         except SourceSchemaError as exc:
             if "No training outcomes were published" in str(exc):
@@ -279,6 +291,7 @@ def evaluate_point_in_time_persistence_baselines(
         scored["candidate_training_rows"] = candidate_train_n
         scored["available_training_rows"] = available_train_n
         scored["training_outcome_availability_enforced"] = True
+        scored["training_outcome_provenance_enforced"] = True
         frames.append(scored)
     if len(frames) < 2:
         raise SourceSchemaError(
@@ -295,6 +308,7 @@ def evaluate_point_in_time_persistence_baselines(
     result["availability_provenance_gate"] = provenance_column
     result["availability_provenance_gate_enforced"] = True
     result["training_outcome_availability_column"] = outcome_available_column
+    result["training_outcome_provenance_column"] = outcome_available_reference_column
     result["benchmark_stage"] = "point_in_time_persistence_only"
     result["forecast_horizon_years"] = horizon
     return result.sort_values(["origin", "model"]).reset_index(drop=True)
@@ -331,6 +345,7 @@ def point_in_time_persistence_errors(
     provenance_column: str = "availability_provenance_verified",
     forecast_origin_date_column: str = "forecast_origin_date",
     outcome_available_column: str = "outcome_available_date",
+    outcome_available_reference_column: str = "outcome_available_reference",
     outcome_column: str = "future_growth",
 ) -> pd.DataFrame:
     """Return row-level errors after auditable predictor and training-outcome timing gates."""
@@ -350,6 +365,7 @@ def point_in_time_persistence_errors(
                 origin,
                 forecast_origin_date_column=forecast_origin_date_column,
                 outcome_available_column=outcome_available_column,
+                outcome_available_reference_column=outcome_available_reference_column,
             )
         except SourceSchemaError as exc:
             if "No training outcomes were published" in str(exc):
@@ -362,6 +378,7 @@ def point_in_time_persistence_errors(
         scored["candidate_training_rows"] = candidate_train_n
         scored["available_training_rows"] = available_train_n
         scored["training_outcome_availability_enforced"] = True
+        scored["training_outcome_provenance_enforced"] = True
         frames.append(scored)
     if len(frames) < 2:
         raise SourceSchemaError(
@@ -376,6 +393,7 @@ def point_in_time_persistence_errors(
     result["availability_provenance_gate"] = provenance_column
     result["availability_provenance_gate_enforced"] = True
     result["training_outcome_availability_column"] = outcome_available_column
+    result["training_outcome_provenance_column"] = outcome_available_reference_column
     result["benchmark_stage"] = "point_in_time_persistence_only"
     result["forecast_horizon_years"] = horizon
     return result.reset_index(drop=True)
