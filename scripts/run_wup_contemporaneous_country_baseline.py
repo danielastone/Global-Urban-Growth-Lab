@@ -60,8 +60,9 @@ def main() -> None:
         read_f34_population_density(raw / "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx"),
     )
     intervals = build_forecast_intervals(city_year, OBSERVED_PANEL_ORIGINS)
-    metrics = evaluate_contemporaneous_country_baseline(intervals)
-    errors = contemporaneous_country_baseline_errors(intervals)
+    scoring = intervals.loc[intervals["period_start"].isin(OBSERVED_SCORING_ORIGINS)].copy()
+    metrics = evaluate_contemporaneous_country_baseline(scoring)
+    errors = contemporaneous_country_baseline_errors(scoring)
     bootstrap = cluster_bootstrap_paired_difference(
         errors,
         model_a="persistence",
