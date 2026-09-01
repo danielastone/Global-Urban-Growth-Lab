@@ -32,6 +32,8 @@ def forecast_panel() -> pd.DataFrame:
                     "future_growth": future,
                     "growth_eligible": True,
                     "point_in_time_available": True,
+                    "forecast_origin_date": f"{start}-12-31",
+                    "outcome_available_date": f"{end}-06-30",
                 }
             )
     frame = pd.DataFrame(rows)
@@ -107,7 +109,24 @@ def test_point_in_time_persistence_cannot_score_late_test_rows() -> None:
     assert counts.loc[2010, "persistence"] == 1
     assert result["fitness_gate_enforced"].all()
     assert result["availability_gate_enforced"].all()
+    assert result["training_outcome_availability_enforced"].all()
     assert result["benchmark_stage"].eq("point_in_time_persistence_only").all()
+
+
+def test_point_in_time_persistence_excludes_unpublished_training_outcomes() -> None:
+    panel = forecast_panel()
+    panel.loc[panel["period_start"].eq(2005), "outcome_available_date"] = "2011-01-01"
+    result = evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
+    at_2010 = result.loc[result["origin"].eq(2010)]
+    assert at_2010["candidate_training_rows"].eq(6).all()
+    assert at_2010["available_training_rows"].eq(3).all()
+    assert at_2010["training_outcome_availability_enforced"].all()
+
+
+def test_point_in_time_persistence_requires_outcome_release_dates() -> None:
+    panel = forecast_panel().drop(columns="outcome_available_date")
+    with pytest.raises(SourceSchemaError, match="outcome_available_date"):
+        evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
 
 
 def test_row_level_errors_cannot_reintroduce_ineligible_rows() -> None:
@@ -128,3 +147,4 @@ def test_point_in_time_errors_cannot_reintroduce_late_rows() -> None:
     excluded = errors.loc[(errors["city_id"] == "C") & (errors["origin"] == 2010)]
     assert excluded.empty
     assert errors["availability_gate_enforced"].all()
+    assert errors["training_outcome_availability_enforced"].all()
