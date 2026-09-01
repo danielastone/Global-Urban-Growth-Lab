@@ -40,6 +40,39 @@ def _persistence_rows(metrics: pd.DataFrame) -> pd.DataFrame:
     return metrics.loc[metrics["model"].eq("persistence")].copy()
 
 
+def _persistence_vs_country(metrics: pd.DataFrame, *, source: str) -> pd.DataFrame:
+    """Compare persistence with the leave-city-out historical country baseline by origin."""
+    models = ["persistence", "country_mean_leave_city_out"]
+    subset = metrics.loc[metrics["model"].isin(models), ["origin", "model", "mae", "rmse"]]
+    mae = subset.pivot(index="origin", columns="model", values="mae")
+    rmse = subset.pivot(index="origin", columns="model", values="rmse")
+    if any(model not in mae.columns or model not in rmse.columns for model in models):
+        raise ValueError(f"{source} lacks matched persistence/country model metrics")
+    out = pd.DataFrame(
+        {
+            "origin": mae.index.astype(int),
+            "source": source,
+            "persistence_mae": mae["persistence"].to_numpy(),
+            "country_loo_mae": mae["country_mean_leave_city_out"].to_numpy(),
+            "persistence_rmse": rmse["persistence"].to_numpy(),
+            "country_loo_rmse": rmse["country_mean_leave_city_out"].to_numpy(),
+        }
+    )
+    out["mae_delta_persistence_minus_country"] = (
+        out["persistence_mae"] - out["country_loo_mae"]
+    )
+    out["rmse_delta_persistence_minus_country"] = (
+        out["persistence_rmse"] - out["country_loo_rmse"]
+    )
+    out["persistence_beats_country_mae"] = out[
+        "mae_delta_persistence_minus_country"
+    ].lt(0)
+    out["persistence_beats_country_rmse"] = out[
+        "rmse_delta_persistence_minus_country"
+    ].lt(0)
+    return restrict_pre_projection_origins(out)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -111,6 +144,14 @@ def main() -> None:
     )
     cross_source["includes_2020_to_2025"] = False
     cross_source["comparison_semantics"] = "source_level_not_city_matched"
+    ranking = pd.concat(
+        [
+            _persistence_vs_country(wup_metrics, source="wup_2025_reference_estimates"),
+            _persistence_vs_country(fixed_matched_metrics, source="ghsl_fixed_2025_footprint"),
+            _persistence_vs_country(dynamic_matched_metrics, source="ghsl_dynamic_boundaries"),
+        ],
+        ignore_index=True,
+    ).sort_values(["origin", "source"]).reset_index(drop=True)
 
     # Finding 12: rebuild the fixed risk set from information at the origin.
     fixed_origin_eligible, risk_coverage = origin_defined_fixed_risk_set(
@@ -145,6 +186,7 @@ def main() -> None:
         "fixed_matched_persistence_pre2020.csv": fixed_pre2020,
         "dynamic_matched_persistence_pre2020.csv": dynamic_pre2020,
         "cross_source_persistence_pre2020.csv": cross_source,
+        "cross_source_model_ranking_pre2020.csv": ranking,
         "fixed_origin_risk_set_coverage.csv": risk_coverage,
         "fixed_origin_defined_metrics.csv": fixed_origin_metrics,
         "fixed_origin_defined_matched_metrics.csv": origin_fixed_matched_metrics,
