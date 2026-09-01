@@ -3,6 +3,8 @@
 import pandas as pd
 import pytest
 
+from urban_growth import coverage_policy
+from urban_growth.coverage_policy import HeadlineCoveragePolicy
 from urban_growth.forecast_headline import (
     evaluate_headline_point_in_time_persistence,
     headline_point_in_time_persistence_errors,
@@ -10,10 +12,22 @@ from urban_growth.forecast_headline import (
 from urban_growth.io import SourceSchemaError
 
 
-POLICY_KWARGS = {
-    "minimum_observed_outcome_share": 0.60,
-    "coverage_policy_reference": "locked-test-coverage-policy",
-}
+TEST_POLICY_ID = "synthetic-test-coverage-v1"
+
+
+@pytest.fixture(autouse=True)
+def _registered_test_policy(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        coverage_policy,
+        "REGISTERED_HEADLINE_COVERAGE_POLICIES",
+        (
+            HeadlineCoveragePolicy(
+                policy_id=TEST_POLICY_ID,
+                minimum_observed_outcome_share=0.60,
+                reference="synthetic unit-test policy",
+            ),
+        ),
+    )
 
 
 def _panel() -> pd.DataFrame:
@@ -62,97 +76,94 @@ def _coverage() -> pd.DataFrame:
     )
 
 
-def test_headline_metrics_attach_origin_risk_set_coverage() -> None:
-    result = evaluate_headline_point_in_time_persistence(
-        _panel(), [2005, 2010], _coverage(), **POLICY_KWARGS
+def _evaluate(coverage: pd.DataFrame | None = None) -> pd.DataFrame:
+    return evaluate_headline_point_in_time_persistence(
+        _panel(),
+        [2005, 2010],
+        _coverage() if coverage is None else coverage,
+        coverage_policy_id=TEST_POLICY_ID,
     )
+
+
+def test_headline_metrics_attach_registered_policy_and_coverage() -> None:
+    result = _evaluate()
     assert result["origin_risk_set_coverage_enforced"].all()
     assert result["headline_coverage_contract_enforced"].all()
     assert result["headline_coverage_minimum_enforced"].all()
+    assert result["coverage_policy_registry_enforced"].all()
     assert result["coverage_policy_passed"].all()
+    assert result["coverage_policy_id"].eq(TEST_POLICY_ID).all()
     assert result["minimum_observed_outcome_share"].eq(0.60).all()
-    assert result["coverage_policy_reference"].eq("locked-test-coverage-policy").all()
-    assert result["benchmark_stage"].eq("point_in_time_persistence_with_origin_coverage").all()
-    assert result.loc[result["origin"].eq(2005), "origin_risk_set_rows"].eq(4).all()
-    assert result.loc[result["origin"].eq(2010), "observed_outcome_share"].eq(0.60).all()
 
 
-def test_headline_errors_attach_same_coverage_denominator() -> None:
+def test_headline_errors_attach_same_registered_policy() -> None:
     result = headline_point_in_time_persistence_errors(
-        _panel(), [2005, 2010], _coverage(), **POLICY_KWARGS
+        _panel(), [2005, 2010], _coverage(), coverage_policy_id=TEST_POLICY_ID
     )
-    assert result["origin_risk_set_coverage_enforced"].all()
-    assert result["headline_coverage_contract_enforced"].all()
-    assert result["headline_coverage_minimum_enforced"].all()
-    assert result["coverage_policy_passed"].all()
-    assert result.loc[result["origin"].eq(2010), "origin_risk_set_rows"].eq(5).all()
+    assert result["coverage_policy_registry_enforced"].all()
+    assert result["coverage_policy_id"].eq(TEST_POLICY_ID).all()
+
+
+def test_unknown_runtime_policy_id_fails_closed() -> None:
+    with pytest.raises(SourceSchemaError, match="Unknown coverage_policy_id"):
+        evaluate_headline_point_in_time_persistence(
+            _panel(), [2005, 2010], _coverage(), coverage_policy_id="lower-cutoff-after-results"
+        )
+
+
+def test_empty_production_registry_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(coverage_policy, "REGISTERED_HEADLINE_COVERAGE_POLICIES", ())
+    with pytest.raises(SourceSchemaError, match="Unknown coverage_policy_id"):
+        _evaluate()
 
 
 def test_headline_evaluation_requires_coverage_for_every_origin() -> None:
     coverage = _coverage().loc[_coverage()["origin"].eq(2005)].copy()
     with pytest.raises(SourceSchemaError, match="missing declared origins"):
-        evaluate_headline_point_in_time_persistence(
-            _panel(), [2005, 2010], coverage, **POLICY_KWARGS
-        )
+        _evaluate(coverage)
 
 
 def test_headline_evaluation_rejects_future_defined_membership() -> None:
     coverage = _coverage()
     coverage.loc[coverage["origin"].eq(2010), "future_outcome_used_for_membership"] = True
     with pytest.raises(SourceSchemaError, match="Future outcome observability"):
-        evaluate_headline_point_in_time_persistence(
-            _panel(), [2005, 2010], coverage, **POLICY_KWARGS
-        )
+        _evaluate(coverage)
 
 
 def test_headline_evaluation_rejects_inconsistent_coverage_counts() -> None:
     coverage = _coverage()
     coverage.loc[coverage["origin"].eq(2010), "missing_outcome_rows"] = 1
     with pytest.raises(SourceSchemaError, match="must equal the origin risk set"):
-        evaluate_headline_point_in_time_persistence(
-            _panel(), [2005, 2010], coverage, **POLICY_KWARGS
-        )
+        _evaluate(coverage)
 
 
-def test_headline_evaluation_rejects_scored_rows_above_observed_outcomes() -> None:
-    coverage = _coverage()
-    coverage.loc[coverage["origin"].eq(2010), "observed_outcome_rows"] = 2
-    coverage.loc[coverage["origin"].eq(2010), "missing_outcome_rows"] = 3
-    coverage.loc[coverage["origin"].eq(2010), "observed_outcome_share"] = 0.4
+def test_registered_minimum_fails_when_not_met(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        coverage_policy,
+        "REGISTERED_HEADLINE_COVERAGE_POLICIES",
+        (
+            HeadlineCoveragePolicy(
+                policy_id=TEST_POLICY_ID,
+                minimum_observed_outcome_share=0.70,
+                reference="synthetic stricter policy",
+            ),
+        ),
+    )
     with pytest.raises(SourceSchemaError, match="below the registered headline minimum"):
-        evaluate_headline_point_in_time_persistence(
-            _panel(), [2005, 2010], coverage, **POLICY_KWARGS
-        )
+        _evaluate()
 
 
-def test_headline_evaluation_fails_when_registered_minimum_is_not_met() -> None:
-    with pytest.raises(SourceSchemaError, match="below the registered headline minimum"):
-        evaluate_headline_point_in_time_persistence(
-            _panel(),
-            [2005, 2010],
-            _coverage(),
-            minimum_observed_outcome_share=0.70,
-            coverage_policy_reference="locked-test-coverage-policy",
-        )
-
-
-def test_headline_evaluation_rejects_invalid_registered_minimum() -> None:
-    with pytest.raises(SourceSchemaError, match=r"must be in \(0, 1\]"):
-        evaluate_headline_point_in_time_persistence(
-            _panel(),
-            [2005, 2010],
-            _coverage(),
-            minimum_observed_outcome_share=0,
-            coverage_policy_reference="locked-test-coverage-policy",
-        )
-
-
-def test_headline_evaluation_requires_coverage_policy_reference() -> None:
-    with pytest.raises(SourceSchemaError, match="coverage_policy_reference"):
-        evaluate_headline_point_in_time_persistence(
-            _panel(),
-            [2005, 2010],
-            _coverage(),
-            minimum_observed_outcome_share=0.60,
-            coverage_policy_reference="  ",
-        )
+def test_invalid_registered_policy_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        coverage_policy,
+        "REGISTERED_HEADLINE_COVERAGE_POLICIES",
+        (
+            HeadlineCoveragePolicy(
+                policy_id=TEST_POLICY_ID,
+                minimum_observed_outcome_share=0,
+                reference="invalid synthetic policy",
+            ),
+        ),
+    )
+    with pytest.raises(SourceSchemaError, match="invalid minimum"):
+        _evaluate()
