@@ -109,7 +109,8 @@ def build_mexico_multiwave_history(transitions: pd.DataFrame) -> pd.DataFrame:
 
     A forecast row is eligible only when both its outcome transition and the immediately
     preceding transition used for recent growth pass independently. Later geography cannot
-    repair an earlier predictor interval.
+    repair an earlier predictor interval. Forecast horizon is retained explicitly because
+    annualized growth rates from different horizons are not interchangeable error targets.
     """
     checked = validate_mexico_locality_transition(transitions)
     checked = checked.sort_values(["analysis_id", "origin_year", "endpoint_year"]).copy()
@@ -149,6 +150,7 @@ def build_mexico_multiwave_history(transitions: pd.DataFrame) -> pd.DataFrame:
     current["future_growth"] = current["interval_log_growth"]
     current["period_start"] = current["origin_year"]
     current["period_end"] = current["endpoint_year"]
+    current["forecast_horizon_years"] = current["endpoint_year"] - current["origin_year"]
     current["country_code"] = "MEX"
     current["city_id"] = current["analysis_id"].astype(str)
     current["growth_eligible"] = current["forecast_interval_eligible"]
