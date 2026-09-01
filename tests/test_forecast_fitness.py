@@ -33,6 +33,7 @@ def forecast_panel() -> pd.DataFrame:
                     "growth_eligible": True,
                     "point_in_time_available": True,
                     "availability_provenance_verified": True,
+                    "forecast_origin_registration_verified": True,
                     "forecast_origin_date": f"{start}-12-31",
                     "outcome_available_date": f"{end}-06-30",
                     "outcome_available_reference": f"official-release-{end}",
@@ -72,6 +73,19 @@ def test_point_in_time_gate_requires_verified_provenance() -> None:
         point_in_time_fitness_gated_forecast_panel(panel)
 
 
+def test_point_in_time_gate_requires_origin_registration_column() -> None:
+    panel = forecast_panel().drop(columns="forecast_origin_registration_verified")
+    with pytest.raises(SourceSchemaError, match="forecast_origin_registration_verified"):
+        point_in_time_fitness_gated_forecast_panel(panel)
+
+
+def test_point_in_time_gate_rejects_unverified_origin_registration() -> None:
+    panel = forecast_panel()
+    panel.loc[0, "forecast_origin_registration_verified"] = False
+    with pytest.raises(SourceSchemaError, match="verified forecast-origin registration"):
+        point_in_time_fitness_gated_forecast_panel(panel)
+
+
 def test_point_in_time_gate_excludes_late_rows_after_fitness_gate() -> None:
     panel = forecast_panel()
     panel.loc[
@@ -83,6 +97,7 @@ def test_point_in_time_gate_excludes_late_rows_after_fitness_gate() -> None:
     assert not ((result["city_id"] == "C") & (result["period_start"] == 2010)).any()
     assert result["forecast_availability_gate_passed"].all()
     assert result["forecast_availability_provenance_gate_passed"].all()
+    assert result["forecast_origin_registration_gate_passed"].all()
 
 
 def test_persistence_oos_requires_multiple_usable_origins() -> None:
@@ -120,6 +135,7 @@ def test_point_in_time_persistence_cannot_score_late_test_rows() -> None:
     assert result["fitness_gate_enforced"].all()
     assert result["availability_gate_enforced"].all()
     assert result["availability_provenance_gate_enforced"].all()
+    assert result["forecast_origin_registration_gate_enforced"].all()
     assert result["training_outcome_availability_enforced"].all()
     assert result["training_outcome_provenance_enforced"].all()
     assert result["benchmark_stage"].eq("point_in_time_persistence_only").all()
@@ -174,5 +190,6 @@ def test_point_in_time_errors_cannot_reintroduce_late_rows() -> None:
     assert excluded.empty
     assert errors["availability_gate_enforced"].all()
     assert errors["availability_provenance_gate_enforced"].all()
+    assert errors["forecast_origin_registration_gate_enforced"].all()
     assert errors["training_outcome_availability_enforced"].all()
     assert errors["training_outcome_provenance_enforced"].all()

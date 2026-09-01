@@ -92,31 +92,45 @@ def point_in_time_fitness_gated_forecast_panel(
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
     provenance_column: str = "availability_provenance_verified",
+    origin_registration_column: str = "forecast_origin_registration_verified",
 ) -> pd.DataFrame:
-    """Return rows passing fitness plus an auditable point-in-time availability gate."""
+    """Return rows passing fitness plus auditable point-in-time and origin-rule gates."""
     require_columns(
         panel,
-        {availability_column, provenance_column},
+        {availability_column, provenance_column, origin_registration_column},
         source_name="point-in-time forecast panel",
     )
     availability = panel[availability_column]
     provenance = panel[provenance_column]
+    origin_registration = panel[origin_registration_column]
     if not pd.api.types.is_bool_dtype(availability.dtype):
         raise SourceSchemaError(f"{availability_column} must be boolean")
     if not pd.api.types.is_bool_dtype(provenance.dtype):
         raise SourceSchemaError(f"{provenance_column} must be boolean")
+    if not pd.api.types.is_bool_dtype(origin_registration.dtype):
+        raise SourceSchemaError(f"{origin_registration_column} must be boolean")
     if not provenance.all():
         raise SourceSchemaError(
             "Point-in-time persistence requires verified availability provenance for every row"
         )
+    if not origin_registration.all():
+        raise SourceSchemaError(
+            "Point-in-time persistence requires verified forecast-origin registration for every row"
+        )
     gated = fitness_gated_forecast_panel(panel, eligibility_column=eligibility_column)
-    result = gated.loc[gated[availability_column] & gated[provenance_column]].copy()
+    result = gated.loc[
+        gated[availability_column]
+        & gated[provenance_column]
+        & gated[origin_registration_column]
+    ].copy()
     if result.empty:
-        raise SourceSchemaError("No forecast rows pass both fitness and point-in-time gates")
+        raise SourceSchemaError("No forecast rows pass fitness and point-in-time gates")
     result["forecast_availability_gate"] = availability_column
     result["forecast_availability_gate_passed"] = True
     result["forecast_availability_provenance_gate"] = provenance_column
     result["forecast_availability_provenance_gate_passed"] = True
+    result["forecast_origin_registration_gate"] = origin_registration_column
+    result["forecast_origin_registration_gate_passed"] = True
     return result.reset_index(drop=True)
 
 
@@ -256,6 +270,7 @@ def evaluate_point_in_time_persistence_baselines(
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
     provenance_column: str = "availability_provenance_verified",
+    origin_registration_column: str = "forecast_origin_registration_verified",
     forecast_origin_date_column: str = "forecast_origin_date",
     outcome_available_column: str = "outcome_available_date",
     outcome_available_reference_column: str = "outcome_available_reference",
@@ -267,6 +282,7 @@ def evaluate_point_in_time_persistence_baselines(
         eligibility_column=eligibility_column,
         availability_column=availability_column,
         provenance_column=provenance_column,
+        origin_registration_column=origin_registration_column,
     )
     horizon = _validate_single_horizon(gated)
     declared = _validate_declared_origins(gated, origins)
@@ -307,6 +323,8 @@ def evaluate_point_in_time_persistence_baselines(
     result["availability_gate_enforced"] = True
     result["availability_provenance_gate"] = provenance_column
     result["availability_provenance_gate_enforced"] = True
+    result["forecast_origin_registration_gate"] = origin_registration_column
+    result["forecast_origin_registration_gate_enforced"] = True
     result["training_outcome_availability_column"] = outcome_available_column
     result["training_outcome_provenance_column"] = outcome_available_reference_column
     result["benchmark_stage"] = "point_in_time_persistence_only"
@@ -343,6 +361,7 @@ def point_in_time_persistence_errors(
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
     provenance_column: str = "availability_provenance_verified",
+    origin_registration_column: str = "forecast_origin_registration_verified",
     forecast_origin_date_column: str = "forecast_origin_date",
     outcome_available_column: str = "outcome_available_date",
     outcome_available_reference_column: str = "outcome_available_reference",
@@ -354,6 +373,7 @@ def point_in_time_persistence_errors(
         eligibility_column=eligibility_column,
         availability_column=availability_column,
         provenance_column=provenance_column,
+        origin_registration_column=origin_registration_column,
     )
     horizon = _validate_single_horizon(gated)
     declared = _validate_declared_origins(gated, origins)
@@ -392,6 +412,8 @@ def point_in_time_persistence_errors(
     result["availability_gate_enforced"] = True
     result["availability_provenance_gate"] = provenance_column
     result["availability_provenance_gate_enforced"] = True
+    result["forecast_origin_registration_gate"] = origin_registration_column
+    result["forecast_origin_registration_gate_enforced"] = True
     result["training_outcome_availability_column"] = outcome_available_column
     result["training_outcome_provenance_column"] = outcome_available_reference_column
     result["benchmark_stage"] = "point_in_time_persistence_only"
