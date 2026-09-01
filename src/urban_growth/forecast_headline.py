@@ -113,6 +113,7 @@ def _attach_coverage_to_metrics(
     result["origin_risk_set_coverage_enforced"] = True
     result["headline_coverage_contract_enforced"] = True
     result["headline_coverage_minimum_enforced"] = True
+    result["headline_point_in_time_integrity_enforced"] = True
     result["benchmark_stage"] = "point_in_time_persistence_with_origin_coverage"
     return result.sort_values(["origin", "model"]).reset_index(drop=True)
 
@@ -125,15 +126,15 @@ def evaluate_headline_point_in_time_persistence(
     coverage_policy_id: str,
     **kwargs: object,
 ) -> pd.DataFrame:
-    """Evaluate point-in-time persistence only under a versioned coverage policy."""
-    from urban_growth.forecast_fitness import evaluate_point_in_time_persistence_baselines
+    """Evaluate headline persistence only after recomputing point-in-time evidence."""
+    from urban_growth.forecast_integrity import evaluate_verified_point_in_time_persistence_baselines
 
     coverage = _headline_coverage(
         coverage_summary,
         origins,
         coverage_policy_id=coverage_policy_id,
     )
-    metrics = evaluate_point_in_time_persistence_baselines(panel, origins, **kwargs)
+    metrics = evaluate_verified_point_in_time_persistence_baselines(panel, origins, **kwargs)
     return _attach_coverage_to_metrics(metrics, coverage)
 
 
@@ -145,15 +146,15 @@ def headline_point_in_time_persistence_errors(
     coverage_policy_id: str,
     **kwargs: object,
 ) -> pd.DataFrame:
-    """Return row-level errors only under a versioned coverage policy."""
-    from urban_growth.forecast_fitness import point_in_time_persistence_errors
+    """Return headline row errors only after recomputing point-in-time evidence."""
+    from urban_growth.forecast_integrity import verified_point_in_time_persistence_errors
 
     coverage = _headline_coverage(
         coverage_summary,
         origins,
         coverage_policy_id=coverage_policy_id,
     )
-    errors = point_in_time_persistence_errors(panel, origins, **kwargs)
+    errors = verified_point_in_time_persistence_errors(panel, origins, **kwargs)
     result = errors.merge(coverage, on="origin", how="left", validate="many_to_one")
     required_attached = COVERAGE_COLUMNS - {"origin"}
     if result[list(required_attached)].isna().any().any():
@@ -168,5 +169,6 @@ def headline_point_in_time_persistence_errors(
     result["origin_risk_set_coverage_enforced"] = True
     result["headline_coverage_contract_enforced"] = True
     result["headline_coverage_minimum_enforced"] = True
+    result["headline_point_in_time_integrity_enforced"] = True
     result["benchmark_stage"] = "point_in_time_persistence_with_origin_coverage"
     return result.reset_index(drop=True)
