@@ -14,7 +14,14 @@ from urban_growth.adapters.ghsl_ucdb import (
     read_ghsl_theme_csv,
     reconcile_2025_streams,
 )
+from urban_growth.adapters.wup import (
+    read_f21_city_population,
+    read_f25_city_land_area,
+    read_f30_built_up_area_per_capita,
+    read_f34_population_density,
+)
 from urban_growth.forecast import (
+    build_forecast_intervals,
     build_ghsl_dynamic_forecast_intervals,
     build_ghsl_fixed_forecast_intervals,
     evaluate_rolling_baselines,
@@ -25,6 +32,8 @@ from urban_growth.ghsl_redteam import (
     origin_defined_fixed_risk_set,
     restrict_pre_projection_origins,
 )
+from urban_growth.wup_lineage import classify_wup_city_population_lineage
+from urban_growth.wup_panel import build_wup_city_year_panel
 
 
 def _persistence_rows(metrics: pd.DataFrame) -> pd.DataFrame:
@@ -43,6 +52,7 @@ def main() -> None:
         type=Path,
         default=Path("data/raw/GHS_UCDB_MTUC_GLOBE_R2024A.csv"),
     )
+    parser.add_argument("--wup-raw-dir", type=Path, default=Path("data/raw"))
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/ghsl_redteam_130"))
     args = parser.parse_args()
 
@@ -61,11 +71,46 @@ def main() -> None:
         fixed_intervals, dynamic_intervals
     )
 
-    # Finding 14: isolate the pre-2020 period before comparing source behavior.
+    # Finding 14: isolate pre-2020 observed/reference-estimate WUP and GHSL behavior.
     fixed_matched_metrics = evaluate_rolling_baselines(fixed_matched, evaluation_origins)
     dynamic_matched_metrics = evaluate_rolling_baselines(dynamic_matched, evaluation_origins)
     fixed_pre2020 = restrict_pre_projection_origins(_persistence_rows(fixed_matched_metrics))
     dynamic_pre2020 = restrict_pre_projection_origins(_persistence_rows(dynamic_matched_metrics))
+    raw = args.wup_raw_dir
+    wup_population = classify_wup_city_population_lineage(
+        read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
+    )
+    wup_city_year = build_wup_city_year_panel(
+        wup_population,
+        read_f25_city_land_area(raw / "WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx"),
+        read_f30_built_up_area_per_capita(
+            raw / "WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx"
+        ),
+        read_f34_population_density(raw / "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx"),
+    )
+    wup_intervals = build_forecast_intervals(wup_city_year, list(range(1980, 2020, 5)))
+    wup_metrics = evaluate_rolling_baselines(wup_intervals, pre_projection_origins)
+    wup_pre2020 = restrict_pre_projection_origins(_persistence_rows(wup_metrics))
+    cross_source = (
+        wup_pre2020[["origin", "mae", "rmse"]]
+        .rename(columns={"mae": "wup_persistence_mae", "rmse": "wup_persistence_rmse"})
+        .merge(
+            fixed_pre2020[["origin", "mae", "rmse"]].rename(
+                columns={"mae": "ghsl_fixed_persistence_mae", "rmse": "ghsl_fixed_persistence_rmse"}
+            ),
+            on="origin",
+            validate="one_to_one",
+        )
+        .merge(
+            dynamic_pre2020[["origin", "mae", "rmse"]].rename(
+                columns={"mae": "ghsl_dynamic_persistence_mae", "rmse": "ghsl_dynamic_persistence_rmse"}
+            ),
+            on="origin",
+            validate="one_to_one",
+        )
+    )
+    cross_source["includes_2020_to_2025"] = False
+    cross_source["comparison_semantics"] = "source_level_not_city_matched"
 
     # Finding 12: rebuild the fixed risk set from information at the origin.
     fixed_origin_eligible, risk_coverage = origin_defined_fixed_risk_set(
@@ -96,8 +141,10 @@ def main() -> None:
     entanglement = entanglement.loc[entanglement["origin"].isin(pre_projection_origins)].copy()
 
     results = {
+        "wup_persistence_pre2020.csv": wup_pre2020,
         "fixed_matched_persistence_pre2020.csv": fixed_pre2020,
         "dynamic_matched_persistence_pre2020.csv": dynamic_pre2020,
+        "cross_source_persistence_pre2020.csv": cross_source,
         "fixed_origin_risk_set_coverage.csv": risk_coverage,
         "fixed_origin_defined_metrics.csv": fixed_origin_metrics,
         "fixed_origin_defined_matched_metrics.csv": origin_fixed_matched_metrics,
