@@ -5,8 +5,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import pandas as pd
-
 from urban_growth.adapters.us_census import (
     build_us_place_boundary_cohort,
     build_us_place_origin_denominator,
