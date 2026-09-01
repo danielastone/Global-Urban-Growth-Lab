@@ -71,26 +71,23 @@ def _validate_origin_coverage(
     return coverage.sort_values("origin").reset_index(drop=True)
 
 
-def _apply_registered_coverage_policy(
-    coverage: pd.DataFrame,
+def _headline_coverage(
+    coverage_summary: pd.DataFrame,
+    origins: list[int],
     *,
-    minimum_observed_outcome_share: float,
-    coverage_policy_reference: str,
+    coverage_policy_id: str,
 ) -> pd.DataFrame:
-    """Require a preregistered minimum observed-outcome share for headline qualification."""
-    try:
-        minimum = float(minimum_observed_outcome_share)
-    except (TypeError, ValueError) as exc:
-        raise SourceSchemaError("minimum_observed_outcome_share must be numeric") from exc
-    if not 0 < minimum <= 1:
-        raise SourceSchemaError("minimum_observed_outcome_share must be in (0, 1]")
-    reference = str(coverage_policy_reference).strip()
-    if not reference:
-        raise SourceSchemaError("coverage_policy_reference must document the registered coverage rule")
+    from urban_growth.coverage_policy import resolve_registered_coverage_policy
+
+    coverage = _validate_origin_coverage(coverage_summary, origins)
+    policy = resolve_registered_coverage_policy(coverage_policy_id)
+    minimum = float(policy.minimum_observed_outcome_share)
 
     result = coverage.copy()
+    result["coverage_policy_id"] = policy.policy_id
     result["minimum_observed_outcome_share"] = minimum
-    result["coverage_policy_reference"] = reference
+    result["coverage_policy_reference"] = str(policy.reference).strip()
+    result["coverage_policy_registry_enforced"] = True
     result["coverage_policy_passed"] = result["observed_outcome_share"].ge(minimum)
     failed = result.loc[~result["coverage_policy_passed"], "origin"].tolist()
     if failed:
@@ -99,21 +96,6 @@ def _apply_registered_coverage_policy(
             f"{failed}"
         )
     return result
-
-
-def _headline_coverage(
-    coverage_summary: pd.DataFrame,
-    origins: list[int],
-    *,
-    minimum_observed_outcome_share: float,
-    coverage_policy_reference: str,
-) -> pd.DataFrame:
-    coverage = _validate_origin_coverage(coverage_summary, origins)
-    return _apply_registered_coverage_policy(
-        coverage,
-        minimum_observed_outcome_share=minimum_observed_outcome_share,
-        coverage_policy_reference=coverage_policy_reference,
-    )
 
 
 def _attach_coverage_to_metrics(
@@ -140,18 +122,16 @@ def evaluate_headline_point_in_time_persistence(
     origins: list[int],
     coverage_summary: pd.DataFrame,
     *,
-    minimum_observed_outcome_share: float,
-    coverage_policy_reference: str,
+    coverage_policy_id: str,
     **kwargs: object,
 ) -> pd.DataFrame:
-    """Evaluate point-in-time persistence only when registered origin coverage passes."""
+    """Evaluate point-in-time persistence only under a versioned coverage policy."""
     from urban_growth.forecast_fitness import evaluate_point_in_time_persistence_baselines
 
     coverage = _headline_coverage(
         coverage_summary,
         origins,
-        minimum_observed_outcome_share=minimum_observed_outcome_share,
-        coverage_policy_reference=coverage_policy_reference,
+        coverage_policy_id=coverage_policy_id,
     )
     metrics = evaluate_point_in_time_persistence_baselines(panel, origins, **kwargs)
     return _attach_coverage_to_metrics(metrics, coverage)
@@ -162,18 +142,16 @@ def headline_point_in_time_persistence_errors(
     origins: list[int],
     coverage_summary: pd.DataFrame,
     *,
-    minimum_observed_outcome_share: float,
-    coverage_policy_reference: str,
+    coverage_policy_id: str,
     **kwargs: object,
 ) -> pd.DataFrame:
-    """Return row-level errors only when registered origin coverage passes."""
+    """Return row-level errors only under a versioned coverage policy."""
     from urban_growth.forecast_fitness import point_in_time_persistence_errors
 
     coverage = _headline_coverage(
         coverage_summary,
         origins,
-        minimum_observed_outcome_share=minimum_observed_outcome_share,
-        coverage_policy_reference=coverage_policy_reference,
+        coverage_policy_id=coverage_policy_id,
     )
     errors = point_in_time_persistence_errors(panel, origins, **kwargs)
     result = errors.merge(coverage, on="origin", how="left", validate="many_to_one")
