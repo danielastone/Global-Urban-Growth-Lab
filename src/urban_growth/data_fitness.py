@@ -15,7 +15,14 @@ BAD_EXPOSURE = {"material", "unknown"}
 UNKNOWN_EVIDENCE = {"unknown", "uncertain", "unresolved", "not_reviewed", "not reviewed"}
 PRESENT_EVIDENCE = {"1", "true", "yes", "y", "passed", "valid", "present"}
 CLEAR_EVIDENCE = {"0", "false", "no", "n", "clear", "none", "absent"}
-CLEAR_BOUNDARY_STATUS = {"none", "stable", "unchanged", "harmonized"}
+CLEAR_BOUNDARY_STATUS = {
+    "none",
+    "stable",
+    "unchanged",
+    "harmonized",
+    "official_crosswalk",
+    "none_within_fixed_2025_footprint",
+}
 UNRESOLVED_BOUNDARY = {
     "annexation",
     "merger",
