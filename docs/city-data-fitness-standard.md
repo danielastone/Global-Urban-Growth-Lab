@@ -53,8 +53,11 @@ Headline eligibility is intentionally strict. A record must be growth-eligible a
 - validation status `passed`;
 - a stable or accepted harmonized concordance;
 - no unresolved geographic change;
+- explicit truncation and survivorship exposure assessments;
 - no material or unknown survivorship/truncation exposure for threshold-sensitive analyses;
 - no known unresolved inconsistency.
+
+Missing `truncation_exposure` or `survivorship_exposure` is not interpreted as low risk. Missing evidence fails headline eligibility with `missing_truncation_exposure` or `missing_survivorship_exposure`. The row may remain eligible for non-headline growth analysis when the other requirements for that use are met.
 
 The exact analysis can impose additional requirements. The standard is a minimum gate, not permission to ignore estimator-specific assumptions.
 
@@ -72,7 +75,7 @@ A changing administrative boundary can still support growth analysis only when t
 
 ## Threshold-selection rules
 
-For analyses near a population threshold, `truncation_exposure` and `survivorship_exposure` must not be `material` or `unknown` for headline use. These fields do not mechanically remove observations from unrelated analyses; they are analysis-specific warnings and gates.
+For analyses near a population threshold, `truncation_exposure` and `survivorship_exposure` must be explicitly assessed and must not be `material` or `unknown` for headline use. Blank or missing values fail the headline gate rather than being treated as absence of exposure. These fields do not mechanically remove observations from unrelated analyses; they are analysis-specific warnings and gates.
 
 Sample construction should use earlier-period population wherever possible. Entry, exit, threshold crossing, and lower-tail coverage should be reported separately.
 
