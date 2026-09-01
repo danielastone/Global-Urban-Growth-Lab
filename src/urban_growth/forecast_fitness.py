@@ -57,6 +57,26 @@ def fitness_gated_forecast_panel(
     return result.reset_index(drop=True)
 
 
+def point_in_time_fitness_gated_forecast_panel(
+    panel: pd.DataFrame,
+    *,
+    eligibility_column: str = "growth_eligible",
+    availability_column: str = "point_in_time_available",
+) -> pd.DataFrame:
+    """Return rows that pass both data-fitness and point-in-time availability gates."""
+    require_columns(panel, {availability_column}, source_name="point-in-time forecast panel")
+    availability = panel[availability_column]
+    if not pd.api.types.is_bool_dtype(availability.dtype):
+        raise SourceSchemaError(f"{availability_column} must be boolean")
+    gated = fitness_gated_forecast_panel(panel, eligibility_column=eligibility_column)
+    result = gated.loc[gated[availability_column]].copy()
+    if result.empty:
+        raise SourceSchemaError("No forecast rows pass both fitness and point-in-time gates")
+    result["forecast_availability_gate"] = availability_column
+    result["forecast_availability_gate_passed"] = True
+    return result.reset_index(drop=True)
+
+
 def _validate_multi_origin_oos(panel: pd.DataFrame, origins: list[int]) -> list[int]:
     if not origins or len(set(origins)) != len(origins):
         raise SourceSchemaError("Forecast origins must be unique and non-empty")
@@ -79,15 +99,14 @@ def _validate_multi_origin_oos(panel: pd.DataFrame, origins: list[int]) -> list[
     return usable
 
 
-def evaluate_fitness_gated_persistence_baselines(
-    panel: pd.DataFrame,
+def _evaluate_persistence_baselines(
+    gated: pd.DataFrame,
     origins: list[int],
     *,
-    eligibility_column: str = "growth_eligible",
-    outcome_column: str = "future_growth",
+    eligibility_column: str,
+    outcome_column: str,
+    benchmark_stage: str,
 ) -> pd.DataFrame:
-    """Evaluate the locked simple-baseline ladder on eligible rows only."""
-    gated = fitness_gated_forecast_panel(panel, eligibility_column=eligibility_column)
     usable_origins = _validate_multi_origin_oos(gated, origins)
     result = evaluate_rolling_baselines(gated, usable_origins, outcome_column=outcome_column)
     result = result.loc[result["model"].isin(PERSISTENCE_BASELINE_MODELS)].copy()
@@ -97,8 +116,52 @@ def evaluate_fitness_gated_persistence_baselines(
         raise SourceSchemaError("Zero-growth baseline was not produced")
     result["fitness_gate"] = eligibility_column
     result["fitness_gate_enforced"] = True
-    result["benchmark_stage"] = "persistence_only"
+    result["benchmark_stage"] = benchmark_stage
     return result.sort_values(["origin", "model"]).reset_index(drop=True)
+
+
+def evaluate_fitness_gated_persistence_baselines(
+    panel: pd.DataFrame,
+    origins: list[int],
+    *,
+    eligibility_column: str = "growth_eligible",
+    outcome_column: str = "future_growth",
+) -> pd.DataFrame:
+    """Evaluate retrospective persistence baselines on fitness-eligible rows only."""
+    gated = fitness_gated_forecast_panel(panel, eligibility_column=eligibility_column)
+    return _evaluate_persistence_baselines(
+        gated,
+        origins,
+        eligibility_column=eligibility_column,
+        outcome_column=outcome_column,
+        benchmark_stage="retrospective_persistence_only",
+    )
+
+
+def evaluate_point_in_time_persistence_baselines(
+    panel: pd.DataFrame,
+    origins: list[int],
+    *,
+    eligibility_column: str = "growth_eligible",
+    availability_column: str = "point_in_time_available",
+    outcome_column: str = "future_growth",
+) -> pd.DataFrame:
+    """Evaluate deployable persistence baselines after both required gates."""
+    gated = point_in_time_fitness_gated_forecast_panel(
+        panel,
+        eligibility_column=eligibility_column,
+        availability_column=availability_column,
+    )
+    result = _evaluate_persistence_baselines(
+        gated,
+        origins,
+        eligibility_column=eligibility_column,
+        outcome_column=outcome_column,
+        benchmark_stage="point_in_time_persistence_only",
+    )
+    result["availability_gate"] = availability_column
+    result["availability_gate_enforced"] = True
+    return result
 
 
 def fitness_gated_persistence_errors(
@@ -108,7 +171,7 @@ def fitness_gated_persistence_errors(
     eligibility_column: str = "growth_eligible",
     outcome_column: str = "future_growth",
 ) -> pd.DataFrame:
-    """Return row-level errors for the same locked fitness-gated baseline ladder."""
+    """Return retrospective row-level errors for the fitness-gated baseline ladder."""
     gated = fitness_gated_forecast_panel(panel, eligibility_column=eligibility_column)
     usable_origins = _validate_multi_origin_oos(gated, origins)
     result = rolling_baseline_errors(gated, usable_origins, outcome_column=outcome_column)
@@ -117,5 +180,32 @@ def fitness_gated_persistence_errors(
         raise SourceSchemaError("No persistence-stage row-level errors were produced")
     result["fitness_gate"] = eligibility_column
     result["fitness_gate_enforced"] = True
-    result["benchmark_stage"] = "persistence_only"
+    result["benchmark_stage"] = "retrospective_persistence_only"
+    return result.reset_index(drop=True)
+
+
+def point_in_time_persistence_errors(
+    panel: pd.DataFrame,
+    origins: list[int],
+    *,
+    eligibility_column: str = "growth_eligible",
+    availability_column: str = "point_in_time_available",
+    outcome_column: str = "future_growth",
+) -> pd.DataFrame:
+    """Return row-level errors after both fitness and point-in-time gates."""
+    gated = point_in_time_fitness_gated_forecast_panel(
+        panel,
+        eligibility_column=eligibility_column,
+        availability_column=availability_column,
+    )
+    usable_origins = _validate_multi_origin_oos(gated, origins)
+    result = rolling_baseline_errors(gated, usable_origins, outcome_column=outcome_column)
+    result = result.loc[result["model"].isin(PERSISTENCE_BASELINE_MODELS)].copy()
+    if result.empty:
+        raise SourceSchemaError("No point-in-time persistence row-level errors were produced")
+    result["fitness_gate"] = eligibility_column
+    result["fitness_gate_enforced"] = True
+    result["availability_gate"] = availability_column
+    result["availability_gate_enforced"] = True
+    result["benchmark_stage"] = "point_in_time_persistence_only"
     return result.reset_index(drop=True)
