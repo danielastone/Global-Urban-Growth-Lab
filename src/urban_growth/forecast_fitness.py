@@ -56,12 +56,7 @@ def fitness_gated_forecast_panel(
     *,
     eligibility_column: str = "growth_eligible",
 ) -> pd.DataFrame:
-    """Return only explicitly eligible forecast rows.
-
-    Eligibility must already have been produced by a source-specific application of
-    the City Data Fitness Standard. Missing eligibility is an error rather than an
-    implicit pass.
-    """
+    """Return only explicitly eligible forecast rows."""
     require_columns(
         panel,
         {
@@ -97,7 +92,7 @@ def point_in_time_fitness_gated_forecast_panel(
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
 ) -> pd.DataFrame:
-    """Return rows that pass both data-fitness and point-in-time availability gates."""
+    """Return rows that pass both data-fitness and predictor/concordance availability gates."""
     require_columns(panel, {availability_column}, source_name="point-in-time forecast panel")
     availability = panel[availability_column]
     if not pd.api.types.is_bool_dtype(availability.dtype):
@@ -121,7 +116,7 @@ def _validate_single_horizon(panel: pd.DataFrame) -> float:
     return float(horizons[0])
 
 
-def _validate_multi_origin_oos(panel: pd.DataFrame, origins: list[int]) -> list[int]:
+def _validate_declared_origins(panel: pd.DataFrame, origins: list[int]) -> list[int]:
     if not origins or len(set(origins)) != len(origins):
         raise SourceSchemaError("Forecast origins must be unique and non-empty")
     declared = sorted(origins)
@@ -129,6 +124,11 @@ def _validate_multi_origin_oos(panel: pd.DataFrame, origins: list[int]) -> list[
     missing = [origin for origin in declared if origin not in available]
     if missing:
         raise SourceSchemaError(f"Fitness-eligible panel lacks declared origins: {missing}")
+    return declared
+
+
+def _validate_multi_origin_oos(panel: pd.DataFrame, origins: list[int]) -> list[int]:
+    declared = _validate_declared_origins(panel, origins)
     usable = []
     for origin in declared:
         has_train = panel["period_end"].le(origin).any()
@@ -141,6 +141,47 @@ def _validate_multi_origin_oos(panel: pd.DataFrame, origins: list[int]) -> list[
             "fitness-eligible training and test rows"
         )
     return usable
+
+
+def _origin_specific_point_in_time_panel(
+    panel: pd.DataFrame,
+    origin: int,
+    *,
+    forecast_origin_date_column: str,
+    outcome_available_column: str,
+) -> tuple[pd.DataFrame, int, int]:
+    """Return one origin's test rows plus only training outcomes published by its as-of date."""
+    require_columns(
+        panel,
+        {forecast_origin_date_column, outcome_available_column},
+        source_name="point-in-time persistence panel",
+    )
+    test = panel.loc[panel["period_start"].eq(origin)].copy()
+    if test.empty:
+        raise SourceSchemaError(f"Point-in-time panel lacks test rows for origin {origin}")
+    origin_dates = pd.to_datetime(test[forecast_origin_date_column], errors="coerce")
+    if origin_dates.isna().any() or origin_dates.nunique() != 1:
+        raise SourceSchemaError(
+            f"{forecast_origin_date_column} must resolve to one valid date per forecast origin"
+        )
+    as_of = origin_dates.iloc[0]
+    outcome_available = pd.to_datetime(panel[outcome_available_column], errors="coerce")
+    if outcome_available.isna().any():
+        raise SourceSchemaError(
+            f"{outcome_available_column} must be known for every point-in-time forecast row"
+        )
+    candidate_train = panel["period_end"].le(origin)
+    available_train = candidate_train & outcome_available.le(as_of)
+    train = panel.loc[available_train].copy()
+    if train.empty:
+        raise SourceSchemaError(f"No training outcomes were published by forecast origin {origin}")
+    combined = pd.concat([train, test], ignore_index=True)
+    reject_duplicate_keys(
+        combined,
+        ["city_id", "period_start", "period_end"],
+        source_name=f"point-in-time persistence origin {origin}",
+    )
+    return combined, int(candidate_train.sum()), int(available_train.sum())
 
 
 def _evaluate_persistence_baselines(
@@ -190,24 +231,55 @@ def evaluate_point_in_time_persistence_baselines(
     *,
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
+    forecast_origin_date_column: str = "forecast_origin_date",
+    outcome_available_column: str = "outcome_available_date",
     outcome_column: str = "future_growth",
 ) -> pd.DataFrame:
-    """Evaluate deployable persistence baselines after both required gates."""
+    """Evaluate deployable persistence baselines with predictor and training-outcome timing gates."""
     gated = point_in_time_fitness_gated_forecast_panel(
         panel,
         eligibility_column=eligibility_column,
         availability_column=availability_column,
     )
-    result = _evaluate_persistence_baselines(
-        gated,
-        origins,
-        eligibility_column=eligibility_column,
-        outcome_column=outcome_column,
-        benchmark_stage="point_in_time_persistence_only",
-    )
+    horizon = _validate_single_horizon(gated)
+    declared = _validate_declared_origins(gated, origins)
+    frames: list[pd.DataFrame] = []
+    for origin in declared:
+        try:
+            origin_panel, candidate_train_n, available_train_n = _origin_specific_point_in_time_panel(
+                gated,
+                origin,
+                forecast_origin_date_column=forecast_origin_date_column,
+                outcome_available_column=outcome_available_column,
+            )
+        except SourceSchemaError as exc:
+            if "No training outcomes were published" in str(exc):
+                continue
+            raise
+        scored = evaluate_rolling_baselines(origin_panel, [origin], outcome_column=outcome_column)
+        scored = scored.loc[scored["model"].isin(PERSISTENCE_BASELINE_MODELS)].copy()
+        if scored.empty:
+            continue
+        scored["candidate_training_rows"] = candidate_train_n
+        scored["available_training_rows"] = available_train_n
+        scored["training_outcome_availability_enforced"] = True
+        frames.append(scored)
+    if len(frames) < 2:
+        raise SourceSchemaError(
+            "Point-in-time persistence benchmark requires at least two origins with published "
+            "training outcomes and eligible test rows"
+        )
+    result = pd.concat(frames, ignore_index=True)
+    if "persistence" not in set(result["model"]) or "zero_growth" not in set(result["model"]):
+        raise SourceSchemaError("Required persistence-stage baselines were not produced")
+    result["fitness_gate"] = eligibility_column
+    result["fitness_gate_enforced"] = True
     result["availability_gate"] = availability_column
     result["availability_gate_enforced"] = True
-    return result
+    result["training_outcome_availability_column"] = outcome_available_column
+    result["benchmark_stage"] = "point_in_time_persistence_only"
+    result["forecast_horizon_years"] = horizon
+    return result.sort_values(["origin", "model"]).reset_index(drop=True)
 
 
 def fitness_gated_persistence_errors(
@@ -238,24 +310,50 @@ def point_in_time_persistence_errors(
     *,
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
+    forecast_origin_date_column: str = "forecast_origin_date",
+    outcome_available_column: str = "outcome_available_date",
     outcome_column: str = "future_growth",
 ) -> pd.DataFrame:
-    """Return row-level errors after both fitness and point-in-time gates."""
+    """Return row-level errors after predictor and training-outcome timing gates."""
     gated = point_in_time_fitness_gated_forecast_panel(
         panel,
         eligibility_column=eligibility_column,
         availability_column=availability_column,
     )
     horizon = _validate_single_horizon(gated)
-    usable_origins = _validate_multi_origin_oos(gated, origins)
-    result = rolling_baseline_errors(gated, usable_origins, outcome_column=outcome_column)
-    result = result.loc[result["model"].isin(PERSISTENCE_BASELINE_MODELS)].copy()
-    if result.empty:
-        raise SourceSchemaError("No point-in-time persistence row-level errors were produced")
+    declared = _validate_declared_origins(gated, origins)
+    frames: list[pd.DataFrame] = []
+    for origin in declared:
+        try:
+            origin_panel, candidate_train_n, available_train_n = _origin_specific_point_in_time_panel(
+                gated,
+                origin,
+                forecast_origin_date_column=forecast_origin_date_column,
+                outcome_available_column=outcome_available_column,
+            )
+        except SourceSchemaError as exc:
+            if "No training outcomes were published" in str(exc):
+                continue
+            raise
+        scored = rolling_baseline_errors(origin_panel, [origin], outcome_column=outcome_column)
+        scored = scored.loc[scored["model"].isin(PERSISTENCE_BASELINE_MODELS)].copy()
+        if scored.empty:
+            continue
+        scored["candidate_training_rows"] = candidate_train_n
+        scored["available_training_rows"] = available_train_n
+        scored["training_outcome_availability_enforced"] = True
+        frames.append(scored)
+    if len(frames) < 2:
+        raise SourceSchemaError(
+            "Point-in-time persistence errors require at least two origins with published "
+            "training outcomes and eligible test rows"
+        )
+    result = pd.concat(frames, ignore_index=True)
     result["fitness_gate"] = eligibility_column
     result["fitness_gate_enforced"] = True
     result["availability_gate"] = availability_column
     result["availability_gate_enforced"] = True
+    result["training_outcome_availability_column"] = outcome_available_column
     result["benchmark_stage"] = "point_in_time_persistence_only"
     result["forecast_horizon_years"] = horizon
     return result.reset_index(drop=True)
