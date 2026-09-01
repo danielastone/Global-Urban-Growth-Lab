@@ -92,6 +92,7 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
 
     if not geographic_comparable:
         level_reasons.append("geography_not_comparable")
+        growth_reasons.append("geography_not_comparable")
 
     if not temporal_comparable:
         growth_reasons.append("time_not_comparable")
