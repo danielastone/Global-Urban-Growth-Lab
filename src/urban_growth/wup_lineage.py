@@ -1,4 +1,5 @@
 """Empirical-lineage classification for WUP 2025 DEGURBA city population series."""
+# ruff: noqa: I001
 
 from __future__ import annotations
 
@@ -44,7 +45,9 @@ def classify_wup_city_population_lineage(panel: pd.DataFrame) -> pd.DataFrame:
         "crisp_projection"
     )
     if out["empirical_lineage_type"].eq("unclassified").any():
-        years = sorted(out.loc[out["empirical_lineage_type"].eq("unclassified"), "year"].unique())
+        years = sorted(
+            out.loc[out["empirical_lineage_type"].eq("unclassified"), "year"].unique()
+        )
         raise SourceSchemaError(f"Unclassified WUP empirical-lineage years: {years}")
 
     # build_forecast_intervals gates outcomes on observation_type. Preserve the
