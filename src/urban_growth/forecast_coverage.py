@@ -48,8 +48,9 @@ def origin_risk_set_outcome_coverage(
         lag_year = origin - lookback_years
         outcome_start_year = origin + outcome_gap_years
         outcome_end_year = outcome_start_year + horizon_years
+        required_years = sorted({lag_year, origin, outcome_start_year, outcome_end_year})
         keys = pd.MultiIndex.from_product(
-            [city_ids, [lag_year, origin, outcome_start_year, outcome_end_year]],
+            [city_ids, required_years],
             names=["city_id", "year"],
         )
         wide = source.reindex(keys).reset_index().pivot(index="city_id", columns="year")
