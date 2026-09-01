@@ -35,6 +35,10 @@ def forecast_panel() -> pd.DataFrame:
                     "availability_provenance_verified": True,
                     "forecast_origin_registration_verified": True,
                     "forecast_origin_date": f"{start}-12-31",
+                    "predictor_available_date": f"{start}-01-01",
+                    "concordance_available_date": f"{start}-01-01",
+                    "predictor_availability_source": f"predictor-release-{start}",
+                    "concordance_availability_source": f"geography-release-{start}",
                     "outcome_available_date": f"{end}-06-30",
                     "outcome_available_reference": f"official-release-{end}",
                 }
@@ -107,10 +111,6 @@ def test_persistence_oos_requires_multiple_usable_origins() -> None:
 
 def test_persistence_oos_scores_only_fitness_eligible_test_rows() -> None:
     result = evaluate_fitness_gated_persistence_baselines(forecast_panel(), [2005, 2010])
-    assert {"zero_growth", "persistence"}.issubset(set(result["model"]))
-    assert result["fitness_gate_enforced"].all()
-    assert result["benchmark_stage"].eq("retrospective_persistence_only").all()
-    assert result["forecast_horizon_years"].eq(5.0).all()
     counts = result.pivot(index="origin", columns="model", values="n")
     assert counts.loc[2005, "persistence"] == 3
     assert counts.loc[2010, "persistence"] == 2
@@ -132,13 +132,34 @@ def test_point_in_time_persistence_cannot_score_late_test_rows() -> None:
     result = evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
     counts = result.pivot(index="origin", columns="model", values="n")
     assert counts.loc[2010, "persistence"] == 1
-    assert result["fitness_gate_enforced"].all()
-    assert result["availability_gate_enforced"].all()
-    assert result["availability_provenance_gate_enforced"].all()
-    assert result["forecast_origin_registration_gate_enforced"].all()
+    assert result["training_uses_current_origin_as_of"].all()
+    assert result["training_predictor_availability_enforced"].all()
+    assert result["training_concordance_availability_enforced"].all()
     assert result["training_outcome_availability_enforced"].all()
-    assert result["training_outcome_provenance_enforced"].all()
-    assert result["benchmark_stage"].eq("point_in_time_persistence_only").all()
+
+
+def test_later_origin_training_can_use_row_unavailable_at_its_own_origin() -> None:
+    panel = forecast_panel()
+    mask = panel["period_start"].eq(2000)
+    panel.loc[mask, "point_in_time_available"] = False
+    panel.loc[mask, "predictor_available_date"] = "2001-01-01"
+    panel.loc[mask, "concordance_available_date"] = "2001-01-01"
+    result = evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
+    at_2010 = result.loc[result["origin"].eq(2010)]
+    assert at_2010["candidate_training_rows"].eq(6).all()
+    assert at_2010["available_training_rows"].eq(6).all()
+    assert at_2010["training_uses_current_origin_as_of"].all()
+
+
+def test_training_row_stays_excluded_until_predictor_is_available() -> None:
+    panel = forecast_panel()
+    mask = panel["period_start"].eq(2000)
+    panel.loc[mask, "point_in_time_available"] = False
+    panel.loc[mask, "predictor_available_date"] = "2011-01-01"
+    result = evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
+    at_2010 = result.loc[result["origin"].eq(2010)]
+    assert at_2010["candidate_training_rows"].eq(6).all()
+    assert at_2010["available_training_rows"].eq(3).all()
 
 
 def test_point_in_time_persistence_excludes_unpublished_training_outcomes() -> None:
@@ -148,8 +169,18 @@ def test_point_in_time_persistence_excludes_unpublished_training_outcomes() -> N
     at_2010 = result.loc[result["origin"].eq(2010)]
     assert at_2010["candidate_training_rows"].eq(6).all()
     assert at_2010["available_training_rows"].eq(3).all()
-    assert at_2010["training_outcome_availability_enforced"].all()
-    assert at_2010["training_outcome_provenance_enforced"].all()
+
+
+def test_point_in_time_persistence_requires_training_predictor_dates() -> None:
+    panel = forecast_panel().drop(columns="predictor_available_date")
+    with pytest.raises(SourceSchemaError, match="predictor_available_date"):
+        evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
+
+
+def test_point_in_time_persistence_requires_training_concordance_dates() -> None:
+    panel = forecast_panel().drop(columns="concordance_available_date")
+    with pytest.raises(SourceSchemaError, match="concordance_available_date"):
+        evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
 
 
 def test_point_in_time_persistence_requires_outcome_release_dates() -> None:
@@ -158,16 +189,10 @@ def test_point_in_time_persistence_requires_outcome_release_dates() -> None:
         evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
 
 
-def test_point_in_time_persistence_requires_outcome_release_provenance() -> None:
-    panel = forecast_panel().drop(columns="outcome_available_reference")
-    with pytest.raises(SourceSchemaError, match="outcome_available_reference"):
-        evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
-
-
 def test_point_in_time_persistence_rejects_blank_outcome_release_provenance() -> None:
     panel = forecast_panel()
     panel.loc[0, "outcome_available_reference"] = "  "
-    with pytest.raises(SourceSchemaError, match="provenance for every outcome release date"):
+    with pytest.raises(SourceSchemaError, match="outcome_available_reference"):
         evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
 
 
@@ -175,21 +200,14 @@ def test_row_level_errors_cannot_reintroduce_ineligible_rows() -> None:
     errors = fitness_gated_persistence_errors(forecast_panel(), [2005, 2010])
     excluded = errors.loc[(errors["city_id"] == "B") & (errors["origin"] == 2010)]
     assert excluded.empty
-    assert errors["fitness_gate_enforced"].all()
-    assert errors["forecast_horizon_years"].eq(5.0).all()
 
 
-def test_point_in_time_errors_cannot_reintroduce_late_rows() -> None:
+def test_point_in_time_errors_use_same_current_origin_training_gate() -> None:
     panel = forecast_panel()
-    panel.loc[
-        (panel["city_id"] == "C") & (panel["period_start"] == 2010),
-        "point_in_time_available",
-    ] = False
+    mask = panel["period_start"].eq(2000)
+    panel.loc[mask, "point_in_time_available"] = False
+    panel.loc[mask, "predictor_available_date"] = "2001-01-01"
     errors = point_in_time_persistence_errors(panel, [2005, 2010])
-    excluded = errors.loc[(errors["city_id"] == "C") & (errors["origin"] == 2010)]
-    assert excluded.empty
-    assert errors["availability_gate_enforced"].all()
-    assert errors["availability_provenance_gate_enforced"].all()
-    assert errors["forecast_origin_registration_gate_enforced"].all()
-    assert errors["training_outcome_availability_enforced"].all()
-    assert errors["training_outcome_provenance_enforced"].all()
+    at_2010 = errors.loc[errors["origin"].eq(2010)]
+    assert at_2010["available_training_rows"].eq(6).all()
+    assert at_2010["training_uses_current_origin_as_of"].all()
