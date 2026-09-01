@@ -52,6 +52,13 @@ The existing proposed Mexico gate remains at least 85% count coverage and at lea
 
 ## Forecast use
 
-`src/urban_growth/mexico_concordance.py` converts accepted adjacent transitions into forecast rows only when both the prior-history and current-outcome transitions pass. The resulting rows expose `recent_growth`, `future_growth`, `period_start`, `period_end`, `growth_eligible`, and explicit no-future-boundary flags for the common persistence benchmark layer.
+`src/urban_growth/mexico_concordance.py` converts accepted adjacent transitions into forecast rows only when both the prior-history and current-outcome transitions pass. The resulting rows expose `recent_growth`, `future_growth`, `period_start`, `period_end`, `forecast_horizon_years`, and source-specific `growth_eligible` for the common persistence benchmark layer.
+
+Source-specific transition eligibility is not sufficient for either a headline claim or a deployable forecast. The builder therefore fails both statuses closed:
+
+- `headline_eligible = false` with `common_city_data_fitness_not_applied` until the row has been evaluated under the common City Data Fitness Standard, including truncation/survivorship and adverse-evidence fields;
+- `forecast_deployable_at_origin = false` with `point_in_time_availability_not_applied` until explicit predictor/concordance availability dates have passed the point-in-time gate.
+
+A Mexico row may therefore be suitable for a retrospective source-specific growth benchmark while still being ineligible for headline or deployable classification. Downstream code must not infer those stronger statuses from `forecast_interval_eligible` or `growth_eligible`.
 
 No empirical Mexico persistence result is registered by this contract. Exact ITER/SCITEL files, official equivalence records, vintage Marco Geoestadístico layers, retrieval dates, URLs, and hashes must be acquired and registered first.
