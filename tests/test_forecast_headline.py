@@ -51,6 +51,7 @@ def _panel() -> pd.DataFrame:
                     "growth_eligible": True,
                     "point_in_time_available": True,
                     "availability_provenance_verified": True,
+                    "forecast_origin_registration_verified": True,
                     "forecast_origin_date": f"{start}-12-31",
                     "outcome_available_date": f"{end}-06-30",
                     "outcome_available_reference": f"official-release-{end}",
@@ -94,6 +95,7 @@ def test_headline_metrics_attach_registered_policy_and_coverage() -> None:
     assert result["coverage_policy_passed"].all()
     assert result["coverage_policy_id"].eq(TEST_POLICY_ID).all()
     assert result["minimum_observed_outcome_share"].eq(0.60).all()
+    assert result["forecast_origin_registration_gate_enforced"].all()
 
 
 def test_headline_errors_attach_same_registered_policy() -> None:
@@ -102,6 +104,16 @@ def test_headline_errors_attach_same_registered_policy() -> None:
     )
     assert result["coverage_policy_registry_enforced"].all()
     assert result["coverage_policy_id"].eq(TEST_POLICY_ID).all()
+    assert result["forecast_origin_registration_gate_enforced"].all()
+
+
+def test_headline_rejects_unverified_origin_registration() -> None:
+    panel = _panel()
+    panel.loc[0, "forecast_origin_registration_verified"] = False
+    with pytest.raises(SourceSchemaError, match="verified forecast-origin registration"):
+        evaluate_headline_point_in_time_persistence(
+            panel, [2005, 2010], _coverage(), coverage_policy_id=TEST_POLICY_ID
+        )
 
 
 def test_unknown_runtime_policy_id_fails_closed() -> None:
