@@ -10,16 +10,17 @@ from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_co
 def apply_forecast_availability_gate(
     panel: pd.DataFrame,
     *,
-    origin_column: str = "period_start",
+    origin_column: str = "forecast_origin_date",
     predictor_available_column: str = "predictor_available_date",
     concordance_available_column: str = "concordance_available_date",
 ) -> pd.DataFrame:
     """Mark whether predictor evidence was actually available at forecast origin.
 
-    Reference periods are not publication dates. A historical predictor may only be
-    called deployable at an origin when both its population/statistical payload and
-    any geography/concordance evidence needed to construct it were available no
-    later than that origin date.
+    Reference periods are not publication dates, and integer origin years are not
+    timestamps. A historical predictor may only be called deployable at an origin
+    when an explicit forecast-origin date is supplied and both its statistical
+    payload and any geography/concordance evidence needed to construct it were
+    available no later than that date.
     """
     require_columns(
         panel,
