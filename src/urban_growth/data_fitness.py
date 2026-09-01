@@ -12,6 +12,7 @@ ACCEPTED_CONCORDANCE = {
 
 PASS_VALIDATION = {"passed"}
 BAD_EXPOSURE = {"material", "unknown"}
+UNKNOWN_EVIDENCE = {"unknown", "uncertain", "unresolved", "not_reviewed", "not reviewed"}
 UNRESOLVED_BOUNDARY = {
     "annexation",
     "merger",
@@ -45,6 +46,21 @@ def _truthy(value: object) -> bool:
     return _norm(value) in {"1", "true", "yes", "y", "passed", "valid"}
 
 
+def _negative_evidence_state(value: object) -> str:
+    """Return clear / present / unknown for evidence asserting an adverse condition.
+
+    These fields answer questions such as whether a methodology changed or a known
+    inconsistency exists. Missing or explicitly uncertain evidence must not be
+    interpreted as evidence that the adverse condition is absent.
+    """
+    normalized = _norm(value)
+    if not normalized or normalized in UNKNOWN_EVIDENCE:
+        return "unknown"
+    if _truthy(value):
+        return "present"
+    return "clear"
+
+
 def _join_reasons(reasons: Iterable[str]) -> str:
     return ";".join(sorted(set(reasons)))
 
@@ -63,6 +79,9 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
     boundary_change_status = _norm(row.get("boundary_change_status"))
     truncation_exposure = _norm(row.get("truncation_exposure"))
     survivorship_exposure = _norm(row.get("survivorship_exposure"))
+    reclassification_state = _negative_evidence_state(row.get("administrative_reclassification"))
+    methodology_state = _negative_evidence_state(row.get("methodology_change"))
+    inconsistency_state = _negative_evidence_state(row.get("known_inconsistency"))
 
     if not source_id:
         level_reasons.append("missing_source_id")
@@ -107,16 +126,25 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
     if boundary_change_status in UNRESOLVED_BOUNDARY and not harmonized:
         growth_reasons.append("unresolved_boundary_change")
 
-    if _truthy(row.get("administrative_reclassification")) and not harmonized:
-        growth_reasons.append("administrative_reclassification")
+    if not harmonized:
+        if reclassification_state == "present":
+            growth_reasons.append("administrative_reclassification")
+        elif reclassification_state == "unknown":
+            growth_reasons.append("administrative_reclassification_unknown")
 
-    if _truthy(row.get("methodology_change")):
+    if methodology_state == "present":
         growth_reasons.append("methodology_change")
+    elif methodology_state == "unknown":
+        growth_reasons.append("methodology_change_unknown")
 
-    if _truthy(row.get("known_inconsistency")):
+    if inconsistency_state == "present":
         level_reasons.append("known_inconsistency")
         growth_reasons.append("known_inconsistency")
         spatial_reasons.append("known_inconsistency")
+    elif inconsistency_state == "unknown":
+        level_reasons.append("known_inconsistency_unknown")
+        growth_reasons.append("known_inconsistency_unknown")
+        spatial_reasons.append("known_inconsistency_unknown")
 
     if not _truthy(row.get("coordinates_validated")):
         spatial_reasons.append("coordinates_not_validated")
@@ -147,8 +175,10 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
     elif survivorship_exposure in BAD_EXPOSURE:
         headline_reasons.append("survivorship_exposure")
 
-    if _truthy(row.get("known_inconsistency")):
+    if inconsistency_state == "present":
         headline_reasons.append("known_inconsistency")
+    elif inconsistency_state == "unknown":
+        headline_reasons.append("known_inconsistency_unknown")
 
     headline_eligible = not headline_reasons
 
