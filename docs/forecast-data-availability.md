@@ -6,17 +6,19 @@ A reference year is not a data-availability date. A census, population count, ge
 
 This issue is independent of geographic comparability, threshold truncation, survivorship, and model overfitting. A row can pass all of those checks and still be unavailable to an analyst at the claimed forecast origin.
 
+The repository's core rolling-forecast panels use integer years in `period_start` and `period_end`. Those fields are reference-period identifiers, not timestamps. In particular, passing an integer year such as `2000` to generic datetime coercion does not mean January 1, 2000 and must never be used to establish historical availability.
+
 ## Locked rule
 
 Any result described as **deployable at origin**, **real-time**, or a point-in-time forecast must record:
 
+- `forecast_origin_date`: the actual as-of date at which the forecast is claimed to have been formed;
 - `predictor_available_date`: first date the population/statistical information needed for the predictor was available to the analyst;
-- `concordance_available_date`: first date the geography/crosswalk evidence needed to construct the comparable predictor was available;
-- a forecast-origin date precise enough to compare with those availability dates.
+- `concordance_available_date`: first date the geography/crosswalk evidence needed to construct the comparable predictor was available.
 
-Both evidence dates must be on or before the forecast origin. Missing availability dates fail closed. Reference year, enumeration date, period end, file vintage, and current download date are not substitutes for first availability.
+Both evidence dates must be on or before `forecast_origin_date`. Missing origin or availability dates fail closed. Reference year, enumeration date, `period_start`, period end, file vintage, and current download date are not substitutes for first availability.
 
-`src/urban_growth/forecast_availability.py` implements this rule and produces `point_in_time_available` plus explicit exclusion reasons.
+`src/urban_growth/forecast_availability.py` implements this rule and produces `point_in_time_available` plus explicit exclusion reasons. The default origin field is `forecast_origin_date`; callers may override the column name only when they supply another explicit date field with the same semantics.
 
 ## Consequences
 
@@ -30,8 +32,8 @@ For revised international products such as current-vintage WUP, WPP, or retrospe
 
 ## Result classification
 
-- `point_in_time_available = true`: required predictor and concordance evidence existed by the origin.
+- `point_in_time_available = true`: required predictor and concordance evidence existed by the explicit forecast-origin date.
 - `point_in_time_available = false`: retrospective-only for that origin.
-- unknown evidence availability: fail closed; do not infer availability from the reference period.
+- unknown evidence availability or missing forecast-origin date: fail closed; do not infer availability from the reference period.
 
 This gate is orthogonal to the City Data Fitness Standard and should be applied in addition to source-specific growth/headline eligibility before a forecast is described as deployable.
