@@ -153,13 +153,13 @@ def test_later_origin_training_can_use_row_unavailable_at_its_own_origin() -> No
 
 def test_training_row_stays_excluded_until_predictor_is_available() -> None:
     panel = forecast_panel()
-    mask = panel["period_start"].eq(2000)
+    mask = panel["period_start"].eq(2000) & panel["city_id"].eq("A")
     panel.loc[mask, "point_in_time_available"] = False
     panel.loc[mask, "predictor_available_date"] = "2011-01-01"
     result = evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
     at_2010 = result.loc[result["origin"].eq(2010)]
     assert at_2010["candidate_training_rows"].eq(6).all()
-    assert at_2010["available_training_rows"].eq(3).all()
+    assert at_2010["available_training_rows"].eq(5).all()
 
 
 def test_point_in_time_persistence_excludes_unpublished_training_outcomes() -> None:
