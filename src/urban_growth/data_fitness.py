@@ -13,6 +13,8 @@ ACCEPTED_CONCORDANCE = {
 PASS_VALIDATION = {"passed"}
 BAD_EXPOSURE = {"material", "unknown"}
 UNKNOWN_EVIDENCE = {"unknown", "uncertain", "unresolved", "not_reviewed", "not reviewed"}
+PRESENT_EVIDENCE = {"1", "true", "yes", "y", "passed", "valid", "present"}
+CLEAR_EVIDENCE = {"0", "false", "no", "n", "clear", "none", "absent"}
 UNRESOLVED_BOUNDARY = {
     "annexation",
     "merger",
@@ -43,22 +45,25 @@ def _norm(value: object) -> str:
 def _truthy(value: object) -> bool:
     if isinstance(value, bool):
         return value
-    return _norm(value) in {"1", "true", "yes", "y", "passed", "valid"}
+    return _norm(value) in PRESENT_EVIDENCE
 
 
 def _negative_evidence_state(value: object) -> str:
     """Return clear / present / unknown for evidence asserting an adverse condition.
 
     These fields answer questions such as whether a methodology changed or a known
-    inconsistency exists. Missing or explicitly uncertain evidence must not be
+    inconsistency exists. Only explicit clear/present values are accepted. Missing,
+    uncertain, or unrecognized values remain unknown so lack of evidence cannot be
     interpreted as evidence that the adverse condition is absent.
     """
+    if isinstance(value, bool):
+        return "present" if value else "clear"
     normalized = _norm(value)
-    if not normalized or normalized in UNKNOWN_EVIDENCE:
-        return "unknown"
-    if _truthy(value):
+    if normalized in PRESENT_EVIDENCE:
         return "present"
-    return "clear"
+    if normalized in CLEAR_EVIDENCE:
+        return "clear"
+    return "unknown"
 
 
 def _join_reasons(reasons: Iterable[str]) -> str:
