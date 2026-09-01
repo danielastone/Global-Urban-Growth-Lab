@@ -52,6 +52,7 @@ def test_fitness_gate_excludes_ineligible_rows() -> None:
     result = fitness_gated_forecast_panel(forecast_panel())
     assert not ((result["city_id"] == "B") & (result["period_start"] == 2010)).any()
     assert result["forecast_fitness_gate_passed"].all()
+    assert result["forecast_horizon_years"].eq(5.0).all()
 
 
 def test_point_in_time_gate_requires_explicit_boolean_availability() -> None:
@@ -82,9 +83,17 @@ def test_persistence_oos_scores_only_fitness_eligible_test_rows() -> None:
     assert {"zero_growth", "persistence"}.issubset(set(result["model"]))
     assert result["fitness_gate_enforced"].all()
     assert result["benchmark_stage"].eq("retrospective_persistence_only").all()
+    assert result["forecast_horizon_years"].eq(5.0).all()
     counts = result.pivot(index="origin", columns="model", values="n")
     assert counts.loc[2005, "persistence"] == 3
     assert counts.loc[2010, "persistence"] == 2
+
+
+def test_persistence_oos_rejects_mixed_forecast_horizons() -> None:
+    panel = forecast_panel()
+    panel.loc[(panel["city_id"] == "A") & (panel["period_start"] == 2000), "period_end"] = 2010
+    with pytest.raises(SourceSchemaError, match="cannot pool mixed forecast horizons"):
+        evaluate_fitness_gated_persistence_baselines(panel, [2005, 2010])
 
 
 def test_point_in_time_persistence_cannot_score_late_test_rows() -> None:
@@ -106,6 +115,7 @@ def test_row_level_errors_cannot_reintroduce_ineligible_rows() -> None:
     excluded = errors.loc[(errors["city_id"] == "B") & (errors["origin"] == 2010)]
     assert excluded.empty
     assert errors["fitness_gate_enforced"].all()
+    assert errors["forecast_horizon_years"].eq(5.0).all()
 
 
 def test_point_in_time_errors_cannot_reintroduce_late_rows() -> None:

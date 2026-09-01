@@ -17,6 +17,21 @@ PERSISTENCE_BASELINE_MODELS = {
 }
 
 
+def _attach_forecast_horizon(panel: pd.DataFrame) -> pd.DataFrame:
+    """Attach a positive forecast horizon, preserving an explicit source value when present."""
+    out = panel.copy()
+    if "forecast_horizon_years" in out.columns:
+        horizon = pd.to_numeric(out["forecast_horizon_years"], errors="coerce")
+    else:
+        horizon = pd.to_numeric(out["period_end"], errors="coerce") - pd.to_numeric(
+            out["period_start"], errors="coerce"
+        )
+    if horizon.isna().any() or horizon.le(0).any():
+        raise SourceSchemaError("forecast_horizon_years must be positive and known for every row")
+    out["forecast_horizon_years"] = horizon.astype(float)
+    return out
+
+
 def fitness_gated_forecast_panel(
     panel: pd.DataFrame,
     *,
@@ -49,7 +64,7 @@ def fitness_gated_forecast_panel(
     eligibility = panel[eligibility_column]
     if not pd.api.types.is_bool_dtype(eligibility.dtype):
         raise SourceSchemaError(f"{eligibility_column} must be boolean")
-    result = panel.loc[eligibility].copy()
+    result = _attach_forecast_horizon(panel.loc[eligibility].copy())
     if result.empty:
         raise SourceSchemaError("No forecast rows pass the declared data-fitness gate")
     result["forecast_fitness_gate"] = eligibility_column
@@ -75,6 +90,16 @@ def point_in_time_fitness_gated_forecast_panel(
     result["forecast_availability_gate"] = availability_column
     result["forecast_availability_gate_passed"] = True
     return result.reset_index(drop=True)
+
+
+def _validate_single_horizon(panel: pd.DataFrame) -> float:
+    horizons = sorted(pd.unique(panel["forecast_horizon_years"]))
+    if len(horizons) != 1:
+        raise SourceSchemaError(
+            "Persistence benchmark cannot pool mixed forecast horizons; stratify to one "
+            f"forecast_horizon_years value before evaluation: {horizons}"
+        )
+    return float(horizons[0])
 
 
 def _validate_multi_origin_oos(panel: pd.DataFrame, origins: list[int]) -> list[int]:
@@ -107,6 +132,7 @@ def _evaluate_persistence_baselines(
     outcome_column: str,
     benchmark_stage: str,
 ) -> pd.DataFrame:
+    horizon = _validate_single_horizon(gated)
     usable_origins = _validate_multi_origin_oos(gated, origins)
     result = evaluate_rolling_baselines(gated, usable_origins, outcome_column=outcome_column)
     result = result.loc[result["model"].isin(PERSISTENCE_BASELINE_MODELS)].copy()
@@ -117,6 +143,7 @@ def _evaluate_persistence_baselines(
     result["fitness_gate"] = eligibility_column
     result["fitness_gate_enforced"] = True
     result["benchmark_stage"] = benchmark_stage
+    result["forecast_horizon_years"] = horizon
     return result.sort_values(["origin", "model"]).reset_index(drop=True)
 
 
@@ -173,6 +200,7 @@ def fitness_gated_persistence_errors(
 ) -> pd.DataFrame:
     """Return retrospective row-level errors for the fitness-gated baseline ladder."""
     gated = fitness_gated_forecast_panel(panel, eligibility_column=eligibility_column)
+    horizon = _validate_single_horizon(gated)
     usable_origins = _validate_multi_origin_oos(gated, origins)
     result = rolling_baseline_errors(gated, usable_origins, outcome_column=outcome_column)
     result = result.loc[result["model"].isin(PERSISTENCE_BASELINE_MODELS)].copy()
@@ -181,6 +209,7 @@ def fitness_gated_persistence_errors(
     result["fitness_gate"] = eligibility_column
     result["fitness_gate_enforced"] = True
     result["benchmark_stage"] = "retrospective_persistence_only"
+    result["forecast_horizon_years"] = horizon
     return result.reset_index(drop=True)
 
 
@@ -198,6 +227,7 @@ def point_in_time_persistence_errors(
         eligibility_column=eligibility_column,
         availability_column=availability_column,
     )
+    horizon = _validate_single_horizon(gated)
     usable_origins = _validate_multi_origin_oos(gated, origins)
     result = rolling_baseline_errors(gated, usable_origins, outcome_column=outcome_column)
     result = result.loc[result["model"].isin(PERSISTENCE_BASELINE_MODELS)].copy()
@@ -208,4 +238,5 @@ def point_in_time_persistence_errors(
     result["availability_gate"] = availability_column
     result["availability_gate_enforced"] = True
     result["benchmark_stage"] = "point_in_time_persistence_only"
+    result["forecast_horizon_years"] = horizon
     return result.reset_index(drop=True)
