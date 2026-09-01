@@ -15,10 +15,17 @@ def _panel() -> pd.DataFrame:
             "period_start": [2000, 2000],
             "period_end": [2005, 2005],
             "forecast_origin_date": ["2000-01-01", "2000-01-01"],
+            "forecast_origin_registration": ["annual January 1 as-of", "annual January 1 as-of"],
             "predictor_available_date": ["1999-12-01", "2000-06-01"],
             "concordance_available_date": ["1999-11-01", "1999-11-01"],
-            "predictor_availability_source": ["official statistical release", "official statistical release"],
-            "concordance_availability_source": ["official geography release", "official geography release"],
+            "predictor_availability_source": [
+                "official statistical release",
+                "official statistical release",
+            ],
+            "concordance_availability_source": [
+                "official geography release",
+                "official geography release",
+            ],
         }
     )
 
@@ -29,6 +36,7 @@ def test_availability_gate_blocks_post_origin_predictor() -> None:
     assert not bool(result.loc[1, "point_in_time_available"])
     assert result.loc[1, "availability_exclusion_reason"] == "predictor_not_available_at_origin"
     assert result["availability_provenance_verified"].all()
+    assert result["forecast_origin_registration_verified"].all()
 
 
 def test_availability_gate_blocks_post_origin_concordance() -> None:
@@ -59,6 +67,34 @@ def test_availability_gate_requires_concordance_provenance() -> None:
         apply_forecast_availability_gate(frame)
 
 
+def test_availability_gate_requires_origin_registration() -> None:
+    frame = _panel().iloc[[0]].copy()
+    frame["forecast_origin_registration"] = " "
+    with pytest.raises(SourceSchemaError, match="predeclared forecast-origin rule"):
+        apply_forecast_availability_gate(frame)
+
+
+def test_forecast_origin_date_must_match_declared_origin_year() -> None:
+    frame = _panel().iloc[[0]].copy()
+    frame["forecast_origin_date"] = "2001-01-01"
+    with pytest.raises(SourceSchemaError, match="year declared by period_start"):
+        apply_forecast_availability_gate(frame)
+
+
+def test_rolling_origins_must_use_one_calendar_rule() -> None:
+    first = _panel().iloc[[0]].copy()
+    second = _panel().iloc[[0]].copy()
+    second["city_id"] = "C"
+    second["period_start"] = 2005
+    second["period_end"] = 2010
+    second["forecast_origin_date"] = "2005-06-30"
+    second["predictor_available_date"] = "2004-12-01"
+    second["concordance_available_date"] = "2004-11-01"
+    frame = pd.concat([first, second], ignore_index=True)
+    with pytest.raises(SourceSchemaError, match="one registered month-day rule"):
+        apply_forecast_availability_gate(frame)
+
+
 def test_integer_period_start_is_not_used_as_timestamp() -> None:
     frame = _panel().iloc[[0]].drop(columns=["forecast_origin_date"])
     with pytest.raises(SourceSchemaError, match="forecast_origin_date"):
@@ -81,4 +117,11 @@ def test_point_in_time_sample_rejects_unverified_provenance_flag() -> None:
     result = apply_forecast_availability_gate(_panel())
     result["availability_provenance_verified"] = False
     with pytest.raises(SourceSchemaError, match="verified availability provenance"):
+        point_in_time_forecast_sample(result)
+
+
+def test_point_in_time_sample_rejects_unverified_origin_registration() -> None:
+    result = apply_forecast_availability_gate(_panel())
+    result["forecast_origin_registration_verified"] = False
+    with pytest.raises(SourceSchemaError, match="verified forecast-origin registration"):
         point_in_time_forecast_sample(result)
