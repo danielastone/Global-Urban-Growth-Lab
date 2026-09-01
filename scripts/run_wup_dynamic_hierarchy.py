@@ -20,6 +20,7 @@ from urban_growth.dynamic_estimators import (
     fit_dynamic_hierarchy,
 )
 from urban_growth.forecast import build_forecast_intervals
+from urban_growth.wup_lineage import classify_wup_city_population_lineage
 from urban_growth.wup_panel import build_wup_city_year_panel
 
 
@@ -40,7 +41,9 @@ def main() -> None:
     )
     args = parser.parse_args()
     raw = args.raw_dir
-    population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
+    population = classify_wup_city_population_lineage(
+        read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
+    )
     area = read_f25_city_land_area(raw / "WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx")
     built = read_f30_built_up_area_per_capita(
         raw / "WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx"
@@ -49,7 +52,9 @@ def main() -> None:
         raw / "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx"
     )
     panel = build_wup_city_year_panel(population, area, built, density)
-    intervals = build_forecast_intervals(panel, list(range(1980, 2025, 5)))
+    intervals = build_forecast_intervals(panel, list(range(1980, 2020, 5)))
+    if intervals["period_start"].max() >= 2020:
+        raise RuntimeError("Observed WUP hierarchy must not include the 2020->2025 CRISP outcome")
     intervals["log_population_start"] = np.log(intervals["population_start"])
     covariates = ["log_population_start", "country_rank_percentile_origin"]
     sample = common_dynamic_sample(
@@ -61,6 +66,8 @@ def main() -> None:
         covariates=covariates, period="period_start",
     )
     estimates["data_revision"] = "WUP_2025_revised_history"
+    estimates["outcome_lineage"] = "GHS-WUP-POP_reference_estimate_through_2020"
+    estimates["crisp_2025_outcome_excluded"] = True
     estimates["boundary_semantics"] = "WUP changing city definitions"
     estimates["causal_interpretation_permitted"] = False
     estimates["validated_inference"] = False
@@ -89,6 +96,7 @@ def main() -> None:
     audit["minimum_periods_per_city"] = sample.groupby("city_id").size().min()
     audit["maximum_periods_per_city"] = sample.groupby("city_id").size().max()
     audit["common_sample_across_estimators"] = True
+    audit["crisp_2025_outcome_excluded"] = True
     audit["selection_semantics"] = (
         "requires at least two observations in each forecast-origin half"
     )
