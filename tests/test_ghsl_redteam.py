@@ -53,11 +53,13 @@ def test_origin_defined_risk_set_is_invariant_to_endpoint_population() -> None:
 
 
 def test_built_up_partialling_removes_constructed_common_signal() -> None:
-    cities = ["a", "b", "c", "d"]
+    cities = [f"city-{i}" for i in range(10)]
     fixed_panel_rows = []
     intervals = []
-    recent_built = np.array([0.01, 0.02, 0.03, 0.04])
+    recent_built = np.linspace(0.01, 0.05, len(cities))
     future_built = recent_built.copy()
+    recent_noise = np.array([-2, -1, 0, 1, 2, -2, -1, 0, 1, 2]) * 0.001
+    future_noise = np.array([1, -2, 2, 0, -1, 2, 0, -2, 1, -1]) * 0.001
     for i, city in enumerate(cities):
         lag = 100.0
         origin = lag * np.exp(recent_built[i] * 5)
@@ -75,15 +77,13 @@ def test_built_up_partialling_removes_constructed_common_signal() -> None:
                 "period_start": 1990,
                 "period_end": 1995,
                 "outcome_start_year": 1990,
-                "recent_growth": recent_built[i] + np.array([-0.002, 0.001, -0.001, 0.002])[i],
-                "future_growth": future_built[i] + np.array([0.001, -0.002, 0.002, -0.001])[i],
+                "recent_growth": recent_built[i] + recent_noise[i],
+                "future_growth": future_built[i] + future_noise[i],
             }
         )
     result = built_up_entanglement_diagnostic(pd.DataFrame(intervals), pd.DataFrame(fixed_panel_rows))
     assert result.loc[0, "population_growth_correlation"] > 0.9
-    assert abs(result.loc[0, "residual_population_growth_correlation"]) < result.loc[
-        0, "population_growth_correlation"
-    ]
+    assert abs(result.loc[0, "residual_population_growth_correlation"]) < 0.5
     assert result.loc[0, "diagnostic_semantics"] == "source_process_not_causal_control"
 
 
