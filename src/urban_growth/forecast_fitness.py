@@ -18,15 +18,34 @@ PERSISTENCE_BASELINE_MODELS = {
 
 
 def _attach_forecast_horizon(panel: pd.DataFrame) -> pd.DataFrame:
-    """Attach a positive forecast horizon, preserving an explicit source value when present."""
+    """Attach the target horizon without counting any pre-outcome gap as forecast time."""
     out = panel.copy()
+    period_end = pd.to_numeric(out["period_end"], errors="coerce")
+    period_start = pd.to_numeric(out["period_start"], errors="coerce")
+
+    derived: pd.Series | None = None
+    if "outcome_start_year" in out.columns:
+        outcome_start = pd.to_numeric(out["outcome_start_year"], errors="coerce")
+        derived = period_end - outcome_start
+    elif "outcome_gap_years" in out.columns:
+        outcome_gap = pd.to_numeric(out["outcome_gap_years"], errors="coerce")
+        derived = period_end - (period_start + outcome_gap)
+    elif "forecast_horizon_years" not in out.columns:
+        derived = period_end - period_start
+
+    explicit: pd.Series | None = None
     if "forecast_horizon_years" in out.columns:
-        horizon = pd.to_numeric(out["forecast_horizon_years"], errors="coerce")
-    else:
-        horizon = pd.to_numeric(out["period_end"], errors="coerce") - pd.to_numeric(
-            out["period_start"], errors="coerce"
-        )
-    if horizon.isna().any() or horizon.le(0).any():
+        explicit = pd.to_numeric(out["forecast_horizon_years"], errors="coerce")
+
+    if explicit is not None and derived is not None:
+        mismatch = explicit.notna() & derived.notna() & explicit.ne(derived)
+        if mismatch.any():
+            raise SourceSchemaError(
+                "Explicit forecast_horizon_years disagrees with the declared outcome interval"
+            )
+
+    horizon = explicit if explicit is not None else derived
+    if horizon is None or horizon.isna().any() or horizon.le(0).any():
         raise SourceSchemaError("forecast_horizon_years must be positive and known for every row")
     out["forecast_horizon_years"] = horizon.astype(float)
     return out
