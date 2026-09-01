@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 from urban_growth.forecast_fitness import (
@@ -62,7 +61,7 @@ def _validate_origin_coverage(
     if not (observed + missing_rows).eq(risk).all():
         raise SourceSchemaError("Observed plus missing outcome rows must equal the origin risk set")
     expected_share = observed / risk
-    if share.isna().any() or not np.allclose(share, expected_share, rtol=0, atol=1e-12):
+    if share.isna().any() or share.sub(expected_share).abs().gt(1e-12).any():
         raise SourceSchemaError("observed_outcome_share disagrees with the coverage counts")
     if coverage["coverage_denominator_rule"].ne("lag_and_origin_predictors_only").any():
         raise SourceSchemaError("Headline coverage denominator must use lag/origin predictors only")
