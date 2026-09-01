@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import pandas as pd
 
-from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
 from urban_growth.forecast_fitness import (
     evaluate_point_in_time_persistence_baselines,
     point_in_time_persistence_errors,
 )
+from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
 
 
 COVERAGE_COLUMNS = {
