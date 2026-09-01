@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pandas as pd
 
-from urban_growth import forecast_fitness
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
 
 
@@ -95,10 +94,10 @@ def evaluate_headline_point_in_time_persistence(
     **kwargs: object,
 ) -> pd.DataFrame:
     """Evaluate point-in-time persistence while preserving the origin risk-set denominator."""
+    from urban_growth.forecast_fitness import evaluate_point_in_time_persistence_baselines
+
     coverage = _validate_origin_coverage(coverage_summary, origins)
-    metrics = forecast_fitness.evaluate_point_in_time_persistence_baselines(
-        panel, origins, **kwargs
-    )
+    metrics = evaluate_point_in_time_persistence_baselines(panel, origins, **kwargs)
     return _attach_coverage_to_metrics(metrics, coverage)
 
 
@@ -109,8 +108,10 @@ def headline_point_in_time_persistence_errors(
     **kwargs: object,
 ) -> pd.DataFrame:
     """Return row-level point-in-time errors with origin risk-set coverage attached."""
+    from urban_growth.forecast_fitness import point_in_time_persistence_errors
+
     coverage = _validate_origin_coverage(coverage_summary, origins)
-    errors = forecast_fitness.point_in_time_persistence_errors(panel, origins, **kwargs)
+    errors = point_in_time_persistence_errors(panel, origins, **kwargs)
     result = errors.merge(coverage, on="origin", how="left", validate="many_to_one")
     if result[list(COVERAGE_COLUMNS - {"origin"})].isna().any().any():
         raise SourceSchemaError("Persistence errors could not be matched to origin risk-set coverage")
