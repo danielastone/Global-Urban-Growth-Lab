@@ -66,3 +66,35 @@ def validate_boundary_cohort(frame: pd.DataFrame) -> None:
         raise SourceSchemaError("Boundary cohort contains unresolved or incomparable geography")
     if frame[["population_origin", "population_endpoint"]].isna().any().any():
         raise SourceSchemaError("Boundary cohort requires both population endpoints")
+
+
+def origin_defined_threshold_cohort(
+    frame: pd.DataFrame,
+    *,
+    cohort_min: float = 25_000,
+    cohort_max: float = 100_000,
+) -> pd.DataFrame:
+    """Select a threshold-study cohort using origin population only.
+
+    Endpoint population is retained as an outcome but never participates in membership.
+    This prevents future growth, threshold crossing, or survival at the endpoint from
+    redefining the risk set after the forecast origin.
+    """
+    validate_boundary_cohort(frame)
+    if cohort_min <= 0 or cohort_max <= cohort_min:
+        raise SourceSchemaError("Origin cohort bounds must be positive and increasing")
+    origin_population = pd.to_numeric(frame["population_origin"], errors="coerce")
+    endpoint_population = pd.to_numeric(frame["population_endpoint"], errors="coerce")
+    if origin_population.isna().any() or endpoint_population.isna().any():
+        raise SourceSchemaError("Threshold cohort populations must be numeric")
+    if origin_population.le(0).any() or endpoint_population.le(0).any():
+        raise SourceSchemaError("Threshold cohort populations must be positive")
+    selected = frame.loc[origin_population.between(cohort_min, cohort_max)].copy()
+    if selected.empty:
+        raise SourceSchemaError("No settlements fall within the declared origin cohort")
+    selected["cohort_population_basis"] = "population_origin"
+    selected["cohort_min_population"] = float(cohort_min)
+    selected["cohort_max_population"] = float(cohort_max)
+    selected["cohort_uses_endpoint_population"] = False
+    selected["cohort_defined_at_origin"] = True
+    return selected.reset_index(drop=True)

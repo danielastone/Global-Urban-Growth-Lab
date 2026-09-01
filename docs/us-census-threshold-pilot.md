@@ -9,10 +9,12 @@ identifiers and Census relationship files make this a comparatively favorable te
 the implementation rather than a demanding test of international harmonization.
 
 The first registered interval is 2010–2020. The origin cohort contains places with
-25,000–100,000 residents in 2010. A place crosses the WUP observation threshold when
-its directly enumerated population is below 50,000 in 2010 and at least 50,000 in
-2020. Crossing is interval-censored in the open interval `(2010, 2020)`; the code does
-not invent a point crossing year.
+25,000–100,000 residents in 2010. Cohort membership is defined **only** from the 2010
+origin population. The 2020 population is retained as an outcome and cannot add a
+future entrant, remove a later decliner, or otherwise redefine the origin risk set.
+A place crosses the WUP observation threshold when its directly enumerated population
+is below 50,000 in 2010 and at least 50,000 in 2020. Crossing is interval-censored in
+the open interval `(2010, 2020)`; the code does not invent a point crossing year.
 
 ## Official inputs
 
@@ -38,6 +40,19 @@ All other relationships are excluded rather than interpreted as demographic chan
 This land-overlap rule is a conservative feasibility screen. It is not proof that
 population was enumerated on perfectly identical geography, and the retained overlap
 ratios remain in the output for sensitivity analysis.
+
+## Origin-defined cohort rule
+
+`urban_growth.census_threshold.origin_defined_threshold_cohort` is the canonical
+constructor for the threshold-study risk set. It first validates comparable geography
+and complete endpoints, then applies the declared population bounds to
+`population_origin` only. It records `cohort_population_basis = population_origin`,
+`cohort_defined_at_origin = true`, and `cohort_uses_endpoint_population = false`.
+
+This means a locality with 20,000 people at origin and 70,000 at the endpoint remains
+outside a 25,000–100,000 origin cohort, while a locality with 80,000 at origin and
+30,000 at the endpoint remains inside. Endpoint growth, threshold crossing, and later
+survival therefore cannot determine sample membership.
 
 ## City Data Fitness gate
 
