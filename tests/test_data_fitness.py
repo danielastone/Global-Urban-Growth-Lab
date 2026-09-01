@@ -95,6 +95,49 @@ def test_methodology_change_blocks_growth_without_rewriting_raw_value():
     assert "methodology_change" in result["growth_exclusion_reasons"]
 
 
+def test_unknown_methodology_change_fails_growth_closed():
+    result = evaluate_city_data_fitness(
+        pd.DataFrame([stable_row(methodology_change="unknown")])
+    ).iloc[0]
+
+    assert not bool(result["growth_eligible"])
+    assert not bool(result["headline_eligible"])
+    assert "methodology_change_unknown" in result["growth_exclusion_reasons"]
+
+
+def test_unknown_administrative_reclassification_fails_growth_unless_harmonized():
+    result = evaluate_city_data_fitness(
+        pd.DataFrame([stable_row(administrative_reclassification="uncertain")])
+    ).iloc[0]
+    harmonized = evaluate_city_data_fitness(
+        pd.DataFrame(
+            [
+                stable_row(
+                    administrative_reclassification="uncertain",
+                    concordance_status="harmonized_common_geography",
+                    boundary_temporally_fixed=False,
+                )
+            ]
+        )
+    ).iloc[0]
+
+    assert not bool(result["growth_eligible"])
+    assert "administrative_reclassification_unknown" in result["growth_exclusion_reasons"]
+    assert bool(harmonized["growth_eligible"])
+
+
+def test_unknown_inconsistency_fails_all_analytical_uses_closed():
+    result = evaluate_city_data_fitness(
+        pd.DataFrame([stable_row(known_inconsistency="not_reviewed")])
+    ).iloc[0]
+
+    assert not bool(result["level_eligible"])
+    assert not bool(result["growth_eligible"])
+    assert not bool(result["spatial_eligible"])
+    assert not bool(result["headline_eligible"])
+    assert "known_inconsistency_unknown" in result["fitness_reasons"]
+
+
 def test_threshold_selection_exposure_blocks_headline_only():
     result = evaluate_city_data_fitness(
         pd.DataFrame([stable_row(truncation_exposure="material")])
