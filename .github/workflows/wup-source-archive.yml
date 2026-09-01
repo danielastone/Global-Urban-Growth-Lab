@@ -1,0 +1,36 @@
+name: WUP source archive
+
+on:
+  push:
+    branches:
+      - "run/wup-source-archive"
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Acquire official WUP 2025 city tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/raw
+          base="https://population.un.org/wup/assets/Download/Cities"
+          for file in \
+            WUP2025-F21-DEGURBA-Cities_Pop.xlsx \
+            WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx \
+            WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx \
+            WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx
+          do
+            curl --fail --location --retry 3 --retry-delay 2 \
+              "$base/$file" --output "data/raw/$file"
+          done
+          sha256sum data/raw/WUP2025-*.xlsx > data/raw/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wup-2025-source-data
+          path: data/raw/
+          if-no-files-found: error
