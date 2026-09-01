@@ -35,6 +35,7 @@ def forecast_panel() -> pd.DataFrame:
                     "availability_provenance_verified": True,
                     "forecast_origin_date": f"{start}-12-31",
                     "outcome_available_date": f"{end}-06-30",
+                    "outcome_available_reference": f"official-release-{end}",
                 }
             )
     frame = pd.DataFrame(rows)
@@ -120,6 +121,7 @@ def test_point_in_time_persistence_cannot_score_late_test_rows() -> None:
     assert result["availability_gate_enforced"].all()
     assert result["availability_provenance_gate_enforced"].all()
     assert result["training_outcome_availability_enforced"].all()
+    assert result["training_outcome_provenance_enforced"].all()
     assert result["benchmark_stage"].eq("point_in_time_persistence_only").all()
 
 
@@ -131,11 +133,25 @@ def test_point_in_time_persistence_excludes_unpublished_training_outcomes() -> N
     assert at_2010["candidate_training_rows"].eq(6).all()
     assert at_2010["available_training_rows"].eq(3).all()
     assert at_2010["training_outcome_availability_enforced"].all()
+    assert at_2010["training_outcome_provenance_enforced"].all()
 
 
 def test_point_in_time_persistence_requires_outcome_release_dates() -> None:
     panel = forecast_panel().drop(columns="outcome_available_date")
     with pytest.raises(SourceSchemaError, match="outcome_available_date"):
+        evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
+
+
+def test_point_in_time_persistence_requires_outcome_release_provenance() -> None:
+    panel = forecast_panel().drop(columns="outcome_available_reference")
+    with pytest.raises(SourceSchemaError, match="outcome_available_reference"):
+        evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
+
+
+def test_point_in_time_persistence_rejects_blank_outcome_release_provenance() -> None:
+    panel = forecast_panel()
+    panel.loc[0, "outcome_available_reference"] = "  "
+    with pytest.raises(SourceSchemaError, match="provenance for every outcome release date"):
         evaluate_point_in_time_persistence_baselines(panel, [2005, 2010])
 
 
@@ -159,3 +175,4 @@ def test_point_in_time_errors_cannot_reintroduce_late_rows() -> None:
     assert errors["availability_gate_enforced"].all()
     assert errors["availability_provenance_gate_enforced"].all()
     assert errors["training_outcome_availability_enforced"].all()
+    assert errors["training_outcome_provenance_enforced"].all()
