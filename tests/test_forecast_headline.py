@@ -53,6 +53,10 @@ def _panel() -> pd.DataFrame:
                     "availability_provenance_verified": True,
                     "forecast_origin_registration_verified": True,
                     "forecast_origin_date": f"{start}-12-31",
+                    "predictor_available_date": f"{start}-01-01",
+                    "concordance_available_date": f"{start}-01-01",
+                    "predictor_availability_source": f"predictor-release-{start}",
+                    "concordance_availability_source": f"geography-release-{start}",
                     "outcome_available_date": f"{end}-06-30",
                     "outcome_available_reference": f"official-release-{end}",
                 }
@@ -96,6 +100,7 @@ def test_headline_metrics_attach_registered_policy_and_coverage() -> None:
     assert result["coverage_policy_id"].eq(TEST_POLICY_ID).all()
     assert result["minimum_observed_outcome_share"].eq(0.60).all()
     assert result["forecast_origin_registration_gate_enforced"].all()
+    assert result["training_uses_current_origin_as_of"].all()
 
 
 def test_headline_errors_attach_same_registered_policy() -> None:
@@ -105,6 +110,7 @@ def test_headline_errors_attach_same_registered_policy() -> None:
     assert result["coverage_policy_registry_enforced"].all()
     assert result["coverage_policy_id"].eq(TEST_POLICY_ID).all()
     assert result["forecast_origin_registration_gate_enforced"].all()
+    assert result["training_uses_current_origin_as_of"].all()
 
 
 def test_headline_rejects_unverified_origin_registration() -> None:
