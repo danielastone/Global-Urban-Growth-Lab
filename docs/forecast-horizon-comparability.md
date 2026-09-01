@@ -4,7 +4,11 @@ Annualizing population growth does not make forecast errors from different horiz
 
 ## Locked rule
 
-Persistence benchmark evaluation must use one forecast horizon at a time. Every eligible row must carry a positive `forecast_horizon_years` value, either supplied explicitly by the source-specific builder or deterministically derived from `period_end - period_start` when the forecast interval itself defines the target horizon.
+Persistence benchmark evaluation must use one forecast horizon at a time. Every eligible row must carry a positive `forecast_horizon_years` value, either supplied explicitly by the source-specific builder or deterministically derived from the declared outcome interval.
+
+When an outcome gap exists, the forecast horizon is `period_end - outcome_start_year`, not `period_end - period_start`. If only `outcome_gap_years` is recorded, the equivalent derivation is `period_end - (period_start + outcome_gap_years)`. The pre-outcome gap is therefore never counted as target forecast horizon. If an explicit `forecast_horizon_years` value is present alongside derived interval fields, the values must agree or the common fitness gate fails closed.
+
+For simple contiguous intervals with no separate outcome-start or gap field, `period_end - period_start` remains the deterministic fallback.
 
 If more than one horizon is present after fitness and point-in-time gates are applied, the common persistence evaluator fails closed. Callers must stratify the panel to a single horizon before computing aggregate metrics or row-level errors.
 
