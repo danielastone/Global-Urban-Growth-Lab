@@ -135,10 +135,17 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
         headline_reasons.append("concordance_not_accepted")
     if boundary_change_status in UNRESOLVED_BOUNDARY and not harmonized:
         headline_reasons.append("unresolved_boundary_change")
-    if truncation_exposure in BAD_EXPOSURE:
+
+    if not truncation_exposure:
+        headline_reasons.append("missing_truncation_exposure")
+    elif truncation_exposure in BAD_EXPOSURE:
         headline_reasons.append("truncation_exposure")
-    if survivorship_exposure in BAD_EXPOSURE:
+
+    if not survivorship_exposure:
+        headline_reasons.append("missing_survivorship_exposure")
+    elif survivorship_exposure in BAD_EXPOSURE:
         headline_reasons.append("survivorship_exposure")
+
     if _truthy(row.get("known_inconsistency")):
         headline_reasons.append("known_inconsistency")
 
