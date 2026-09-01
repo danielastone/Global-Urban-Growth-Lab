@@ -1,4 +1,5 @@
 """Headline-qualified persistence evaluation with origin risk-set coverage enforcement."""
+# ruff: noqa: I001
 
 from __future__ import annotations
 
