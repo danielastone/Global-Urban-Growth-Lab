@@ -43,8 +43,8 @@ def test_default_forecast_gate_excludes_2020_to_2025_crisp_outcome() -> None:
             }
         )
     panel = classify_wup_city_population_lineage(pd.DataFrame(rows))
-    intervals = build_forecast_intervals(panel, [2020])
-    assert intervals.empty
+    with pytest.raises(SourceSchemaError, match="No complete forecast intervals"):
+        build_forecast_intervals(panel, [2020])
 
 
 def test_projection_sensitivity_requires_explicit_opt_in() -> None:
@@ -73,8 +73,6 @@ def test_projection_sensitivity_requires_explicit_opt_in() -> None:
 
 
 def test_wup_lineage_fails_on_unclassified_intermediate_year() -> None:
-    panel = pd.DataFrame(
-        {"year": [2021], "observation_type": ["estimate"]}
-    )
+    panel = pd.DataFrame({"year": [2021], "observation_type": ["estimate"]})
     with pytest.raises(SourceSchemaError, match="Unclassified WUP empirical-lineage years"):
         classify_wup_city_population_lineage(panel)
