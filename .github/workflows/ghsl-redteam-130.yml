@@ -1,0 +1,65 @@
+name: GHSL red-team issue 130
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/ghsl-redteam-130
+    paths:
+      - ".github/workflows/ghsl-redteam-130.yml"
+      - "scripts/run_ghsl_redteam_130.py"
+      - "src/urban_growth/ghsl_redteam.py"
+      - "src/urban_growth/adapters/ghsl_ucdb.py"
+      - "src/urban_growth/forecast.py"
+
+jobs:
+  ghsl-redteam:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: "0.11.33"
+      - run: uv sync --locked
+      - name: Acquire official GHSL UCDB R2024A v1.2 inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/raw downloads
+          theme_url="https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_THEME_GLOBE_R2024A/GHS_UCDB_THEME_GHSL_GLOBE_R2024A/V1-2/GHS_UCDB_THEME_GHSL_GLOBE_R2024A_V1_2.zip"
+          mtuc_url="https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_MTUC_GLOBE_R2024A/V1-2/GHS_UCDB_MTUC_GLOBE_R2024A_V1_2.zip"
+          curl --fail --location --retry 3 --retry-delay 2 "$theme_url" -o downloads/theme.zip
+          curl --fail --location --retry 3 --retry-delay 2 "$mtuc_url" -o downloads/mtuc.zip
+          sha256sum downloads/theme.zip downloads/mtuc.zip | tee ghsl-source-zip-sha256.txt
+          unzip -q downloads/theme.zip -d downloads/theme
+          unzip -q downloads/mtuc.zip -d downloads/mtuc
+          theme_csv=$(find downloads/theme -type f -iname '*.csv' | head -n 1)
+          mtuc_csv=$(find downloads/mtuc -type f -iname '*.csv' | head -n 1)
+          test -n "$theme_csv"
+          test -n "$mtuc_csv"
+          cp "$theme_csv" data/raw/GHS_UCDB_THEME_GHSL_GLOBE_R2024A.csv
+          cp "$mtuc_csv" data/raw/GHS_UCDB_MTUC_GLOBE_R2024A.csv
+          sha256sum data/raw/GHS_UCDB_*.csv | tee ghsl-source-csv-sha256.txt
+      - name: Run GHSL issue 130 diagnostics
+        run: uv run --locked python scripts/run_ghsl_redteam_130.py
+      - name: Print core diagnostics
+        shell: bash
+        run: |
+          echo '--- risk-set coverage ---'
+          cat outputs/ghsl_redteam_130/fixed_origin_risk_set_coverage.csv
+          echo '--- built-up entanglement ---'
+          cat outputs/ghsl_redteam_130/fixed_origin_built_up_entanglement.csv
+          echo '--- fixed pre-2020 persistence ---'
+          cat outputs/ghsl_redteam_130/fixed_matched_persistence_pre2020.csv
+          echo '--- dynamic pre-2020 persistence ---'
+          cat outputs/ghsl_redteam_130/dynamic_matched_persistence_pre2020.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghsl-redteam-130
+          path: |
+            outputs/ghsl_redteam_130/*.csv
+            ghsl-source-zip-sha256.txt
+            ghsl-source-csv-sha256.txt
