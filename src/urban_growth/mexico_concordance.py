@@ -107,10 +107,15 @@ def validate_mexico_locality_transition(transition: pd.DataFrame) -> pd.DataFram
 def build_mexico_multiwave_history(transitions: pd.DataFrame) -> pd.DataFrame:
     """Build adjacent-transition forecast rows without future-boundary leakage.
 
-    A forecast row is eligible only when both its outcome transition and the immediately
-    preceding transition used for recent growth pass independently. Later geography cannot
-    repair an earlier predictor interval. Forecast horizon is retained explicitly because
-    annualized growth rates from different horizons are not interchangeable error targets.
+    A forecast row is source-transition eligible only when both its outcome transition
+    and the immediately preceding transition used for recent growth pass independently.
+    Later geography cannot repair an earlier predictor interval. Forecast horizon is
+    retained explicitly because annualized growth rates from different horizons are not
+    interchangeable error targets.
+
+    Source-transition eligibility is not the common City Data Fitness Standard and is
+    not point-in-time availability. This builder therefore never promotes a row directly
+    to headline or deployable status.
     """
     checked = validate_mexico_locality_transition(transitions)
     checked = checked.sort_values(["analysis_id", "origin_year", "endpoint_year"]).copy()
@@ -154,9 +159,11 @@ def build_mexico_multiwave_history(transitions: pd.DataFrame) -> pd.DataFrame:
     current["country_code"] = "MEX"
     current["city_id"] = current["analysis_id"].astype(str)
     current["growth_eligible"] = current["forecast_interval_eligible"]
-    current["headline_eligible"] = current["forecast_interval_eligible"]
+    current["headline_eligible"] = False
+    current["headline_exclusion_reasons"] = "common_city_data_fitness_not_applied"
     current["boundary_history_uses_future_reference"] = False
-    current["forecast_deployable_at_origin"] = current["forecast_interval_eligible"]
+    current["forecast_deployable_at_origin"] = False
+    current["deployability_exclusion_reason"] = "point_in_time_availability_not_applied"
     return current
 
 

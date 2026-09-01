@@ -101,6 +101,32 @@ def test_multiwave_history_uses_only_immediately_prior_transition() -> None:
     assert not result["boundary_history_uses_future_reference"].any()
 
 
+def test_transition_eligibility_does_not_self_promote_to_headline_or_deployable() -> None:
+    transitions = pd.DataFrame(
+        [
+            row(),
+            row(
+                origin_year=2000,
+                endpoint_year=2005,
+                origin_population=44_000,
+                endpoint_population=48_000,
+                origin_event_type="census",
+                endpoint_event_type="population_count",
+                evidence_reference_year=2005,
+            ),
+        ]
+    )
+    result = build_mexico_multiwave_history(transitions)
+    current = result.loc[result["origin_year"].eq(2000)].iloc[0]
+
+    assert current["forecast_interval_eligible"]
+    assert current["growth_eligible"]
+    assert not current["headline_eligible"]
+    assert current["headline_exclusion_reasons"] == "common_city_data_fitness_not_applied"
+    assert not current["forecast_deployable_at_origin"]
+    assert current["deployability_exclusion_reason"] == "point_in_time_availability_not_applied"
+
+
 def test_failed_prior_transition_blocks_next_forecast_origin() -> None:
     transitions = pd.DataFrame(
         [
