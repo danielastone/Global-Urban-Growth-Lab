@@ -15,6 +15,14 @@ BAD_EXPOSURE = {"material", "unknown"}
 UNKNOWN_EVIDENCE = {"unknown", "uncertain", "unresolved", "not_reviewed", "not reviewed"}
 PRESENT_EVIDENCE = {"1", "true", "yes", "y", "passed", "valid", "present"}
 CLEAR_EVIDENCE = {"0", "false", "no", "n", "clear", "none", "absent"}
+CLEAR_BOUNDARY_STATUS = {
+    "none",
+    "stable",
+    "unchanged",
+    "harmonized",
+    "official_crosswalk",
+    "none_within_fixed_2025_footprint",
+}
 UNRESOLVED_BOUNDARY = {
     "annexation",
     "merger",
@@ -66,6 +74,16 @@ def _negative_evidence_state(value: object) -> str:
     return "unknown"
 
 
+def _boundary_status_state(value: object) -> str:
+    """Return clear / changed / unknown for boundary-change evidence."""
+    normalized = _norm(value)
+    if normalized in CLEAR_BOUNDARY_STATUS:
+        return "clear"
+    if normalized in UNRESOLVED_BOUNDARY:
+        return "changed"
+    return "unknown"
+
+
 def _join_reasons(reasons: Iterable[str]) -> str:
     return ";".join(sorted(set(reasons)))
 
@@ -82,6 +100,7 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
     validation_status = _norm(row.get("validation_status"))
     concordance_status = _norm(row.get("concordance_status"))
     boundary_change_status = _norm(row.get("boundary_change_status"))
+    boundary_status_state = _boundary_status_state(boundary_change_status)
     truncation_exposure = _norm(row.get("truncation_exposure"))
     survivorship_exposure = _norm(row.get("survivorship_exposure"))
     reclassification_state = _negative_evidence_state(row.get("administrative_reclassification"))
@@ -128,8 +147,11 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
     if not boundary_resolved:
         growth_reasons.append("boundary_not_stable_or_harmonized")
 
-    if boundary_change_status in UNRESOLVED_BOUNDARY and not harmonized:
-        growth_reasons.append("unresolved_boundary_change")
+    if not harmonized:
+        if boundary_status_state == "changed":
+            growth_reasons.append("unresolved_boundary_change")
+        elif boundary_status_state == "unknown":
+            growth_reasons.append("boundary_change_status_unknown")
 
     if not harmonized:
         if reclassification_state == "present":
@@ -167,8 +189,11 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
         headline_reasons.append("validation_not_passed")
     if concordance_status not in ACCEPTED_CONCORDANCE:
         headline_reasons.append("concordance_not_accepted")
-    if boundary_change_status in UNRESOLVED_BOUNDARY and not harmonized:
-        headline_reasons.append("unresolved_boundary_change")
+    if not harmonized:
+        if boundary_status_state == "changed":
+            headline_reasons.append("unresolved_boundary_change")
+        elif boundary_status_state == "unknown":
+            headline_reasons.append("boundary_change_status_unknown")
 
     if not truncation_exposure:
         headline_reasons.append("missing_truncation_exposure")

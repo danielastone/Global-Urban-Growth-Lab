@@ -74,6 +74,45 @@ def test_harmonized_common_geography_can_restore_growth_eligibility():
     assert bool(result["headline_eligible"])
 
 
+def test_unknown_boundary_status_fails_growth_and_headline_closed():
+    result = evaluate_city_data_fitness(
+        pd.DataFrame([stable_row(boundary_change_status="partial")])
+    ).iloc[0]
+
+    assert bool(result["level_eligible"])
+    assert not bool(result["growth_eligible"])
+    assert not bool(result["headline_eligible"])
+    assert "boundary_change_status_unknown" in result["growth_exclusion_reasons"]
+    assert "boundary_change_status_unknown" in result["headline_exclusion_reasons"]
+
+
+def test_missing_boundary_status_fails_growth_and_headline_closed():
+    result = evaluate_city_data_fitness(
+        pd.DataFrame([stable_row(boundary_change_status=None)])
+    ).iloc[0]
+
+    assert not bool(result["growth_eligible"])
+    assert not bool(result["headline_eligible"])
+    assert "boundary_change_status_unknown" in result["growth_exclusion_reasons"]
+
+
+def test_harmonized_geography_can_resolve_unknown_boundary_status():
+    result = evaluate_city_data_fitness(
+        pd.DataFrame(
+            [
+                stable_row(
+                    boundary_change_status="partial",
+                    boundary_temporally_fixed=False,
+                    concordance_status="harmonized_common_geography",
+                )
+            ]
+        )
+    ).iloc[0]
+
+    assert bool(result["growth_eligible"])
+    assert bool(result["headline_eligible"])
+
+
 def test_geographic_comparability_is_required_for_growth_and_headline():
     result = evaluate_city_data_fitness(
         pd.DataFrame([stable_row(geographic_comparable=False)])
