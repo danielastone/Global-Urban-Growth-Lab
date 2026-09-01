@@ -1,0 +1,54 @@
+name: WUP contemporaneous country diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - redteam/contemporaneous-country-baseline
+    paths:
+      - ".github/workflows/wup-contemporaneous-country.yml"
+      - "scripts/run_wup_contemporaneous_country_baseline.py"
+      - "src/urban_growth/contemporaneous_baseline.py"
+      - "src/urban_growth/wup_lineage.py"
+      - "src/urban_growth/forecast.py"
+
+jobs:
+  contemporaneous-country:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: "0.11.33"
+      - run: uv sync --locked
+      - name: Acquire official WUP 2025 city tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/raw
+          base="https://population.un.org/wup/assets/Download/Cities"
+          for file in \
+            WUP2025-F21-DEGURBA-Cities_Pop.xlsx \
+            WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx \
+            WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx \
+            WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx
+          do
+            curl --fail --location --retry 3 --retry-delay 2 \
+              "$base/$file" --output "data/raw/$file"
+          done
+          sha256sum data/raw/WUP2025-*.xlsx | tee outputs-wup-source-sha256.txt
+      - name: Run contemporaneous country diagnostic
+        run: uv run --locked python scripts/run_wup_contemporaneous_country_baseline.py
+      - name: Print metrics
+        run: cat outputs/wup_contemporaneous_country_metrics.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wup-contemporaneous-country-diagnostic
+          path: |
+            outputs/wup_contemporaneous_country_metrics.csv
+            outputs/wup_contemporaneous_country_bootstrap.csv
+            outputs/wup_contemporaneous_country_time_bootstrap.csv
+            outputs-wup-source-sha256.txt
