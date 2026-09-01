@@ -10,7 +10,7 @@ from urban_growth.io import SourceSchemaError, require_columns
 
 WUP_REFERENCE_ESTIMATE_START = 1975
 WUP_REFERENCE_ESTIMATE_END = 2020
-WUP_CRISP_PROJECTION_START = 2025
+WUP_CRISP_PROJECTION_START = 2021
 
 
 def classify_wup_city_population_lineage(panel: pd.DataFrame) -> pd.DataFrame:
@@ -18,9 +18,9 @@ def classify_wup_city_population_lineage(panel: pd.DataFrame) -> pd.DataFrame:
 
     WUP 2025 describes the published 1950-2025 population series as estimates,
     but its DEGURBA methodology uses reference estimates from GHS-WUP-POP for
-    1975-2020 and CRISP model projections from 2025 onward. Forecast evaluation
-    therefore must not treat the 2025 city endpoint as an observed/reference
-    estimate merely because it falls inside the publisher's estimate period.
+    1975-2020 and CRISP-generated values after 2020. Forecast evaluation therefore
+    must not treat post-2020 city endpoints as observed/reference estimates merely
+    because they fall inside the publisher's estimate period.
     """
     require_columns(
         panel,
@@ -50,9 +50,6 @@ def classify_wup_city_population_lineage(panel: pd.DataFrame) -> pd.DataFrame:
         )
         raise SourceSchemaError(f"Unclassified WUP empirical-lineage years: {years}")
 
-    # build_forecast_intervals gates outcomes on observation_type. Preserve the
-    # publisher label separately, then make this field reflect empirical lineage
-    # for forecast-outcome eligibility.
     out["observation_type"] = out["empirical_lineage_type"].map(
         {
             "historical_backcast": "estimate",
@@ -65,6 +62,6 @@ def classify_wup_city_population_lineage(panel: pd.DataFrame) -> pd.DataFrame:
     )
     out["wup_lineage_methodology_reference"] = (
         "WUP2025 methodology: 1975-2020 GHS-WUP-POP reference estimates; "
-        "2025+ CRISP projections"
+        "post-2020 CRISP-generated values"
     )
     return out
