@@ -93,6 +93,25 @@ def test_threshold_selection_exposure_blocks_headline_only():
     assert "truncation_exposure" in result["headline_exclusion_reasons"]
 
 
+def test_missing_truncation_exposure_fails_headline_closed():
+    row = stable_row()
+    row.pop("truncation_exposure")
+    result = evaluate_city_data_fitness(pd.DataFrame([row])).iloc[0]
+
+    assert bool(result["growth_eligible"])
+    assert not bool(result["headline_eligible"])
+    assert "missing_truncation_exposure" in result["headline_exclusion_reasons"]
+
+
+def test_missing_survivorship_exposure_fails_headline_closed():
+    row = stable_row(survivorship_exposure=None)
+    result = evaluate_city_data_fitness(pd.DataFrame([row])).iloc[0]
+
+    assert bool(result["growth_eligible"])
+    assert not bool(result["headline_eligible"])
+    assert "missing_survivorship_exposure" in result["headline_exclusion_reasons"]
+
+
 def test_spatial_use_requires_validated_coordinates_and_network_geography():
     result = evaluate_city_data_fitness(
         pd.DataFrame(
