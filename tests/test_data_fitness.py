@@ -74,6 +74,18 @@ def test_harmonized_common_geography_can_restore_growth_eligibility():
     assert bool(result["headline_eligible"])
 
 
+def test_geographic_comparability_is_required_for_growth_and_headline():
+    result = evaluate_city_data_fitness(
+        pd.DataFrame([stable_row(geographic_comparable=False)])
+    ).iloc[0]
+
+    assert not bool(result["level_eligible"])
+    assert not bool(result["growth_eligible"])
+    assert not bool(result["headline_eligible"])
+    assert "geography_not_comparable" in result["growth_exclusion_reasons"]
+    assert "not_growth_eligible" in result["headline_exclusion_reasons"]
+
+
 def test_methodology_change_blocks_growth_without_rewriting_raw_value():
     frame = pd.DataFrame([stable_row(methodology_change=True, raw_value=49_999)])
     result = evaluate_city_data_fitness(frame).iloc[0]

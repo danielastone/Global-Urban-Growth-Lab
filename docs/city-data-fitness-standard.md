@@ -63,6 +63,8 @@ The exact analysis can impose additional requirements. The standard is a minimum
 
 ## Geographic rules
 
+Growth analysis requires `geographic_comparable=true` in addition to an accepted concordance state. An accepted status label cannot override an explicit determination that the compared observations are not geographically comparable.
+
 Accepted concordance states for stable growth analysis are:
 
 - `stable`;
@@ -71,7 +73,7 @@ Accepted concordance states for stable growth analysis are:
 
 `uncertain` and `unresolved` matches are excluded from headline analyses. They may be retained for robustness tests if explicitly requested.
 
-A changing administrative boundary can still support growth analysis only when the observations have been harmonized to a common geography and the concordance status records that fact. A simple name match is not sufficient.
+A changing administrative boundary can still support growth analysis only when the observations have been harmonized to a common geography, `geographic_comparable=true`, and the concordance status records that fact. A simple name match is not sufficient.
 
 ## Threshold-selection rules
 
