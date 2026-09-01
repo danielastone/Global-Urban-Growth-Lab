@@ -46,6 +46,18 @@ Each record receives four independent flags:
 
 Each flag has a corresponding semicolon-delimited reason field. A `fitness_reasons` field contains the union of all reasons.
 
+## Negative-evidence rule
+
+Fields that assert the absence or presence of an adverse condition must distinguish **clear absence** from **unknown**. Missing, `unknown`, `uncertain`, `unresolved`, or `not_reviewed` values are not treated as `false`.
+
+In particular:
+
+- unknown `methodology_change` fails growth eligibility with `methodology_change_unknown`;
+- unknown `administrative_reclassification` fails growth eligibility unless the observations are already harmonized to a common geography;
+- unknown `known_inconsistency` fails level, growth, spatial, and headline eligibility.
+
+This prevents permissive boolean parsing from turning lack of evidence into evidence of absence.
+
 ## Headline gate
 
 Headline eligibility is intentionally strict. A record must be growth-eligible and must also have:
@@ -55,7 +67,7 @@ Headline eligibility is intentionally strict. A record must be growth-eligible a
 - no unresolved geographic change;
 - explicit truncation and survivorship exposure assessments;
 - no material or unknown survivorship/truncation exposure for threshold-sensitive analyses;
-- no known unresolved inconsistency.
+- no known or unresolved inconsistency.
 
 Missing `truncation_exposure` or `survivorship_exposure` is not interpreted as low risk. Missing evidence fails headline eligibility with `missing_truncation_exposure` or `missing_survivorship_exposure`. The row may remain eligible for non-headline growth analysis when the other requirements for that use are met.
 
