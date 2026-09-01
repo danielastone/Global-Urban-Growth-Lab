@@ -11,6 +11,7 @@ ACCEPTED_CONCORDANCE = {
 }
 
 PASS_VALIDATION = {"passed"}
+ACCEPTED_EXPOSURE = {"none", "low", "material", "unknown"}
 BAD_EXPOSURE = {"material", "unknown"}
 UNKNOWN_EVIDENCE = {"unknown", "uncertain", "unresolved", "not_reviewed", "not reviewed"}
 PRESENT_EVIDENCE = {"1", "true", "yes", "y", "passed", "valid", "present"}
@@ -197,11 +198,15 @@ def _evaluate_row(row: pd.Series) -> dict[str, object]:
 
     if not truncation_exposure:
         headline_reasons.append("missing_truncation_exposure")
+    elif truncation_exposure not in ACCEPTED_EXPOSURE:
+        headline_reasons.append("truncation_exposure_unknown")
     elif truncation_exposure in BAD_EXPOSURE:
         headline_reasons.append("truncation_exposure")
 
     if not survivorship_exposure:
         headline_reasons.append("missing_survivorship_exposure")
+    elif survivorship_exposure not in ACCEPTED_EXPOSURE:
+        headline_reasons.append("survivorship_exposure_unknown")
     elif survivorship_exposure in BAD_EXPOSURE:
         headline_reasons.append("survivorship_exposure")
 
