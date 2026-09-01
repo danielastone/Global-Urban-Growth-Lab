@@ -34,7 +34,7 @@ def test_origin_defined_risk_set_uses_birth_and_origin_population_only() -> None
     assert eligible["city_id"].tolist() == ["a"]
     assert coverage.loc[0, "fixed_rows"] == 3
     assert coverage.loc[0, "eligible_rows"] == 1
-    assert coverage.loc[0, "eligibility_uses_future_population"] == False  # noqa: E712
+    assert coverage.loc[0, "eligibility_uses_future_population"] == False
 
 
 def test_origin_defined_risk_set_is_invariant_to_endpoint_population() -> None:
