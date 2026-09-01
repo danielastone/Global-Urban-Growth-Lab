@@ -1,5 +1,4 @@
 """Tests of whether recent city growth adds information beyond country context."""
-# ruff: noqa: I001
 
 from __future__ import annotations
 
