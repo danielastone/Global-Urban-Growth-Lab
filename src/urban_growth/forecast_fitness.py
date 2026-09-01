@@ -91,18 +91,32 @@ def point_in_time_fitness_gated_forecast_panel(
     *,
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
+    provenance_column: str = "availability_provenance_verified",
 ) -> pd.DataFrame:
-    """Return rows that pass both data-fitness and predictor/concordance availability gates."""
-    require_columns(panel, {availability_column}, source_name="point-in-time forecast panel")
+    """Return rows passing fitness plus an auditable point-in-time availability gate."""
+    require_columns(
+        panel,
+        {availability_column, provenance_column},
+        source_name="point-in-time forecast panel",
+    )
     availability = panel[availability_column]
+    provenance = panel[provenance_column]
     if not pd.api.types.is_bool_dtype(availability.dtype):
         raise SourceSchemaError(f"{availability_column} must be boolean")
+    if not pd.api.types.is_bool_dtype(provenance.dtype):
+        raise SourceSchemaError(f"{provenance_column} must be boolean")
+    if not provenance.all():
+        raise SourceSchemaError(
+            "Point-in-time persistence requires verified availability provenance for every row"
+        )
     gated = fitness_gated_forecast_panel(panel, eligibility_column=eligibility_column)
-    result = gated.loc[gated[availability_column]].copy()
+    result = gated.loc[gated[availability_column] & gated[provenance_column]].copy()
     if result.empty:
         raise SourceSchemaError("No forecast rows pass both fitness and point-in-time gates")
     result["forecast_availability_gate"] = availability_column
     result["forecast_availability_gate_passed"] = True
+    result["forecast_availability_provenance_gate"] = provenance_column
+    result["forecast_availability_provenance_gate_passed"] = True
     return result.reset_index(drop=True)
 
 
@@ -231,15 +245,17 @@ def evaluate_point_in_time_persistence_baselines(
     *,
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
+    provenance_column: str = "availability_provenance_verified",
     forecast_origin_date_column: str = "forecast_origin_date",
     outcome_available_column: str = "outcome_available_date",
     outcome_column: str = "future_growth",
 ) -> pd.DataFrame:
-    """Evaluate deployable persistence baselines with predictor and training-outcome timing gates."""
+    """Evaluate deployable persistence baselines with auditable timing gates."""
     gated = point_in_time_fitness_gated_forecast_panel(
         panel,
         eligibility_column=eligibility_column,
         availability_column=availability_column,
+        provenance_column=provenance_column,
     )
     horizon = _validate_single_horizon(gated)
     declared = _validate_declared_origins(gated, origins)
@@ -276,6 +292,8 @@ def evaluate_point_in_time_persistence_baselines(
     result["fitness_gate_enforced"] = True
     result["availability_gate"] = availability_column
     result["availability_gate_enforced"] = True
+    result["availability_provenance_gate"] = provenance_column
+    result["availability_provenance_gate_enforced"] = True
     result["training_outcome_availability_column"] = outcome_available_column
     result["benchmark_stage"] = "point_in_time_persistence_only"
     result["forecast_horizon_years"] = horizon
@@ -310,15 +328,17 @@ def point_in_time_persistence_errors(
     *,
     eligibility_column: str = "growth_eligible",
     availability_column: str = "point_in_time_available",
+    provenance_column: str = "availability_provenance_verified",
     forecast_origin_date_column: str = "forecast_origin_date",
     outcome_available_column: str = "outcome_available_date",
     outcome_column: str = "future_growth",
 ) -> pd.DataFrame:
-    """Return row-level errors after predictor and training-outcome timing gates."""
+    """Return row-level errors after auditable predictor and training-outcome timing gates."""
     gated = point_in_time_fitness_gated_forecast_panel(
         panel,
         eligibility_column=eligibility_column,
         availability_column=availability_column,
+        provenance_column=provenance_column,
     )
     horizon = _validate_single_horizon(gated)
     declared = _validate_declared_origins(gated, origins)
@@ -353,6 +373,8 @@ def point_in_time_persistence_errors(
     result["fitness_gate_enforced"] = True
     result["availability_gate"] = availability_column
     result["availability_gate_enforced"] = True
+    result["availability_provenance_gate"] = provenance_column
+    result["availability_provenance_gate_enforced"] = True
     result["training_outcome_availability_column"] = outcome_available_column
     result["benchmark_stage"] = "point_in_time_persistence_only"
     result["forecast_horizon_years"] = horizon

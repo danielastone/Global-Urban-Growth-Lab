@@ -32,6 +32,7 @@ def forecast_panel() -> pd.DataFrame:
                     "future_growth": future,
                     "growth_eligible": True,
                     "point_in_time_available": True,
+                    "availability_provenance_verified": True,
                     "forecast_origin_date": f"{start}-12-31",
                     "outcome_available_date": f"{end}-06-30",
                 }
@@ -63,6 +64,13 @@ def test_point_in_time_gate_requires_explicit_boolean_availability() -> None:
         point_in_time_fitness_gated_forecast_panel(panel)
 
 
+def test_point_in_time_gate_requires_verified_provenance() -> None:
+    panel = forecast_panel()
+    panel.loc[0, "availability_provenance_verified"] = False
+    with pytest.raises(SourceSchemaError, match="verified availability provenance"):
+        point_in_time_fitness_gated_forecast_panel(panel)
+
+
 def test_point_in_time_gate_excludes_late_rows_after_fitness_gate() -> None:
     panel = forecast_panel()
     panel.loc[
@@ -73,6 +81,7 @@ def test_point_in_time_gate_excludes_late_rows_after_fitness_gate() -> None:
     assert not ((result["city_id"] == "B") & (result["period_start"] == 2010)).any()
     assert not ((result["city_id"] == "C") & (result["period_start"] == 2010)).any()
     assert result["forecast_availability_gate_passed"].all()
+    assert result["forecast_availability_provenance_gate_passed"].all()
 
 
 def test_persistence_oos_requires_multiple_usable_origins() -> None:
@@ -109,6 +118,7 @@ def test_point_in_time_persistence_cannot_score_late_test_rows() -> None:
     assert counts.loc[2010, "persistence"] == 1
     assert result["fitness_gate_enforced"].all()
     assert result["availability_gate_enforced"].all()
+    assert result["availability_provenance_gate_enforced"].all()
     assert result["training_outcome_availability_enforced"].all()
     assert result["benchmark_stage"].eq("point_in_time_persistence_only").all()
 
@@ -147,4 +157,5 @@ def test_point_in_time_errors_cannot_reintroduce_late_rows() -> None:
     excluded = errors.loc[(errors["city_id"] == "C") & (errors["origin"] == 2010)]
     assert excluded.empty
     assert errors["availability_gate_enforced"].all()
+    assert errors["availability_provenance_gate_enforced"].all()
     assert errors["training_outcome_availability_enforced"].all()
