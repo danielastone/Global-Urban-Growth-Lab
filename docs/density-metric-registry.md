@@ -3,9 +3,12 @@
 `src/urban_growth/density_metrics.py` is the executable policy for Module C density
 measures. `data/density_metric_registry.csv` is its registered, reviewable output. A test
 requires the two representations to match exactly.
+`data/density_metric_pair_registry.csv` separately registers every predictor/outcome pairing;
+this prevents a metric-level `clean` label from being treated as universal permission.
 
-Each row fixes the metric ID, numerator and denominator sources, log-ratio formula, lineage,
-reported epochs, first admissible forecast origin, roles and temporal constraint. Downstream
+Each metric row fixes the ID, numerator and denominator sources, log-ratio formula, lineage
+scope, reported epochs, first admissible forecast origin, level/change estimands, roles and
+temporal constraint. Downstream
 density outputs use `attach_density_metric_references`; an unknown metric ID fails closed.
 
 ## Headline restrictions
@@ -19,8 +22,10 @@ Direct-census density metrics are clean only when the count remains direct enume
 registered support or uses a separately documented polygon allocation. The registry does not
 waive the census geography gate.
 
-Built surface per land area is clean of population allocation. Volume per surface is also clean
-of population, but it is not a vertical-growth series. All `GH_BUV_*` epochs use the fixed 2018
+Built surface per land area is clean of population allocation only against a direct-count
+outcome. Against WUP or GHS-POP it is registered sensitivity-only. Volume per surface is also
+free of a population numerator, but it is a level-only spatial descriptor and is neither an
+outcome nor a vertical-growth series. All `GH_BUV_*` epochs use the fixed 2018
 height layer. Their reported epochs begin in 1975, while their first valid forecast origin is
 2020. This distinction prevents a constructed historical epoch from being treated as information
 available before its height input existed.
