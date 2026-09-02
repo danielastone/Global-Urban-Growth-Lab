@@ -26,6 +26,11 @@ reclassification only after a documented constant-membership F21 cross-check clo
 within the registered tolerance. Until then it is an unidentified composition residual
 that may also contain coverage, cross-border, source, and geography differences.
 
+The fixed side of that cross-check is restricted to independently validated membership at the
+interval origin. Inclusion in a fixed 2025 polygon, or a building construction year no later
+than the origin, does not by itself establish Cities-class membership at the origin. If no
+origin-defined membership crosswalk exists, net reclassification is not identified.
+
 Module A must preserve the original F01 class-total outcome and its discontinuity
 flags. Any extent-density reconciliation using a GHS-POP-based density is
 construction-sensitive sensitivity evidence under the Module C lineage rule, not an

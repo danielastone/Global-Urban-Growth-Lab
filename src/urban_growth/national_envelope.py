@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from urban_growth.density_metrics import density_metric_registry
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
 
 DEGURBA_CATEGORIES = ("city", "town_and_semi_dense", "rural")
@@ -31,6 +32,8 @@ def extent_density_reconciliation(
         "country_code", "polygon_id", "period_start", "period_end",
         "built_surface_start", "built_surface_end", "density_start", "density_end",
         "density_metric_id", "density_lineage_status",
+        "origin_membership_eligible", "origin_membership_validated",
+        "origin_membership_basis",
     }
     national_required = {
         "country_code", "period_start", "period_end", "city_population_start",
@@ -77,9 +80,44 @@ def extent_density_reconciliation(
         raise SourceSchemaError("Fixed-polygon extent and density values must be finite")
     if (fixed[numeric_columns] < 0).any().any():
         raise SourceSchemaError("Fixed-polygon extent and density values must be nonnegative")
+    if not fixed["origin_membership_eligible"].isin([True, False]).all():
+        raise SourceSchemaError("origin_membership_eligible must be boolean")
+    if not fixed["origin_membership_validated"].eq(True).all():
+        raise SourceSchemaError("Every origin-membership decision must be independently validated")
+    if fixed["origin_membership_basis"].isna().any():
+        raise SourceSchemaError("Every fixed polygon requires an origin-membership basis")
+    if fixed["origin_membership_basis"].eq("year_of_construction_only").any():
+        raise SourceSchemaError("Construction year does not establish Cities-class membership")
     for column in ("density_metric_id", "density_lineage_status"):
         if fixed.groupby(interval_key)[column].nunique(dropna=False).gt(1).any():
             raise SourceSchemaError(f"Each country interval must use one {column}")
+    metric_registry = density_metric_registry().set_index("metric_id")
+    used_metric_ids = set(fixed["density_metric_id"])
+    unknown_metrics = used_metric_ids - set(metric_registry.index)
+    if unknown_metrics:
+        raise SourceSchemaError(f"Unregistered reconciliation density metric: {sorted(unknown_metrics)}")
+    invalid_denominators = [
+        metric_id for metric_id in used_metric_ids
+        if metric_registry.loc[metric_id, "denominator_source"] != "GH_BUS_TOT"
+    ]
+    if invalid_denominators:
+        raise SourceSchemaError(
+            "Extent-density reconciliation requires population per GH_BUS_TOT: "
+            f"{', '.join(sorted(invalid_denominators))}"
+        )
+    for metric_id in used_metric_ids:
+        supplied = set(fixed.loc[fixed["density_metric_id"].eq(metric_id), "density_lineage_status"])
+        expected = metric_registry.loc[metric_id, "lineage_status"]
+        if supplied != {expected}:
+            raise SourceSchemaError(f"Density lineage does not match registry for {metric_id}")
+
+    expected_fixed_intervals = set(map(tuple, fixed[interval_key].drop_duplicates().to_numpy()))
+    fixed = fixed.loc[fixed["origin_membership_eligible"]].copy()
+    if fixed.empty:
+        raise SourceSchemaError("No origin-eligible fixed polygons remain")
+    retained_intervals = set(map(tuple, fixed[interval_key].drop_duplicates().to_numpy()))
+    if retained_intervals != expected_fixed_intervals:
+        raise SourceSchemaError("At least one country interval has no origin-eligible fixed polygon")
 
     surface_start = fixed["built_surface_start"]
     surface_end = fixed["built_surface_end"]

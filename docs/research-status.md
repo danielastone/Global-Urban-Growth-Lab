@@ -234,6 +234,10 @@ cross-border and singleton failures show that the raw residual is not identified
 reclassification. Until that dependency closes, the output field is
 `unidentified_composition_residual`, `net_reclassification_change` is missing, and no
 expected-output manifest or empirical three-way decomposition may be registered.
+The executable additionally requires independently validated origin-membership eligibility for
+every fixed polygon and a population-per-`GH_BUS_TOT` density denominator. Construction year
+alone is rejected as Cities-class membership evidence. This makes the current identification
+block explicit rather than allowing future-defined 2025 membership to manufacture a residual.
 
 At the 2020 origin this removes 25 of 10,709 city rows (0.23%) but 25 of 189 countries
 (13.2%). Pooled metrics therefore move little, while equal-country metrics move more.
