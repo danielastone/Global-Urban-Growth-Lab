@@ -28,10 +28,16 @@ ALLOWED_ESTIMANDS = {"level", "change"}
 DIRECT_COUNT_OUTCOMES = {
     "census_density_level": "level",
     "census_density_change": "change",
+    "census_population_growth": "change",
+}
+DIRECT_COUNT_DENSITY_OUTCOMES = {
+    key: value for key, value in DIRECT_COUNT_OUTCOMES.items() if key.startswith("census_density_")
 }
 ENTANGLED_OUTCOMES = {
     "ghs_pop_density_level_sensitivity": "level",
     "ghs_pop_density_change_sensitivity": "change",
+    "wup_population_growth": "change",
+    "ghs_pop_population_growth": "change",
 }
 
 
@@ -191,17 +197,14 @@ def density_metric_pair_registry() -> pd.DataFrame:
         for outcome_id, estimand in {**DIRECT_COUNT_OUTCOMES, **ENTANGLED_OUTCOMES}.items():
             direct = outcome_id in DIRECT_COUNT_OUTCOMES
             headline = direct and metric.lineage_status == "clean"
-            estimand_allowed = estimand in set(metric.admissible_estimands.split("|"))
             rows.append(
                 {
                     "predictor_metric_id": metric.metric_id,
+                    "predictor_admissible_estimands": metric.admissible_estimands,
                     "outcome_id": outcome_id,
                     "outcome_estimand": estimand,
                     "pair_lineage_status": "clean" if headline else "lineage_entangled",
-                    "admissible_analysis_role": (
-                        "not_admissible" if not estimand_allowed
-                        else "headline" if headline else "sensitivity_only"
-                    ),
+                    "admissible_analysis_role": "headline" if headline else "sensitivity_only",
                 }
             )
     return pd.DataFrame(rows)
