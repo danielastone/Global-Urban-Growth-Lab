@@ -133,6 +133,25 @@
       "notes": "The v1.2 package readme explicitly replaces deprecated v1.1, despite the landing page still showing v1.1. Do not describe UCDB as an independent replication of WUP 2025; both depend on GHSL/DEGURBA. Fixed and dynamic values are different and not comparable except at 2025."
     },
     {
+      "source_id": "google_open_buildings_temporal_v1",
+      "priority": 2,
+      "status": "independent_height_pilot",
+      "publisher": "Google Research",
+      "dataset": "Open Buildings 2.5D Temporal",
+      "release": "v1",
+      "landing_page": "https://sites.research.google/gr/open-buildings/temporal/",
+      "documentation_url": "https://developers.google.com/earth-engine/datasets/catalog/GOOGLE_Research_open-buildings-temporal_v1",
+      "retrieval": "public_google_cloud_storage_cog",
+      "formats": ["cloud_optimized_geotiff"],
+      "coverage": "Annual 2016-2023; Africa, South Asia, Southeast Asia, Latin America and Caribbean",
+      "unit": "0.5 m release-grid pixel; approximately 4 m effective resolution",
+      "role": "Independent multi-date building presence and modeled height for fixed-polygon vertical/horizontal pilots",
+      "upstream_dependencies": [],
+      "redistribution": "CC_BY_4_0_elected",
+      "citation": "Sirko et al. (2023), High-Resolution Building and Road Detection from Sentinel-2; Google Open Buildings 2.5D Temporal v1.",
+      "notes": "No population or GHSL built-allocation input. Presence confidence is uncalibrated and varies with clouds and imagery alignment; threshold sensitivity is mandatory. CC BY 4.0 is elected over the alternative ODbL license."
+    },
+    {
       "source_id": "un_wpp_2024",
       "priority": 2,
       "status": "control",
