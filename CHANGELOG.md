@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add a synthetic border-conditioned rival-mass contract that preserves the existing
+  accessibility-band totals; this is infrastructure for H5, not an empirical finding.
+
 - Pre-register the lineage-clean open-covariate density model, comparator ladder, country-cluster falsification rule, fixed failure language, and fail-closed real-run gate.
 
 - Add the registered Module C density-metric policy, lineage/role enforcement, forecast-origin gates, and downstream metric-ID attachment.
