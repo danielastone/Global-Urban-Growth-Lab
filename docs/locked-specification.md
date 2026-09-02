@@ -40,7 +40,10 @@ causal story.
 Module C uses fixed, validated polygons. F01 Cities-class change is not a density outcome:
 it mixes in-place change with territory entering or leaving the class. Density metrics must
 identify the numerator, denominator, spatial support, reference date, availability date and
-lineage in a versioned metric registry before use.
+lineage in a versioned metric registry before use. Lineage is enforced for the
+predictor/outcome pair: `clean` for a built-form metric means clean against a registered
+direct-count outcome on enumerated support, not globally clean. Pairing the same metric with a
+GHS-POP- or WUP-based outcome is sensitivity-only.
 
 Any metric pairing GHS-POP, or GHS-POP-based WUP, with GHS-BUILT is
 `lineage_entangled` because the population surface inherits built-layer allocation. Such a
@@ -63,6 +66,16 @@ origin-available features against the contemporaneous-country baseline on a regi
 direct-count density outcome; persistence is also reported where applicable. Shared-lineage
 reconciliation is an accounting check or sensitivity, not external validation.
 
+Measurement epoch and public availability are separate clocks. Retrospective measurement tests
+may use a time-indexed observation at its measurement epoch but must not call it real-time or
+vintage-correct when the product was released later. Google Open Buildings Temporal is measured
+annually from 2016–2023 (level from 2016; first change from 2017) but is publicly available only
+from 2024. Copernicus DEM slope may be backcast as a registered time-invariant physical
+constraint in retrospective tests while retaining its actual public-availability date.
+
+`volume_per_surface` from GHSL snapshot-height-scaled epochs is a spatial level only. It is not
+an admissible change outcome or a measure of vertical growth.
+
 ### Open-covariate density model pre-registration
 
 No empirical density-model run may precede this registration or use a covariate absent from
@@ -77,12 +90,19 @@ terrain/constrained-land, accessibility and independent-height features availabl
 origin. VIIRS night lights is sensitivity-only. GHS-POP, WUP city population, and variables
 derived from either are excluded from the candidate covariate matrix.
 
-Evaluation holds out pilot cities and resamples complete country clusters. The covariate model
-passes only if its error is lower than the contemporaneous-country density-mean baseline under
-the registered country-cluster bootstrap. Otherwise the required conclusion is **“open-data
-density model not supported.”** Favourable and adverse model rows remain in the same registered
-result table. Every real run requires an expected-output manifest. Adding a covariate after
-outcomes are inspected requires a new dated registration and cannot revise the original test.
+Evaluation holds out pilot cities and uses a stratified state/entidad cluster bootstrap within
+country. With only Mexico and the United States, inference is limited to pilot regions and
+cannot support country-generalized or global uncertainty claims. The primary paired contrast is
+relative RMSE improvement over the contemporaneous-country model. The model passes only when
+the lower bound of its registered 95% interval is at least 5% and its MAE is no worse on
+identical rows.
+Otherwise the required conclusion is **“open-data density model not supported.”** Favourable
+and adverse model rows remain in the same registered result table.
+
+A caller boolean does not register an outcome. Before fitting, the code verifies the direct-count
+outcome's expected-output manifest, checksum, metric id, census vintage and enumerated spatial
+support. Adding a covariate after outcomes are inspected requires a new dated registration and
+cannot revise the original test.
 
 ## Module B model and estimator hierarchy
 
