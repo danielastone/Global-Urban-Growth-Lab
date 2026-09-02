@@ -132,6 +132,31 @@ Consequences:
 
 The official v1.2 GHSL thematic archive was retrieved and registered on 2026-08-27. Its CSV uses Windows-1252 encoding and contains 11,422 unique `ID_UC_G0` records and 551 columns. The adapter reads 12 five-year epochs from 1975 through 2030 for both `GH_POP_TOT_YYYY` (inhabitants) and `GH_BUS_TOT_YYYY` (square metres). All 274,128 values across those two families are present, numeric and positive.
 
+The same registered CSV carries `GH_BUV_TOT_YYYY` and `GH_BUV_NRE_YYYY` for all 12
+epochs, plus `GH_BUH_AVG_2020`. The UCDB height field is temporally labeled 2020, but its
+source is the 2018 GHS-BUILT-H composite; the normalized adapter field is therefore
+`built_up_height_avg_m_2018`. All 274,128 total and non-residential volume values are present
+and numeric. Total volume is positive; non-residential volume may be zero and never exceeds
+total volume.
+
+**Construction fact:** the volume epochs are epoch-specific built-surface layers scaled by the
+2018 height layer. They are not multi-date observations of building height. The registered
+lineage is `ghs_built_v_surface_epoch_scaled_by_2018_height`, and the height lineage is
+`ghs_built_h_2018_snapshot_ucdb_2020_label`. Historical changes in `GH_BUV_*` therefore
+combine surface-footprint change with the spatial distribution of a fixed height field and
+cannot be interpreted as vertical growth.
+
+The requested volume/surface reconciliation confirms the implication but rejects general
+polygon-level constancy. Across the 11,422 polygons, none has an exactly constant total-volume
+to total-surface ratio over all epochs; only 267 (2.3%) are within a 1% relative-span tolerance.
+The within-polygon relative span has median 11.0%,
+25th percentile 5.5%, 75th percentile 19.3%, and 95th percentile 35.4%. The cross-polygon
+median ratio declines from 7.95 m in 1975 to 7.22 m in 2030. This variation occurs because each
+epoch's built-surface mask samples a different subset of the fixed 2018 height field: entering
+and changing built cells have different fixed heights. It is evidence that `GH_BUV_*` is a
+surface-composition construct, not evidence of observed vertical change. Child issue 03 must
+still acquire an independent multi-date height source.
+
 The thematic archive is the fixed-boundary stream: every historical statistic is calculated inside the urban centre's 2025 boundary. The separately published MTUC archive follows changing boundaries. GHSL documentation says the two streams are different and not comparable except at 2025. Therefore a trend from the thematic archive describes change within today's footprint; it is not the city's historical spatial expansion.
 
 The publisher landing page still labels the release v1.1, but the official download script and archive readme identify v1.2, state that the data were last updated on 2026-05-15, and explicitly deprecate v1.1. The catalog records that discrepancy instead of silently downgrading the acquired package.

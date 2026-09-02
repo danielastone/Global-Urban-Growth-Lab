@@ -3,9 +3,11 @@ import pytest
 
 from urban_growth.adapters.ghsl_ucdb import (
     fixed_2025_theme_panel,
+    ghsl_built_volume_panel,
     indicator_panel,
     multitemporal_boundary_panel,
     reconcile_2025_streams,
+    reconcile_volume_surface,
 )
 from urban_growth.adapters.wup import (
     city_area_panel,
@@ -67,6 +69,64 @@ def test_ghsl_fixed_theme_rejects_non_numeric_measure() -> None:
     )
     with pytest.raises(SourceSchemaError, match="non-numeric population"):
         fixed_2025_theme_panel(source)
+
+
+def _built_volume_source() -> pd.DataFrame:
+    source = {
+        "ID_UC_G0": [1],
+        "GC_UCN_MAI_2025": ["Example"],
+        "GC_CNT_GAD_2025": ["Exampleland"],
+        "GC_UCA_KM2_2025": [12],
+        "GH_BUH_AVG_2020": [7.5],
+    }
+    for offset, year in enumerate(range(1975, 2031, 5)):
+        source[f"GH_BUV_TOT_{year}"] = [1_000 + 100 * offset]
+        source[f"GH_BUV_NRE_{year}"] = [100 + 10 * offset]
+    return pd.DataFrame(source)
+
+
+def test_ghsl_built_volume_panel_registers_lineage_and_fixed_height() -> None:
+    result = ghsl_built_volume_panel(_built_volume_source())
+    assert result["year"].tolist() == list(range(1975, 2031, 5))
+    assert result["built_up_volume_m3"].iloc[0] == 1_000
+    assert result["built_up_volume_nres_m3"].iloc[-1] == 210
+    assert result["built_up_height_avg_m_2018"].unique().tolist() == [7.5]
+    assert result["boundary_mode"].unique().tolist() == ["fixed"]
+    assert result["built_up_volume_lineage"].str.contains("2018_height").all()
+    assert result["built_up_height_lineage"].str.contains("2018_snapshot").all()
+
+
+def test_ghsl_built_volume_panel_fails_closed_on_missing_epoch() -> None:
+    source = _built_volume_source().drop(columns="GH_BUV_NRE_1985")
+    with pytest.raises(SourceSchemaError, match="missing columns: GH_BUV_NRE_1985"):
+        ghsl_built_volume_panel(source)
+
+
+def test_ghsl_built_volume_panel_rejects_nonresidential_above_total() -> None:
+    source = _built_volume_source()
+    source["GH_BUV_NRE_2000"] = 10_000
+    with pytest.raises(SourceSchemaError, match="exceeds total"):
+        ghsl_built_volume_panel(source)
+
+
+def test_volume_surface_reconciliation_reports_nonconstant_ratio() -> None:
+    volume = ghsl_built_volume_panel(_built_volume_source())
+    surface = volume[["city_id", "year", "boundary_product"]].copy()
+    surface["built_up_area_m2"] = 100.0
+    audit = reconcile_volume_surface(volume, surface, relative_span_tolerance=0.01)
+    assert audit["epoch_count"].tolist() == [12]
+    assert not audit["ratio_near_constant"].iloc[0]
+    assert audit["construction_interpretation"].iloc[0] == (
+        "fixed_2018_height_sampled_by_epoch_surface"
+    )
+
+
+def test_volume_surface_reconciliation_fails_on_key_mismatch() -> None:
+    volume = ghsl_built_volume_panel(_built_volume_source())
+    surface = volume[["city_id", "year", "boundary_product"]].iloc[:-1].copy()
+    surface["built_up_area_m2"] = 100.0
+    with pytest.raises(SourceSchemaError, match="different keys"):
+        reconcile_volume_surface(volume, surface)
 
 
 def test_ghsl_2025_stream_reconciliation_allows_population_rounding() -> None:

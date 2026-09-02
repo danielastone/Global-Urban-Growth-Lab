@@ -19,6 +19,10 @@ GHSL_MTUC_METADATA = [
     "GC_UCB_YOB _2025",
     "GC_UCB_YOD _2025",
 ]
+GHSL_BUILT_VOLUME_YEARS = tuple(range(1975, 2031, 5))
+GHSL_BUILT_VOLUME_LINEAGE = "ghs_built_v_surface_epoch_scaled_by_2018_height"
+GHSL_BUILT_VOLUME_NRES_LINEAGE = "ghs_built_v_nres_surface_epoch_scaled_by_2018_height"
+GHSL_BUILT_HEIGHT_LINEAGE = "ghs_built_h_2018_snapshot_ucdb_2020_label"
 
 
 def indicator_panel(
@@ -121,6 +125,130 @@ def fixed_2025_theme_panel(frame: pd.DataFrame) -> pd.DataFrame:
         panel, ["city_id", "year", "boundary_product"], source_name="GHS-UCDB theme"
     )
     return panel.sort_values(["city_id", "year"]).reset_index(drop=True)
+
+
+def ghsl_built_volume_panel(frame: pd.DataFrame) -> pd.DataFrame:
+    """Normalize UCDB volume epochs and its single 2018 height snapshot.
+
+    UCDB labels the height statistic ``GH_BUH_AVG_2020`` because its thematic
+    temporal coverage is 2020. The underlying GHS-BUILT-H composite is dated
+    2018, so the normalized measure names the observation vintage explicitly.
+    Volume epochs are constructed by applying that fixed height surface to each
+    epoch's built-up surface; they are not observations of vertical change.
+    """
+    required = {
+        "ID_UC_G0",
+        *GHSL_THEME_METADATA,
+        "GH_BUH_AVG_2020",
+        *(f"GH_BUV_TOT_{year}" for year in GHSL_BUILT_VOLUME_YEARS),
+        *(f"GH_BUV_NRE_{year}" for year in GHSL_BUILT_VOLUME_YEARS),
+    }
+    require_columns(frame, required, source_name="GHS-UCDB built volume R2024A v1.2")
+    total = indicator_panel(
+        frame,
+        city_id_column="ID_UC_G0",
+        metadata_columns=GHSL_THEME_METADATA,
+        indicator_pattern=r"GH_BUV_TOT_(?P<year>\d{4})",
+        value_name="built_up_volume_m3",
+        boundary_product="ucdb_fixed_2025_boundary",
+    )
+    nonresidential = indicator_panel(
+        frame,
+        city_id_column="ID_UC_G0",
+        metadata_columns=GHSL_THEME_METADATA,
+        indicator_pattern=r"GH_BUV_NRE_(?P<year>\d{4})",
+        value_name="built_up_volume_nres_m3",
+        boundary_product="ucdb_fixed_2025_boundary",
+    )
+    keys = [
+        "city_id",
+        *GHSL_THEME_METADATA,
+        "year",
+        "boundary_mode",
+        "boundary_product",
+    ]
+    panel = total.merge(nonresidential, on=keys, validate="one_to_one")
+    observed_years = tuple(sorted(panel["year"].unique()))
+    if observed_years != GHSL_BUILT_VOLUME_YEARS:
+        raise SourceSchemaError(
+            "GHS-UCDB built volume epochs disagree with registered 1975-2030 schema"
+        )
+    height = _publisher_numeric(frame["GH_BUH_AVG_2020"], column="GH_BUH_AVG_2020")
+    height_by_city = pd.Series(height.to_numpy(), index=frame["ID_UC_G0"])
+    if height_by_city.index.has_duplicates:
+        raise SourceSchemaError("GHS-UCDB built volume contains duplicate ID_UC_G0")
+    panel["built_up_height_avg_m_2018"] = panel["city_id"].map(height_by_city)
+    measures = [
+        "built_up_volume_m3",
+        "built_up_volume_nres_m3",
+        "built_up_height_avg_m_2018",
+    ]
+    for column in measures[:2]:
+        panel[column] = _publisher_numeric(panel[column], column=column)
+    if panel[measures].isna().any().any():
+        raise SourceSchemaError("GHS-UCDB built volume has missing registered measures")
+    if (panel["built_up_volume_m3"] <= 0).any():
+        raise SourceSchemaError("GHS-UCDB total built volume must be positive")
+    if (panel[["built_up_volume_nres_m3", "built_up_height_avg_m_2018"]] < 0).any().any():
+        raise SourceSchemaError("GHS-UCDB non-residential volume and height must be nonnegative")
+    if (panel["built_up_height_avg_m_2018"] == 0).any():
+        raise SourceSchemaError("GHS-UCDB average built height must be positive")
+    if (panel["built_up_volume_nres_m3"] > panel["built_up_volume_m3"]).any():
+        raise SourceSchemaError("GHS-UCDB non-residential volume exceeds total volume")
+    panel["built_up_volume_lineage"] = GHSL_BUILT_VOLUME_LINEAGE
+    panel["built_up_volume_nres_lineage"] = GHSL_BUILT_VOLUME_NRES_LINEAGE
+    panel["built_up_height_lineage"] = GHSL_BUILT_HEIGHT_LINEAGE
+    panel = panel.rename(columns={"GC_UCA_KM2_2025": "urban_centre_area_km2"})
+    reject_duplicate_keys(
+        panel, ["city_id", "year", "boundary_product"], source_name="GHS-UCDB built volume"
+    )
+    return panel.sort_values(["city_id", "year"]).reset_index(drop=True)
+
+
+def reconcile_volume_surface(
+    volume_panel: pd.DataFrame,
+    surface_panel: pd.DataFrame,
+    *,
+    relative_span_tolerance: float = 0.01,
+) -> pd.DataFrame:
+    """Measure, but do not assume, within-polygon volume/surface constancy."""
+    if relative_span_tolerance < 0:
+        raise ValueError("relative_span_tolerance must be nonnegative")
+    volume_required = {"city_id", "year", "boundary_product", "built_up_volume_m3"}
+    surface_required = {"city_id", "year", "boundary_product", "built_up_area_m2"}
+    require_columns(volume_panel, volume_required, source_name="GHS-UCDB volume panel")
+    require_columns(surface_panel, surface_required, source_name="GHS-UCDB surface panel")
+    reject_duplicate_keys(
+        volume_panel, ["city_id", "year", "boundary_product"], source_name="volume panel"
+    )
+    reject_duplicate_keys(
+        surface_panel, ["city_id", "year", "boundary_product"], source_name="surface panel"
+    )
+    joined = volume_panel[list(volume_required)].merge(
+        surface_panel[list(surface_required)],
+        on=["city_id", "year", "boundary_product"],
+        how="outer",
+        validate="one_to_one",
+        indicator=True,
+    )
+    if joined["_merge"].ne("both").any():
+        raise SourceSchemaError("GHS-UCDB volume and surface panels have different keys")
+    if (joined[["built_up_volume_m3", "built_up_area_m2"]] <= 0).any().any():
+        raise SourceSchemaError("GHS-UCDB volume/surface reconciliation requires positive values")
+    joined["volume_surface_ratio_m"] = (
+        joined["built_up_volume_m3"] / joined["built_up_area_m2"]
+    )
+    audit = joined.groupby("city_id")["volume_surface_ratio_m"].agg(
+        ratio_min_m="min", ratio_max_m="max", ratio_mean_m="mean", epoch_count="size"
+    )
+    if audit["epoch_count"].ne(len(GHSL_BUILT_VOLUME_YEARS)).any():
+        raise SourceSchemaError("GHS-UCDB reconciliation requires all registered epochs")
+    audit["relative_ratio_span"] = (
+        (audit["ratio_max_m"] - audit["ratio_min_m"]) / audit["ratio_mean_m"]
+    )
+    audit["ratio_near_constant"] = audit["relative_ratio_span"].le(relative_span_tolerance)
+    audit["construction_interpretation"] = "fixed_2018_height_sampled_by_epoch_surface"
+    return audit.reset_index()
 
 
 def reconcile_2025_streams(
