@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Register UCDB total/non-residential built volume and the underlying 2018 height snapshot on
+  fixed 2025 polygons, with fail-closed lineage and volume/surface reconciliation checks.
+
+## Unreleased
+
 - License repository software under Apache-2.0 while explicitly excluding
   third-party data from that grant.
 - Add a deny-by-default, machine-readable data-rights registry covering research,
