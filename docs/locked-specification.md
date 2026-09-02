@@ -35,6 +35,34 @@ The form module has three distinct specifications:
 If C2 and C3 both predict, report joint dynamic adjustment rather than selecting a one-way
 causal story.
 
+### Module C density and form extension
+
+Module C uses fixed, validated polygons. F01 Cities-class change is not a density outcome:
+it mixes in-place change with territory entering or leaving the class. Density metrics must
+identify the numerator, denominator, spatial support, reference date, availability date and
+lineage in a versioned metric registry before use.
+
+Any metric pairing GHS-POP, or GHS-POP-based WUP, with GHS-BUILT is
+`lineage_entangled` because the population surface inherits built-layer allocation. Such a
+metric is sensitivity-only and cannot validate the built layer or serve as the primary density
+outcome. A census count is an independent numerator only on its enumerated support. If census
+units are allocated into an analysis polygon, the allocation method, overlap coverage and
+uncertainty are explicit; the resulting polygon estimate is not described as direct enumeration.
+
+GHS-BUILT-H is a 2018 snapshot. Historical GHS-BUILT-V epochs combine changing built
+surface with that snapshot height and therefore do not observe multi-epoch vertical change.
+They may describe constructed volume under the tag `snapshot_height_scaled_surface`, but
+vertical-growth language requires an independent multi-date height or floor-space source.
+The registered decomposition reports horizontal extent change, within-common-support vertical
+change, entering-cell composition and an interaction or residual separately.
+
+Every C3 form or density feature carries `source_date` and `available_from`. The 2018 snapshot
+height is unavailable to forecast origins before 2020. Feature selection, tuning and practical
+improvement thresholds are fixed without later-origin outcomes. The primary test compares
+origin-available features against the contemporaneous-country baseline on a registered
+direct-count density outcome; persistence is also reported where applicable. Shared-lineage
+reconciliation is an accounting check or sensitivity, not external validation.
+
 ## Module B model and estimator hierarchy
 
 The general retrospective template is:
@@ -130,8 +158,9 @@ a fixed pool” are prohibited without separate identification.
 
 Code must fail on duplicate keys, nonpositive population, future leakage, endpoint-derived tier
 membership, cumulative travel-time bands, unresolved census geography, absent census endpoints,
-empty ILR cells represented as zero, and lineage-undisclosed form variables. Every exclusion
-receives a machine-readable reason.
+empty ILR cells represented as zero, lineage-undisclosed form variables, primary use of a
+`lineage_entangled` density metric, pre-availability C3 features, and claims of vertical change
+from snapshot-height-scaled surface epochs. Every exclusion receives a machine-readable reason.
 
 ## Feasibility register
 
@@ -148,6 +177,7 @@ receives a machine-readable reason.
 | O9 | Forecastable national envelope | Separate forecast-module specification |
 | O10 | India census scope | Test 2001–2011 as historical-only; defer modern validation until Census 2027 locality outputs and crosswave concordances exist |
 | O11 | U.S. Census place pipeline | Validate code on direct 2010/2020 enumerations and official one-to-one boundary relationships; does not close O1–O3 |
+| O12 | Density and vertical-form extension | Complete #145: register a direct-count density outcome, acquire an independent multi-date height source, and test origin-valid C3 improvement |
 
 No shrinkage model can manufacture missing within-country information. The recovered
 country-period effect diagnostic excludes cells with fewer than three eligible cities and
