@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Pre-register the lineage-clean open-covariate density model, comparator ladder, country-cluster
+  falsification rule, fixed failure language, and fail-closed real-run gate.
+
 - License repository software under Apache-2.0 while explicitly excluding
   third-party data from that grant.
 - Add a deny-by-default, machine-readable data-rights registry covering research,
