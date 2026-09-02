@@ -3,11 +3,73 @@ import pytest
 
 from urban_growth.io import SourceSchemaError
 from urban_growth.national_envelope import (
+    extent_density_reconciliation,
     national_envelope_feature_registry,
     national_envelope_forecast_features,
     national_envelope_intervals,
     national_envelope_summaries,
 )
+
+
+def reconciliation_inputs(validated: bool = True):
+    fixed = pd.DataFrame([
+        {"country_code": "X", "polygon_id": "a", "period_start": 2000,
+         "period_end": 2005, "built_surface_start": 10.0, "built_surface_end": 12.0,
+         "density_start": 4.0, "density_end": 5.0,
+         "density_metric_id": "census_pop_per_built_surface",
+         "density_lineage_status": "clean"},
+        {"country_code": "X", "polygon_id": "b", "period_start": 2000,
+         "period_end": 2005, "built_surface_start": 5.0, "built_surface_end": 6.0,
+         "density_start": 2.0, "density_end": 2.0,
+         "density_metric_id": "census_pop_per_built_surface",
+         "density_lineage_status": "clean"},
+    ])
+    national = pd.DataFrame([{
+        "country_code": "X", "period_start": 2000, "period_end": 2005,
+        "city_population_start": 50.0, "city_population_end": 80.0,
+        "category_presence_transition": False, "large_share_change_flag": False,
+        "large_share_change_threshold": 0.25, "composition_discontinuity_flag": False,
+        "interval_observation_status": "retrospective_revised_estimate",
+    }])
+    membership = pd.DataFrame([{
+        "country_code": "X", "period_start": 2000, "period_end": 2005,
+        "f21_population_start": 50.0, "f21_population_end": 72.0,
+        "constant_membership_validated": validated,
+        "membership_semantics_source": "publisher-methodology" if validated else None,
+    }])
+    return fixed, national, membership
+
+
+def test_extent_density_reconciliation_is_exact_and_inherits_flags() -> None:
+    result = extent_density_reconciliation(*reconciliation_inputs()).iloc[0]
+    assert result["fixed_polygon_population_change"] == pytest.approx(22.0)
+    assert result["horizontal_extent_change"] == pytest.approx(11.0)
+    assert result["in_place_densification_change"] == pytest.approx(11.0)
+    assert result["f01_composition_residual"] == pytest.approx(8.0)
+    assert result["net_reclassification_change"] == pytest.approx(8.0)
+    assert result["residual_interpretation"] == "net_reclassification"
+    assert result["f01_reconciliation_error"] == pytest.approx(0.0)
+    assert not result["composition_discontinuity_flag"]
+
+
+def test_extent_density_reconciliation_fails_closed_on_unvalidated_membership() -> None:
+    result = extent_density_reconciliation(*reconciliation_inputs(validated=False)).iloc[0]
+    assert result["residual_interpretation"] == "unidentified_composition_residual"
+    assert pd.isna(result["net_reclassification_change"])
+
+
+def test_extent_density_reconciliation_fails_closed_when_f21_does_not_close() -> None:
+    fixed, national, membership = reconciliation_inputs()
+    membership["f21_population_end"] = 60.0
+    result = extent_density_reconciliation(fixed, national, membership).iloc[0]
+    assert not result["f21_crosscheck_within_tolerance"]
+    assert result["residual_interpretation"] == "unidentified_composition_residual"
+
+
+def test_extent_density_reconciliation_rejects_duplicate_polygons() -> None:
+    fixed, national, membership = reconciliation_inputs()
+    with pytest.raises(SourceSchemaError, match="duplicate"):
+        extent_density_reconciliation(pd.concat([fixed, fixed.iloc[[0]]]), national, membership)
 
 
 def envelope_panel() -> pd.DataFrame:
