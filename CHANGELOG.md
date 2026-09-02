@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add exact fixed-polygon horizontal/vertical accounting, register the independent Google Open
+  Buildings Temporal source, and record the first 2016–2023 Ghana pilot with threshold sensitivity.
+
+## Unreleased
+
 - License repository software under Apache-2.0 while explicitly excluding
   third-party data from that grant.
 - Add a deny-by-default, machine-readable data-rights registry covering research,
