@@ -7,7 +7,10 @@ from pathlib import Path
 
 import pandas as pd
 
-from urban_growth.density_metrics import DIRECT_COUNT_OUTCOMES, require_density_metric_role
+from urban_growth.density_metrics import (
+    DIRECT_COUNT_DENSITY_OUTCOMES,
+    require_density_metric_role,
+)
 from urban_growth.io import SourceSchemaError
 from urban_growth.result_manifest import verify_result_manifest
 
@@ -177,6 +180,7 @@ def _require_registered_density_outcome(
     with manifest_path.open(newline="", encoding="utf-8") as handle:
         entries = list(csv.DictReader(handle))
     matches = []
+    qualifying_files = 0
     for entry in entries:
         path = root / entry["path"]
         frame = pd.read_csv(path)
@@ -185,6 +189,7 @@ def _require_registered_density_outcome(
             continue
         if frame.empty:
             continue
+        qualifying_files += 1
         identities = frame[list(required)].drop_duplicates()
         if len(identities) != 1:
             raise SourceSchemaError("Registered density outcome has ambiguous identity metadata")
@@ -193,9 +198,13 @@ def _require_registered_density_outcome(
             if identity["spatial_support"] != "enumerated_support":
                 raise SourceSchemaError("Direct-count density outcome must use enumerated support")
             matches.append(path)
-    if len(matches) != 1:
+    if not matches and not qualifying_files:
+        raise SourceSchemaError("Manifest has no qualifying direct-count density outcome artifact")
+    if not matches:
+        raise SourceSchemaError("No manifest-verified density outcome matches the requested identity")
+    if len(matches) > 1:
         raise SourceSchemaError(
-            "Expected exactly one manifest-verified registered direct-count density outcome"
+            "Multiple manifest-verified density outcomes match the requested identity"
         )
     return matches[0]
 
@@ -217,9 +226,9 @@ def require_density_model_run(
     unknown = sorted(set(covariate_ids) - set(registry.index))
     if unknown:
         raise SourceSchemaError(f"Unregistered density covariates: {', '.join(unknown)}")
-    if outcome_role != "primary_direct_count" or outcome_id not in DIRECT_COUNT_OUTCOMES:
+    if outcome_role != "primary_direct_count" or outcome_id not in DIRECT_COUNT_DENSITY_OUTCOMES:
         raise SourceSchemaError("Primary density model requires a registered direct-count outcome")
-    expected_estimand = DIRECT_COUNT_OUTCOMES[outcome_id]
+    expected_estimand = DIRECT_COUNT_DENSITY_OUTCOMES[outcome_id]
     if model_form != expected_estimand:
         raise SourceSchemaError("Model form does not match the registered outcome estimand")
     require_density_metric_role(outcome_metric_id, "outcome", estimand=model_form)

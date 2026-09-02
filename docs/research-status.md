@@ -239,6 +239,16 @@ every fixed polygon and a population-per-`GH_BUS_TOT` density denominator. Const
 alone is rejected as Cities-class membership evidence. This makes the current identification
 block explicit rather than allowing future-defined 2025 membership to manufacture a residual.
 
+The corrected timing registry also limits what the current primary density-change test can
+answer. The only available direct-count interval is 2010–2020, with origin 2010. At that origin,
+the admissible primary covariates are built-surface share, retrospectively backcast terrain slope
+as a time-invariant constraint, and GHSL land fraction. No independent height series begins
+before 2016. Vertical or height-change information therefore cannot enter the primary 2010–2020
+change test. The epic's vertical-form exit condition requires a later direct-count design: for
+example, a post-2016 census interval such as 2020–2030, or a separately preregistered
+cross-sectional design relating 2016–2020 Open Buildings change to 2020 census levels. It is not
+reachable from the currently available 2010 and 2020 census endpoints.
+
 At the 2020 origin this removes 25 of 10,709 city rows (0.23%) but 25 of 189 countries
 (13.2%). Pooled metrics therefore move little, while equal-country metrics move more.
 The substantive ranking does not change:

@@ -82,6 +82,21 @@ def test_primary_run_requires_manifest_verified_direct_count_outcome(tmp_path: P
         require_density_model_run(**args)
 
 
+def test_manifest_without_qualifying_outcome_reports_absence(tmp_path: Path) -> None:
+    args = run_args(tmp_path)
+    output = tmp_path / "outputs" / "density_outcome.csv"
+    frame = pd.DataFrame({"unrelated_result": [1.0]})
+    frame.to_csv(output, index=False)
+    pd.DataFrame([{
+        "path": "outputs/density_outcome.csv",
+        "sha256": file_sha256(output),
+        "rows": 1,
+        "columns": 1,
+    }]).to_csv(tmp_path / "manifest.csv", index=False)
+    with pytest.raises(SourceSchemaError, match="no qualifying"):
+        require_density_model_run(**args)
+
+
 def test_unregistered_and_sensitivity_covariates_fail_closed(tmp_path: Path) -> None:
     with pytest.raises(SourceSchemaError, match="Unregistered"):
         require_density_model_run(**run_args(tmp_path, covariate_ids=["new_feature"]))
