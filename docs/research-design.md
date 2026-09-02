@@ -14,6 +14,23 @@ g(i,t,t+h) = [log(population(i,t+h)) - log(population(i,t))] / h
 
 Report decimal annual growth and percentage-point equivalents. Do not mix annual and five-year coefficients.
 
+## Module A: national settlement envelope
+
+F01 Cities-class change is a class-total accounting outcome, not pure in-place
+demographic growth. Conceptually it contains population change within a fixed city
+universe plus class-composition change from territory or settlements entering and
+leaving the Cities class. Within fixed polygons, the population identity is separated
+exactly into in-place density change and built-surface expansion with their interaction
+allocated symmetrically. The remaining difference from F01 may be named net
+reclassification only after a documented constant-membership F21 cross-check closes
+within the registered tolerance. Until then it is an unidentified composition residual
+that may also contain coverage, cross-border, source, and geography differences.
+
+Module A must preserve the original F01 class-total outcome and its discontinuity
+flags. Any extent-density reconciliation using a GHS-POP-based density is
+construction-sensitive sensitivity evidence under the Module C lineage rule, not an
+independent demographic validation.
+
 ## Baseline ladder
 
 Models must be evaluated in this order:
