@@ -21,7 +21,23 @@ A country can be strong on one dimension and weak or unobserved on another. Down
 analysis must select the dimensions relevant to its estimand rather than average all
 available evidence.
 
-## Non-negotiable v1 rules
+## V1 decision rule
+
+V1 will not produce universal A–E tiers. It will publish versioned dimension-level
+evidence, continuous measures where defensible, documentary categorical fields,
+missingness states, and population coverage. Any later tier must be tied to a specific
+downstream use case—for example, national comparisons, city-growth estimation, locality
+forecasting, or historical panel analysis—and evaluated through a separate preregistered
+issue. There may never be one defensible universal tier.
+
+The dimensions do not yet have validated common operational definitions, empirical
+missingness is unknown, some fields are measurements while others are documentary
+judgments, and the retained SPI components may be strongly correlated. "Higher
+reliability" is outcome-specific. Weights cannot be justified before coverage,
+redundancy, revision behavior, and downstream relevance are known. Preregistering
+boundaries now would document their arbitrariness, not cure it.
+
+Additional non-negotiable rules:
 
 - No universal A–E tiers and no cross-dimension composite score.
 - Publish source fields and defensible continuous measures before derived categories.
@@ -186,9 +202,13 @@ Required SPI fields:
 | `source_missing` | Explicit source missingness flag |
 | `snapshot_id` | Raw-release lineage |
 
-Before any statistical-capacity summary is proposed, report coverage, revision behavior,
-pairwise correlations, and duplicated upstream sources. The overall SPI score is not a
-population-reliability score.
+Before any statistical-capacity summary is proposed, report coverage by country and year,
+pairwise correlations, duplicated source indicators, revision behavior across SPI
+vintages, and whether retained components measure production capacity or merely product
+availability. Pin the exact SPI data release and the project's transformation logic. Do
+not vendor the entire upstream SPI codebase without a separately justified need. The
+overall SPI score is not a population-reliability score, and the three retained pillars
+must not be averaged automatically.
 
 Implementation: [#166](https://github.com/danielastone/Global-Urban-Growth-Lab/issues/166).
 
@@ -206,13 +226,13 @@ but a flat `years_since_census` field is not the primary record.
 | `census_round` | Publisher-defined round where available |
 | `census_reference_date` | Population reference date |
 | `enumeration_start_date` | Fieldwork start, if applicable |
-| `enumeration_end_date` | Fieldwork end, if applicable |
 | `enumeration_basis` | `de_facto`, `de_jure`, `register_based`, `combined`, or `unknown` |
 | `geographic_coverage` | Controlled coverage category plus source text |
-| `results_status` | `planned`, `enumerated`, `preliminary`, `final`, `partial`, `unpublished`, or `unknown` |
+| `results_status` | `preliminary`, `final`, `partially_published`, `unpublished`, or `unknown` |
 | `post_enumeration_survey_status` | `none_reported`, `planned`, `conducted`, `published`, or `unknown` |
+| `pes_results_published` | `yes`, `no`, or `unknown`; separate from whether a PES was conducted |
 | `estimated_net_undercount` | Source value; never inferred from recency |
-| `coverage_adjustment_applied` | `yes`, `no`, or `unknown` |
+| `official_coverage_adjustment_applied` | `yes`, `no`, or `unknown` |
 | `snapshot_id` | Assertion provenance |
 
 Unknown is an explicit documentary state, not an invitation to infer `no`.
@@ -225,9 +245,9 @@ Unknown is an explicit documentary state, not an invitation to infer `no`.
 | `estimate_series` | For example, WPP or IDB |
 | `estimate_vintage` | Named estimate release |
 | `census_event_id` | Candidate incorporated census |
-| `incorporation_status` | `incorporated`, `partially_incorporated`, `not_incorporated`, or `unknown` |
+| `census_incorporated` | `yes`, `partially`, `no`, or `unknown`; always estimate-vintage qualified |
 | `incorporation_method` | Publisher description; no analyst invention |
-| `evidence_strength` | `explicit`, `inferred_documented`, or `unknown` |
+| `source_evidence_level` | `explicit`, `inferred_documented`, or `unknown` |
 | `snapshot_id` | Methodology or country-note evidence |
 
 Assertions from UNSD, UNFPA, WPP, and IDB may disagree. Preserve separate source rows and
@@ -280,10 +300,11 @@ Derived reporting may distinguish:
 - publication lag;
 - retrieval age;
 - projection distance; and
-- expected update interval.
+- expected update frequency.
 
 These quantities must not be averaged across unlike source processes without a declared
-use case.
+use case. A five-year-old census and a five-year-old annual administrative series are not
+equivalently stale.
 
 ## Prospective survey-pipeline risk
 
@@ -293,12 +314,11 @@ One row records one dated event:
 |---|---|
 | `pipeline_event_id` | Stable event identifier |
 | `country_id` | Country affected; nullable only for explicitly multi-country program events |
-| `program_name` | Program or survey series |
-| `survey_name` | Specific survey where known |
+| `survey_program` | Program or survey series; retain a specific survey identifier where known |
 | `planned_milestone` | Fieldwork, publication, processing, or funding milestone |
-| `planned_date` | Original expected date |
-| `event_type` | `cancelled`, `delayed`, `fieldwork_suspended`, `publication_halted`, `funding_ended`, `funding_restored`, or `schedule_revised` |
+| `disruption_type` | `cancelled`, `delayed`, `fieldwork_suspended`, `publication_halted`, `funding_ended`, `funding_restored`, or `schedule_revised` |
 | `event_date` | Date the event occurred or was announced |
+| `evidence_source` | Human-readable source citation plus `snapshot_id` lineage |
 | `replacement_funding_status` | `none_identified`, `partial`, `full`, or `unknown` |
 | `expected_next_observation` | Date/year if documented |
 | `assessment_status` | `confirmed`, `provisional`, `resolved`, or `unknown` |
@@ -332,11 +352,14 @@ Every report declares a population source, population vintage, reference year, u
 and country/territory policy. For each dimension and assessment reference date, it must
 reconcile:
 
-`total population = scored + partially observed + unassessable + unmatched geography`
+`P_total = P_scored + P_partial + P_unassessable + P_unmatched_geography`
 
 The output includes population totals, shares, and unweighted country counts for every
-state. It also reports duplicate identifiers, missing population weights, dependencies,
-and disputed-area treatment. A report that covers only matched countries may not label its
+state. It also reports the reference population vintage, country/territory inclusion
+policy, dependencies and disputed-area treatment, duplicate identifiers, missing
+population weights, and ISO/country-crosswalk failures. Crosswalk tests must include known
+name variants such as `DR Congo`/`Congo, Dem. Rep.`, `Turkey`/`Türkiye`, and `South
+Korea`/`Korea, Rep.`. A report that covers only matched countries may not label its
 denominator as world population.
 
 Weighting measures evidence coverage. It does not validate the evidence and it does not
@@ -356,22 +379,32 @@ boundaries valid.
 
 Post-v1 issue: [#165](https://github.com/danielastone/Global-Urban-Growth-Lab/issues/165).
 
-## Dependency and delivery order
+## Dependency structure
 
-| Order | Issue | Deliverable |
-|---:|---|---|
-| 1 | #167 | Provenance and vintage foundation |
-| 2 | #169 | Missingness and assessment-state foundation |
-| 3a | #166 | SPI vertical slice |
-| 3b | #163 | Census-status vertical slice |
-| 3c | #170 | Shared weighted-coverage utility |
-| 4a | #168 | Prospective pipeline-risk events |
-| 4b | #164 | Separate spatial diagnostics |
-| post-v1 | #165 | Use-case-specific calibration/tier sensitivity |
+| Sub-issue | Status | Actual dependency |
+|---|---|---|
+| #167 provenance and vintage control | P0 foundation | None |
+| #169 missingness taxonomy | P0 foundation | Schema conventions from #167 |
+| #166 World Bank SPI | Independent P1 vertical slice | #169 and #167 |
+| #163 census status | Independent P1 vertical slice | #169 and #167 |
+| #168 DHS/USAID risk | Independent P2 vertical slice | #169 and #167; not #166 or #163 |
+| #164 spatial diagnostics | Separate workstream | #167 plus geographic-identity/boundary-validation infrastructure |
+| #170 population-weighted reporting | Shared utility | #169 and #167; usable as soon as any dimension exists |
+| #165 calibration and sensitivity | Deferred integration | #166, #163, #169, #167, and #170 plus explicit construct definitions |
 
-Issues in the same numbered stage may proceed in parallel. Issue #164 additionally depends
-on appropriate geographic-identity and boundary-validation contracts. Issue #165 remains
-blocked until empirical coverage and correlation are known.
+Only #167 and #169 are globally blocking. Issues #166 and #163 are parallelizable; neither
+depends on the other. Issue #165 remains blocked until empirical coverage and
+cross-dimension correlation are known.
+
+## Build sequence
+
+1. Implement the provenance schema and missingness semantics (#167, then #169).
+2. Ship SPI as the first complete vertical slice (#166).
+3. Ship census foundation separately (#163).
+4. Add reusable population-weighted reporting (#170).
+5. Build the DHS risk table (#168) and spatial layer (#164) independently.
+6. Consider calibration or scoring (#165) only after empirical coverage and
+   cross-dimension correlation are known.
 
 ## Validation requirements
 
