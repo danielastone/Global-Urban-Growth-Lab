@@ -17,12 +17,16 @@ def reconciliation_inputs(validated: bool = True):
          "period_end": 2005, "built_surface_start": 10.0, "built_surface_end": 12.0,
          "density_start": 4.0, "density_end": 5.0,
          "density_metric_id": "census_pop_per_built_surface",
-         "density_lineage_status": "clean"},
+         "density_lineage_status": "clean", "origin_membership_eligible": True,
+         "origin_membership_validated": True,
+         "origin_membership_basis": "validated_publisher_origin_membership"},
         {"country_code": "X", "polygon_id": "b", "period_start": 2000,
          "period_end": 2005, "built_surface_start": 5.0, "built_surface_end": 6.0,
          "density_start": 2.0, "density_end": 2.0,
          "density_metric_id": "census_pop_per_built_surface",
-         "density_lineage_status": "clean"},
+         "density_lineage_status": "clean", "origin_membership_eligible": True,
+         "origin_membership_validated": True,
+         "origin_membership_basis": "validated_publisher_origin_membership"},
     ])
     national = pd.DataFrame([{
         "country_code": "X", "period_start": 2000, "period_end": 2005,
@@ -70,6 +74,21 @@ def test_extent_density_reconciliation_rejects_duplicate_polygons() -> None:
     fixed, national, membership = reconciliation_inputs()
     with pytest.raises(SourceSchemaError, match="duplicate"):
         extent_density_reconciliation(pd.concat([fixed, fixed.iloc[[0]]]), national, membership)
+
+
+def test_extent_density_reconciliation_requires_built_surface_density() -> None:
+    fixed, national, membership = reconciliation_inputs()
+    fixed["density_metric_id"] = "pop_per_land_area"
+    fixed["density_lineage_status"] = "lineage_entangled"
+    with pytest.raises(SourceSchemaError, match="requires population per GH_BUS_TOT"):
+        extent_density_reconciliation(fixed, national, membership)
+
+
+def test_extent_density_reconciliation_rejects_construction_year_as_membership() -> None:
+    fixed, national, membership = reconciliation_inputs()
+    fixed["origin_membership_basis"] = "year_of_construction_only"
+    with pytest.raises(SourceSchemaError, match="does not establish Cities-class membership"):
+        extent_density_reconciliation(fixed, national, membership)
 
 
 def envelope_panel() -> pd.DataFrame:
