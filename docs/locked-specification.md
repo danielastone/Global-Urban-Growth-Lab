@@ -44,6 +44,8 @@ lineage in a versioned metric registry before use. Lineage is enforced for the
 predictor/outcome pair: `clean` for a built-form metric means clean against a registered
 direct-count outcome on enumerated support, not globally clean. Pairing the same metric with a
 GHS-POP- or WUP-based outcome is sensitivity-only.
+This pair registry includes WUP population growth, GHS-POP population growth and direct-census
+population growth as well as density outcomes; an unlisted outcome fails closed.
 
 Any metric pairing GHS-POP, or GHS-POP-based WUP, with GHS-BUILT is
 `lineage_entangled` because the population surface inherits built-layer allocation. Such a
