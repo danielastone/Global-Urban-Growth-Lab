@@ -4,6 +4,8 @@
 
 - Add the registered Module C density-metric policy, lineage/role enforcement, forecast-origin
   gates, and downstream metric-ID attachment.
+- Add fail-closed direct-count density validation, pilot-region clustered bootstrap intervals,
+  denominator-partial correlation tests, and leave-region-out clean C3 model comparison.
 
 ## Unreleased
 
