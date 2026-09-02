@@ -225,6 +225,16 @@ component of the focal country's F01 total. The leave-city-out national comparat
 undefined for those rows. The workflow now flags them, leaves that diagnostic missing,
 and scores every baseline on the common finite sample.
 
+The extent-by-density reconciliation is therefore implemented but not yet registered
+as an empirical result. The executable uses an exact fixed-polygon surface/density
+identity and carries the national-envelope discontinuity flags, but it fails closed on
+the interpretation of the residual. Issue #136 has not yet established F21's
+constant-membership semantics or a complete fixed-polygon/F21 crosswalk; existing
+cross-border and singleton failures show that the raw residual is not identified as
+reclassification. Until that dependency closes, the output field is
+`unidentified_composition_residual`, `net_reclassification_change` is missing, and no
+expected-output manifest or empirical three-way decomposition may be registered.
+
 At the 2020 origin this removes 25 of 10,709 city rows (0.23%) but 25 of 189 countries
 (13.2%). Pooled metrics therefore move little, while equal-country metrics move more.
 The substantive ranking does not change:
