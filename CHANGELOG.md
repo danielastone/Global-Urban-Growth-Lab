@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pre-register the lineage-clean open-covariate density model, comparator ladder, country-cluster falsification rule, fixed failure language, and fail-closed real-run gate.
+
 - Add the registered Module C density-metric policy, lineage/role enforcement, forecast-origin gates, and downstream metric-ID attachment.
 
 - License repository software under Apache-2.0 while explicitly excluding
