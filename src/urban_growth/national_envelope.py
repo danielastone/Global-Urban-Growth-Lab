@@ -10,6 +10,176 @@ from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_co
 DEGURBA_CATEGORIES = ("city", "town_and_semi_dense", "rural")
 
 
+def extent_density_reconciliation(
+    fixed_polygon_intervals: pd.DataFrame,
+    national_intervals: pd.DataFrame,
+    constant_membership_intervals: pd.DataFrame,
+    *,
+    relative_tolerance: float = 1e-6,
+    absolute_tolerance: float = 1.0,
+) -> pd.DataFrame:
+    """Reconcile fixed-polygon extent/density change with F01 Cities change.
+
+    The two fixed-polygon terms use the symmetric two-factor (Shapley) identity,
+    so their sum is exactly the change in ``surface * density``.  The remaining
+    F01 difference is called reclassification only when an independently
+    documented constant-membership F21 universe agrees with the fixed-polygon
+    change within the registered tolerance.  Otherwise it remains an
+    unidentified composition residual.
+    """
+    fixed_required = {
+        "country_code", "polygon_id", "period_start", "period_end",
+        "built_surface_start", "built_surface_end", "density_start", "density_end",
+        "density_metric_id", "density_lineage_status",
+    }
+    national_required = {
+        "country_code", "period_start", "period_end", "city_population_start",
+        "city_population_end", "category_presence_transition",
+        "large_share_change_flag", "large_share_change_threshold",
+        "composition_discontinuity_flag", "interval_observation_status",
+    }
+    membership_required = {
+        "country_code", "period_start", "period_end", "f21_population_start",
+        "f21_population_end", "constant_membership_validated",
+        "membership_semantics_source",
+    }
+    require_columns(fixed_polygon_intervals, fixed_required, source_name="fixed-polygon intervals")
+    require_columns(national_intervals, national_required, source_name="national intervals")
+    require_columns(
+        constant_membership_intervals,
+        membership_required,
+        source_name="constant-membership intervals",
+    )
+    reject_duplicate_keys(
+        fixed_polygon_intervals,
+        ["country_code", "polygon_id", "period_start", "period_end"],
+        source_name="fixed-polygon intervals",
+    )
+    interval_key = ["country_code", "period_start", "period_end"]
+    reject_duplicate_keys(national_intervals, interval_key, source_name="national intervals")
+    reject_duplicate_keys(
+        constant_membership_intervals,
+        interval_key,
+        source_name="constant-membership intervals",
+    )
+    if relative_tolerance < 0 or absolute_tolerance < 0:
+        raise SourceSchemaError("Reconciliation tolerances must be nonnegative")
+
+    numeric_columns = [
+        "built_surface_start", "built_surface_end", "density_start", "density_end",
+    ]
+    fixed = fixed_polygon_intervals.copy()
+    for column in numeric_columns:
+        fixed[column] = pd.to_numeric(fixed[column], errors="coerce")
+    if fixed[numeric_columns].isna().any().any() or not np.isfinite(
+        fixed[numeric_columns].to_numpy(dtype=float)
+    ).all():
+        raise SourceSchemaError("Fixed-polygon extent and density values must be finite")
+    if (fixed[numeric_columns] < 0).any().any():
+        raise SourceSchemaError("Fixed-polygon extent and density values must be nonnegative")
+    for column in ("density_metric_id", "density_lineage_status"):
+        if fixed.groupby(interval_key)[column].nunique(dropna=False).gt(1).any():
+            raise SourceSchemaError(f"Each country interval must use one {column}")
+
+    surface_start = fixed["built_surface_start"]
+    surface_end = fixed["built_surface_end"]
+    density_start = fixed["density_start"]
+    density_end = fixed["density_end"]
+    fixed["fixed_population_start"] = surface_start * density_start
+    fixed["fixed_population_end"] = surface_end * density_end
+    fixed["horizontal_extent_change"] = (
+        0.5 * (density_start + density_end) * (surface_end - surface_start)
+    )
+    fixed["in_place_densification_change"] = (
+        0.5 * (surface_start + surface_end) * (density_end - density_start)
+    )
+    aggregation = {
+        "fixed_population_start": "sum", "fixed_population_end": "sum",
+        "horizontal_extent_change": "sum", "in_place_densification_change": "sum",
+        "polygon_id": "nunique", "density_metric_id": "first",
+        "density_lineage_status": "first",
+    }
+    result = fixed.groupby(interval_key, as_index=False).agg(aggregation).rename(
+        columns={"polygon_id": "polygon_count"}
+    )
+    result["fixed_polygon_population_change"] = (
+        result["fixed_population_end"] - result["fixed_population_start"]
+    )
+    result["fixed_identity_error"] = result["fixed_polygon_population_change"] - (
+        result["horizontal_extent_change"] + result["in_place_densification_change"]
+    )
+    if not np.allclose(result["fixed_identity_error"], 0, atol=1e-8, rtol=1e-10):
+        raise SourceSchemaError("Extent-density decomposition does not close")
+
+    flag_columns = [
+        "city_population_start", "city_population_end", "category_presence_transition",
+        "large_share_change_flag", "large_share_change_threshold",
+        "composition_discontinuity_flag", "interval_observation_status",
+    ]
+    result = result.merge(
+        national_intervals[interval_key + flag_columns], on=interval_key, validate="one_to_one"
+    ).merge(constant_membership_intervals, on=interval_key, validate="one_to_one")
+    for column in (
+        "city_population_start", "city_population_end", "f21_population_start",
+        "f21_population_end",
+    ):
+        result[column] = pd.to_numeric(result[column], errors="coerce")
+    check_columns = [
+        "city_population_start", "city_population_end", "f21_population_start",
+        "f21_population_end",
+    ]
+    if result[check_columns].isna().any().any() or not np.isfinite(
+        result[check_columns].to_numpy(dtype=float)
+    ).all():
+        raise SourceSchemaError("F01 and F21 reconciliation populations must be finite")
+    if (result[check_columns] < 0).any().any():
+        raise SourceSchemaError("F01 and F21 reconciliation populations must be nonnegative")
+    if not result["constant_membership_validated"].isin([True, False]).all():
+        raise SourceSchemaError("constant_membership_validated must be boolean")
+    if result.loc[result["constant_membership_validated"], "membership_semantics_source"].isna().any():
+        raise SourceSchemaError("Validated membership requires a methodology source")
+
+    result["f01_cities_population_change"] = (
+        result["city_population_end"] - result["city_population_start"]
+    )
+    result["f21_constant_membership_change"] = (
+        result["f21_population_end"] - result["f21_population_start"]
+    )
+    result["fixed_vs_f21_change_difference"] = (
+        result["fixed_polygon_population_change"] - result["f21_constant_membership_change"]
+    )
+    scale = np.maximum(
+        np.maximum(result["f21_population_start"], result["f21_population_end"]), 1.0
+    )
+    allowed_error = absolute_tolerance + relative_tolerance * scale
+    result["f21_crosscheck_within_tolerance"] = (
+        result["fixed_vs_f21_change_difference"].abs() <= allowed_error
+    )
+    result["f01_composition_residual"] = (
+        result["f01_cities_population_change"] - result["fixed_polygon_population_change"]
+    )
+    identified = (
+        result["constant_membership_validated"] & result["f21_crosscheck_within_tolerance"]
+    )
+    result["residual_interpretation"] = np.where(
+        identified, "net_reclassification", "unidentified_composition_residual"
+    )
+    result["net_reclassification_change"] = result["f01_composition_residual"].where(identified)
+    result["f01_reconciliation_error"] = result["f01_cities_population_change"] - (
+        result["horizontal_extent_change"] + result["in_place_densification_change"]
+        + result["f01_composition_residual"]
+    )
+    result["relative_tolerance"] = relative_tolerance
+    result["absolute_tolerance"] = absolute_tolerance
+    result["admissible_role"] = np.where(
+        result["density_lineage_status"].eq("clean"),
+        "accounting_decomposition", "construction_sensitive_sensitivity_only",
+    )
+    if not np.allclose(result["f01_reconciliation_error"], 0, atol=1e-8, rtol=1e-10):
+        raise SourceSchemaError("F01 reconciliation does not close")
+    return result.sort_values(interval_key).reset_index(drop=True)
+
+
 def national_envelope_intervals(
     panel: pd.DataFrame,
     *,
