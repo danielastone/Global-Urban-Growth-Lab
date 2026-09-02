@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add a synthetic matched-row forecast contract for the additive national-envelope
+  ladder; this is evaluation infrastructure, not a new empirical finding.
+
 - Add a synthetic border-conditioned rival-mass contract that preserves the existing
   accessibility-band totals; this is infrastructure for H5, not an empirical finding.
 
