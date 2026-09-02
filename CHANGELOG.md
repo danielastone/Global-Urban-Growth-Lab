@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add the registered Module C density-metric policy, lineage/role enforcement, forecast-origin gates, and downstream metric-ID attachment.
+
 - License repository software under Apache-2.0 while explicitly excluding
   third-party data from that grant.
 - Add a deny-by-default, machine-readable data-rights registry covering research,
