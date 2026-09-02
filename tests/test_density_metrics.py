@@ -88,6 +88,30 @@ def test_lineage_is_enforced_for_predictor_outcome_pair() -> None:
         )
 
 
+def test_population_growth_outcomes_are_explicitly_registered() -> None:
+    pairs = density_metric_pair_registry().set_index(["predictor_metric_id", "outcome_id"])
+    for outcome_id in ("wup_population_growth", "ghs_pop_population_growth"):
+        assert pairs.loc[
+            ("built_surface_per_land_area", outcome_id), "admissible_analysis_role"
+        ] == "sensitivity_only"
+        with pytest.raises(SourceSchemaError, match="sensitivity_only, not headline"):
+            require_density_metric_role(
+                "built_surface_per_land_area",
+                "origin_available_predictor",
+                origin=2020,
+                outcome_id=outcome_id,
+                estimand="change",
+            )
+    record = require_density_metric_role(
+        "built_surface_per_land_area",
+        "origin_available_predictor",
+        origin=2020,
+        outcome_id="census_population_growth",
+        estimand="change",
+    )
+    assert record["admissible_analysis_role"] == "headline"
+
+
 def test_fixed_height_proxy_cannot_be_used_as_change_or_outcome() -> None:
     with pytest.raises(SourceSchemaError, match="not admissible as outcome"):
         require_density_metric_role("volume_per_surface", "outcome")
@@ -96,6 +120,11 @@ def test_fixed_height_proxy_cannot_be_used_as_change_or_outcome() -> None:
             "volume_per_surface", "origin_available_predictor", origin=2020,
             outcome_id="census_density_change", estimand="change",
         )
+    level_predictor = require_density_metric_role(
+        "volume_per_surface", "origin_available_predictor", origin=2020,
+        outcome_id="census_density_change", estimand="level",
+    )
+    assert level_predictor["predictor_admissible_estimands"] == "level"
 
 
 def test_registry_rejects_entangled_headline_role() -> None:
