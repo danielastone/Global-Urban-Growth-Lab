@@ -1,5 +1,19 @@
 # Research status
 
+## Built-form decomposition status — 2026-09-02
+
+GHSL alone cannot support a vertical-growth result. Its multi-epoch built volumes apply an
+epoch-specific surface mask to a fixed 2018 height layer. The resulting volume/surface term is
+not identically zero at polygon level, but that variation is spatial support composition rather
+than observed height change.
+
+The first independent multi-date pilot uses Google Open Buildings 2.5D Temporal v1 for the
+fixed 2025 Gushiegu, Ghana UCDB polygon from 2016 to 2023. At the preregistered middle presence
+threshold (0.5), modeled annualized volume growth is 4.68%, decomposed into +6.32% horizontal
+and −1.63% mean-height change. Thresholds 0.3 and 0.7 preserve the directions. This is a
+single-city model-derived pilot subject to uncalibrated-presence, cloud, alignment and height
+prediction error; it is not a global finding or a causal explanation.
+
 ## Specification implementation status — 29 August 2026
 
 The consolidated quality-review specification is now the repository's governing contract.
