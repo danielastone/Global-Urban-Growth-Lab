@@ -130,6 +130,13 @@ Consequences:
 
 ## Verified GHSL R2024A v1.2 schema
 
+The independent-height acquisition gate and candidate-source verdicts are registered in
+[`open-height-source-gate.md`](open-height-source-gate.md). Google Open Buildings 2.5D
+Temporal v1 passes for a 2016–2023 multi-date pilot because it is derived from Sentinel-2
+imagery without population or GHSL built-allocation inputs. DLR WSF3D is a single-snapshot
+cross-check; Microsoft and Overture are incomplete, mixed-vintage footprint/height mosaics and
+do not pass as uniform time series.
+
 The official v1.2 GHSL thematic archive was retrieved and registered on 2026-08-27. Its CSV uses Windows-1252 encoding and contains 11,422 unique `ID_UC_G0` records and 551 columns. The adapter reads 12 five-year epochs from 1975 through 2030 for both `GH_POP_TOT_YYYY` (inhabitants) and `GH_BUS_TOT_YYYY` (square metres). All 274,128 values across those two families are present, numeric and positive.
 
 The thematic archive is the fixed-boundary stream: every historical statistic is calculated inside the urban centre's 2025 boundary. The separately published MTUC archive follows changing boundaries. GHSL documentation says the two streams are different and not comparable except at 2025. Therefore a trend from the thematic archive describes change within today's footprint; it is not the city's historical spatial expansion.
