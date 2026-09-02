@@ -63,6 +63,27 @@ origin-available features against the contemporaneous-country baseline on a regi
 direct-count density outcome; persistence is also reported where applicable. Shared-lineage
 reconciliation is an accounting check or sensitivity, not external validation.
 
+### Open-covariate density model pre-registration
+
+No empirical density-model run may precede this registration or use a covariate absent from
+`density_covariate_registry()`. The primary change outcome is annualized log direct-census
+density change on validated fixed polygons; the cross-sectional outcome is log direct-census
+density. Log GHS-POP density change is lineage-entangled and sensitivity-only.
+
+The comparator ladder is density persistence, contemporaneous-country density mean, and a
+national-envelope-only comparator. The WUP-based national envelope is a comparator, not an
+admissible lineage-clean covariate. Candidate models are restricted to registered built-form,
+terrain/constrained-land, accessibility and independent-height features available at the
+origin. VIIRS night lights is sensitivity-only. GHS-POP, WUP city population, and variables
+derived from either are excluded from the candidate covariate matrix.
+
+Evaluation holds out pilot cities and resamples complete country clusters. The covariate model
+passes only if its error is lower than the contemporaneous-country density-mean baseline under
+the registered country-cluster bootstrap. Otherwise the required conclusion is **“open-data
+density model not supported.”** Favourable and adverse model rows remain in the same registered
+result table. Every real run requires an expected-output manifest. Adding a covariate after
+outcomes are inspected requires a new dated registration and cannot revise the original test.
+
 ## Module B model and estimator hierarchy
 
 The general retrospective template is:
