@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add fail-closed population-reliability snapshot and transformation provenance contracts,
+  including deterministic lineage IDs, existing catalog/license foreign keys, exact UTC
+  capture times, revision coexistence, and evidence-to-input validation. No empirical
+  reliability evidence or country score is added.
+
 - Add a synthetic matched-row forecast contract for the additive national-envelope
   ladder; this is evaluation infrastructure, not a new empirical finding.
 

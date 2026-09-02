@@ -292,6 +292,11 @@ def main() -> None:
     subparsers.add_parser("list")
     subparsers.add_parser("verify-catalog")
     subparsers.add_parser("verify-licenses")
+    provenance = subparsers.add_parser("verify-reliability-provenance")
+    provenance.add_argument("--snapshots", default="data/reliability_snapshots.csv")
+    provenance.add_argument(
+        "--transformations", default="data/reliability_transformations.csv"
+    )
     license_check = subparsers.add_parser("check-license")
     license_check.add_argument("--source-id", required=True)
     license_check.add_argument("--use", required=True, choices=sorted(LICENSE_USE_FIELDS))
@@ -311,6 +316,23 @@ def main() -> None:
     elif args.command == "verify-licenses":
         registry = load_licenses(license_path, catalog=catalog)
         print(f"valid: {len(registry['sources'])} license decisions; default=deny")
+    elif args.command == "verify-reliability-provenance":
+        from urban_growth.reliability_provenance import (
+            load_dataset_snapshots,
+            load_transformation_runs,
+            validate_dataset_snapshots,
+            validate_transformation_runs,
+        )
+
+        registry = load_licenses(license_path, catalog=catalog)
+        snapshots = load_dataset_snapshots(args.snapshots)
+        transformations = load_transformation_runs(args.transformations)
+        validate_dataset_snapshots(snapshots, catalog=catalog, licenses=registry)
+        validate_transformation_runs(transformations, snapshots=snapshots)
+        print(
+            f"valid: {len(snapshots)} reliability snapshots; "
+            f"{len(transformations)} transformation runs"
+        )
     elif args.command == "check-license":
         registry = load_licenses(license_path, catalog=catalog)
         try:

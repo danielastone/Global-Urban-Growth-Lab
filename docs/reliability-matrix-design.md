@@ -133,6 +133,15 @@ structured assertion record. A bare analyst claim is not a source artifact.
 
 An output row without a registered snapshot and transformation run fails closed.
 
+The executable contract is in `src/urban_growth/reliability_provenance.py`. The committed
+registries are `data/reliability_snapshots.csv` and
+`data/reliability_transformations.csv`. They extend `data/manifest.csv`; they do not rewrite
+its date-only historical retrieval records as fabricated timestamps. Existing manifest rows
+can be promoted only when the missing capture metadata is supplied explicitly.
+An upstream release is registered under its exact release-specific source identity; a new
+release or a changed capture receives a new checksum-derived snapshot identity and does not
+overwrite prior evidence.
+
 Implementation: [#167](https://github.com/danielastone/Global-Urban-Growth-Lab/issues/167).
 
 ## Missingness and assessment-state contract
