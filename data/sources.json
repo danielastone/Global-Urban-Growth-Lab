@@ -22,6 +22,25 @@
       "notes": "Overall SPI index excluded; XKX crosswalk unresolved; pre-release retained only for revision diagnostics."
     },
     {
+      "source_id": "unsd_census_dates_2026_02_03",
+      "priority": 1,
+      "status": "reliability_evidence",
+      "publisher": "United Nations Statistics Division",
+      "dataset": "Census dates for all countries",
+      "release": "Last updated 03 February 2026",
+      "landing_page": "https://unstats.un.org/unsd/demographic-social/census/censusdates",
+      "documentation_url": "https://unstats.un.org/unsd/demographic-social/census/",
+      "retrieval": "pinned_https_capture",
+      "formats": ["html"],
+      "coverage": "Country and area census dates for the 1990, 2000, 2010, 2020, and 2030 census rounds",
+      "unit": "country or area by census round",
+      "role": "Documentary census-date evidence only; not evidence of results status, coverage quality, post-enumeration surveys, undercount, adjustment, or incorporation into an estimate series",
+      "upstream_dependencies": [],
+      "redistribution": "not_committed_pending_terms_review",
+      "citation": "United Nations Statistics Division. Census dates for all countries. Last updated 3 February 2026.",
+      "notes": "The live HTML capture is checksum-registered but not committed. Parenthesized dates, ranges, dashes, ellipses, symbols, and footnotes require explicit parsing states; they must not be coerced to exact reference dates."
+    },
+    {
       "source_id": "un_wup_2025_country_degurb",
       "priority": 1,
       "status": "core_control",
