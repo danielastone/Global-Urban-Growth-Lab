@@ -2,6 +2,7 @@ import pandas as pd
 from shapely.geometry import box
 
 from urban_growth.japan_did import (
+    H1_YEARS,
     audit_adjacent_did_overlap,
     build_did_direct_count_denominator,
     build_did_direct_count_intervals,
@@ -32,6 +33,7 @@ def test_official_archive_universe_is_complete() -> None:
     assert len(set(names)) == 97
     assert official_archive_url("A16-20_GML.zip").endswith("/A16-20/A16-20_GML.zip")
     assert len(ghsl_japan_tile_names()) == 40
+    assert len(official_archive_names(H1_YEARS)) == 191
     assert ghsl_japan_tile_url(ghsl_japan_tile_names()[0]).startswith(
         "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/"
     )

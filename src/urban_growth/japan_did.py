@@ -21,24 +21,26 @@ from shapely.strtree import STRtree
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
 
 YEARS = (2000, 2005, 2010, 2015, 2020)
+H1_YEARS = (1990, 1995, *YEARS)
 _TO_EQUAL_AREA = Transformer.from_crs("EPSG:4326", "EPSG:6933", always_xy=True)
 _TO_MOLLWEIDE = Transformer.from_crs("EPSG:4326", "ESRI:54009", always_xy=True)
 
 
-def official_archive_names() -> list[str]:
-    """Return the complete registered A16 archive universe for 2000--2020."""
-    names = [f"A16-{year}_GML.zip" for year in ("10", "15", "20")]
-    names.extend(
-        f"A16-{year}_{pref:02d}_GML.zip"
-        for year in ("00", "05")
-        for pref in range(1, 48)
-    )
+def official_archive_names(years: tuple[int, ...] = YEARS) -> list[str]:
+    """Return the complete registered A16 archive universe for selected census waves."""
+    names: list[str] = []
+    for year in years:
+        short = str(year)[-2:]
+        if year >= 2010:
+            names.append(f"A16-{short}_GML.zip")
+        else:
+            names.extend(f"A16-{short}_{pref:02d}_GML.zip" for pref in range(1, 48))
     return sorted(names)
 
 
-def official_archive_url(name: str) -> str:
+def official_archive_url(name: str, *, years: tuple[int, ...] = H1_YEARS) -> str:
     year = name.split("-")[1].split("_")[0]
-    if name not in official_archive_names():
+    if name not in official_archive_names(years):
         raise SourceSchemaError(f"Unregistered Japan DID archive name: {name}")
     return f"https://nlftp.mlit.go.jp/ksj/gml/data/A16/A16-{year}/{name}"
 
@@ -63,9 +65,11 @@ def _archive_reader(path: Path) -> shapefile.Reader:
         )
 
 
-def read_official_did_archives(raw_dir: Path) -> pd.DataFrame:
+def read_official_did_archives(
+    raw_dir: Path, *, years: tuple[int, ...] = YEARS
+) -> pd.DataFrame:
     """Read the registered MLIT A16 archives into a validated five-wave panel."""
-    expected = official_archive_names()
+    expected = official_archive_names(years)
     missing = [name for name in expected if not (raw_dir / name).is_file()]
     if missing:
         raise SourceSchemaError(f"Japan DID archives missing: {', '.join(missing[:5])}")
@@ -108,7 +112,7 @@ def read_official_did_archives(raw_dir: Path) -> pd.DataFrame:
                 }
             )
     panel = dissolve_did_features(pd.DataFrame(rows))
-    if set(panel["year"].unique()) != set(YEARS):
+    if set(panel["year"].unique()) != set(years):
         raise SourceSchemaError("Japan DID archives do not contain exactly the registered waves")
     reject_duplicate_keys(
         panel, ["year", "did_id_vintage"], source_name="Japan DID panel"
@@ -160,6 +164,7 @@ def _projected(geometry: object) -> object:
 def audit_adjacent_did_overlap(
     panel: pd.DataFrame,
     *,
+    years: tuple[int, ...] = YEARS,
     minimum_origin_population: int = 25_000,
     maximum_origin_population: int = 100_000,
     material_overlap: float = 0.01,
@@ -177,7 +182,7 @@ def audit_adjacent_did_overlap(
     if minimum_origin_population <= 0 or maximum_origin_population < minimum_origin_population:
         raise SourceSchemaError("Japan DID origin population bounds are invalid")
     results: list[dict[str, object]] = []
-    for origin_year, endpoint_year in pairwise(YEARS):
+    for origin_year, endpoint_year in pairwise(years):
         origin = panel.loc[panel["year"].eq(origin_year)].copy().reset_index(drop=True)
         endpoint = panel.loc[panel["year"].eq(endpoint_year)].copy().reset_index(drop=True)
         origin["projected_geometry"] = origin["geometry"].map(_projected)
@@ -352,13 +357,13 @@ def build_did_direct_count_intervals(
 
 
 def build_did_direct_count_denominator(
-    audit: pd.DataFrame, *, resolution_column: str
+    audit: pd.DataFrame, *, resolution_column: str, years: tuple[int, ...] = YEARS
 ) -> pd.DataFrame:
     """Retain every forecast-origin DID and mark three-wave observability explicitly."""
     if resolution_column not in {"dynamic_identity_resolved", "strict_stable_resolved"}:
         raise SourceSchemaError("Unknown Japan DID concordance resolution rule")
     rows: list[dict[str, object]] = []
-    for forecast_origin in YEARS[1:-1]:
+    for forecast_origin in years[1:-1]:
         prior = audit.loc[
             audit["endpoint_year"].eq(forecast_origin) & audit[resolution_column]
         ].set_index("matched_endpoint_row_id")

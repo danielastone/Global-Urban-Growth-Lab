@@ -12,6 +12,7 @@ EMPIRICAL_WORKFLOWS = {
     "ghsl-redteam-130.yml",
     "japan-did-overlap-124.yml",
     "japan-ghsl-match-124.yml",
+    "japan-h1-191.yml",
     "wup-contemporaneous-country.yml",
     "wup-h1-empirical.yml",
     "wup-source-basis-h1.yml",
