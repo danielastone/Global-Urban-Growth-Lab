@@ -56,4 +56,5 @@ jobs:
             outputs/wup_contemporaneous_country_metrics.csv
             outputs/wup_contemporaneous_country_bootstrap.csv
             outputs/wup_contemporaneous_country_time_bootstrap.csv
+            outputs/wup_contemporaneous_country_h1_hierarchy.csv
             results/wup_h1_incremental_source_sha256.txt
