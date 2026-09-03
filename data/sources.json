@@ -3,6 +3,25 @@
   "reviewed_at": "2026-08-27",
   "sources": [
     {
+      "source_id": "world_bank_spi_2025_12",
+      "priority": 1,
+      "status": "reliability_evidence",
+      "publisher": "World Bank",
+      "dataset": "Statistical Performance Indicators",
+      "release": "December 9, 2025; upstream commit 2b474a5a0c5274b7988200747afae8c7eaa58564",
+      "landing_page": "https://datacatalog.worldbank.org/search/dataset/0037996/statistical-performance-indicators",
+      "documentation_url": "https://github.com/worldbank/SPI/tree/2b474a5a0c5274b7988200747afae8c7eaa58564",
+      "retrieval": "pinned_https_download",
+      "formats": ["csv"],
+      "coverage": "217 economy codes, 2004-2024; selected evidence uses pillars 3-5",
+      "unit": "economy-year-indicator",
+      "role": "Dimension-level statistical-system evidence; not a population-accuracy score",
+      "upstream_dependencies": [],
+      "redistribution": "allowed_with_attribution",
+      "citation": "World Bank. Statistical Performance Indicators, December 2025 release.",
+      "notes": "Overall SPI index excluded; XKX crosswalk unresolved; pre-release retained only for revision diagnostics."
+    },
+    {
       "source_id": "un_wup_2025_country_degurb",
       "priority": 1,
       "status": "core_control",

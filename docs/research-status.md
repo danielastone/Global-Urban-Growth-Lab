@@ -657,6 +657,14 @@ staleness, invalid values, unresolved conflicts, and country-crosswalk failures 
 reason codes. It never maps missingness to a low reliability value. The resulting records
 are population-share-ready but contain no composite score, tier, or country-quality claim.
 
+## World Bank SPI evidence vertical slice
+
+Issue #166 registers and ingests the December 2025 World Bank SPI release. Forty pillar 3–5
+indicators remain separate in long form with explicit missingness, release, observation year,
+and economy crosswalk status. A five-day pre-release comparison finds two revised cells among
+182,280 common cells. No overall SPI score or population-accuracy claim is produced. See
+`docs/spi-evidence-166-result.md`.
+
 ## Reproduction
 
 With the registered raw files under `data/raw/`, run:
