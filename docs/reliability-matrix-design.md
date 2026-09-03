@@ -65,6 +65,13 @@ The reliability matrix concerns evidence about national population systems and t
 suitability of that evidence for specified uses. It does not overwrite city-level
 geographic, temporal, or outcome fitness decisions.
 
+The manual city-level intake documented in
+`docs/city-reliability-evidence-intake.md` is a staging mechanism only. Its documentary
+signals are not matrix dimensions, and an intake artifact is not analytically eligible
+until its snapshots and transformation are registered and the relevant use-specific City
+Data Fitness Standard gate is applied. The intake cannot emit or imply a score, tier,
+band, archetype, or cross-signal classification.
+
 ## Unit and identifier rules
 
 The default country identifier is a project-controlled `country_id`. Source identifiers
