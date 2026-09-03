@@ -36,12 +36,12 @@ def japan_issue_124_source_register() -> pd.DataFrame:
                 "official_vintage_geometry": True,
                 "usable_forecast_origins": 3,
                 "future_membership_conditioned": False,
-                "data_acquired": False,
-                "origin_denominator_constructed": False,
-                "geometry_overlap_audited": False,
+                "data_acquired": True,
+                "origin_denominator_constructed": True,
+                "geometry_overlap_audited": True,
                 "qualification_note": (
-                    "Viable national path: census-defined urban districts with five-year direct "
-                    "population and official vintage geography; requires origin-first overlay audit"
+                    "Qualified national path: registered direct counts and vintage DID geometry "
+                    "with origin-first overlap audit and explicit unresolved denominators"
                 ),
             },
             {
@@ -103,7 +103,7 @@ def japan_issue_124_source_register() -> pd.DataFrame:
 
 
 def qualify_japan_issue_124_sources(register: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Identify acquisition-ready sources and withhold empirical qualification until audited."""
+    """Identify acquisition-ready sources and qualify only registered, audited inputs."""
     require_columns(register, REQUIRED, source_name="Japan issue 124 source register")
     reject_duplicate_keys(register, ["candidate_id"], source_name="Japan issue 124 source register")
     out = register.copy()

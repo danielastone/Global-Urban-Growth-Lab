@@ -1,7 +1,7 @@
 # Japan direct-count qualification for issue #124
 
-Japan is the first reviewed country with a credible path to the direct-count benchmark.
-It is acquisition-ready, not yet benchmark-complete.
+Japan is the first reviewed country to complete the direct-count/GHS-POP benchmark.
+The source qualification and matched result are now implemented.
 
 ## Recommended unit: Densely Inhabited Districts
 
@@ -28,7 +28,7 @@ Small-area grid data could support a fixed-footprint sensitivity, but grid cells
 localities. Aggregating them directly to a future GHSL footprint would reproduce the future-membership
 problem rather than test it.
 
-## Required acquisition sequence
+## Implemented acquisition sequence
 
 1. Acquire and hash official DID population tables and vintage polygons for 2000–2020.
 2. Define the eligible DID population cohort independently at each forecast origin.
@@ -46,8 +46,10 @@ Run the current qualification gate with:
 uv run --locked python scripts/run_construction_smoothing_124.py --pilot japan
 ```
 
-It writes `japan_source_qualification.csv` and `japan_benchmark_status.csv`. The current decision
-is `acquisition_ready_not_yet_empirically_qualified`; H1 remains unconfirmed by direct counts.
+It writes `japan_source_qualification.csv` and `japan_benchmark_status.csv`. The DID source is now
+qualified after registered acquisition, origin-denominator construction, and geometry-overlap audit.
+Run `scripts/run_japan_ghsl_match_124.py` for the matched benchmark; results and limitations are in
+`docs/japan-ghsl-match-124-result.md`.
 
 Official source entry points:
 

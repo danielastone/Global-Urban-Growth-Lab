@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import ExitStack
 from io import BytesIO
 from itertools import pairwise
 from pathlib import Path
@@ -9,16 +10,19 @@ from zipfile import ZipFile
 
 import numpy as np
 import pandas as pd
+import rasterio
 import shapefile
 from pyproj import Transformer
+from rasterio.mask import mask
 from shapely.geometry import shape
-from shapely.ops import transform
+from shapely.ops import transform, unary_union
 from shapely.strtree import STRtree
 
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
 
 YEARS = (2000, 2005, 2010, 2015, 2020)
 _TO_EQUAL_AREA = Transformer.from_crs("EPSG:4326", "EPSG:6933", always_xy=True)
+_TO_MOLLWEIDE = Transformer.from_crs("EPSG:4326", "ESRI:54009", always_xy=True)
 
 
 def official_archive_names() -> list[str]:
@@ -103,13 +107,50 @@ def read_official_did_archives(raw_dir: Path) -> pd.DataFrame:
                     "geometry": geometry,
                 }
             )
-    panel = pd.DataFrame(rows)
+    panel = dissolve_did_features(pd.DataFrame(rows))
     if set(panel["year"].unique()) != set(YEARS):
         raise SourceSchemaError("Japan DID archives do not contain exactly the registered waves")
     reject_duplicate_keys(
-        panel, ["year", "source_archive", "source_position"], source_name="Japan DID panel"
+        panel, ["year", "did_id_vintage"], source_name="Japan DID panel"
     )
     return panel.sort_values(["year", "source_archive", "source_position"]).reset_index(drop=True)
+
+
+def dissolve_did_features(raw: pd.DataFrame) -> pd.DataFrame:
+    """Dissolve multipart source features without duplicating DID-level population."""
+    require_columns(
+        raw,
+        {
+            "year", "source_archive", "source_position", "did_id_vintage",
+            "municipality_code", "municipality_name", "population",
+            "published_area_km2", "geometry",
+        },
+        source_name="Japan DID source features",
+    )
+    dissolved: list[dict[str, object]] = []
+    for (year, did_id), group in raw.groupby(["year", "did_id_vintage"], sort=True):
+        geometry = unary_union(group["geometry"].tolist())
+        if geometry.is_empty or not geometry.is_valid:
+            geometry = geometry.buffer(0)
+        if geometry.is_empty or not geometry.is_valid:
+            raise SourceSchemaError(f"Japan DID cannot be dissolved: {year} {did_id}")
+        populations = group["population"].astype(int)
+        dissolved.append(
+            {
+                "year": int(year),
+                "source_archive": ";".join(sorted(group["source_archive"].unique())),
+                "source_position": int(group["source_position"].min()),
+                "source_feature_count": len(group),
+                "source_population_disagreement": populations.nunique() > 1,
+                "did_id_vintage": did_id,
+                "municipality_code": group["municipality_code"].iloc[0],
+                "municipality_name": group["municipality_name"].iloc[0],
+                "population": int(populations.iloc[0]),
+                "published_area_km2": float(group["published_area_km2"].iloc[0]),
+                "geometry": geometry,
+            }
+        )
+    return pd.DataFrame(dissolved)
 
 
 def _projected(geometry: object) -> object:
@@ -171,7 +212,7 @@ def audit_adjacent_did_overlap(
             row: dict[str, object] = {
                 "origin_year": origin_year,
                 "endpoint_year": endpoint_year,
-                "origin_row_id": f"{origin_year}:{origin_row['source_archive']}:{origin_row['source_position']}",
+                "origin_row_id": f"{origin_year}:{origin_row['did_id_vintage']}",
                 "origin_did_id_vintage": origin_row["did_id_vintage"],
                 "origin_municipality_code": origin_row["municipality_code"],
                 "origin_population": int(origin_row["population"]),
@@ -196,8 +237,7 @@ def audit_adjacent_did_overlap(
                 row.update(
                     {
                         "matched_endpoint_row_id": (
-                            f"{endpoint_year}:{endpoint_row['source_archive']}:"
-                            f"{endpoint_row['source_position']}"
+                            f"{endpoint_year}:{endpoint_row['did_id_vintage']}"
                         ),
                         "matched_endpoint_did_id_vintage": endpoint_row["did_id_vintage"],
                         "endpoint_population": int(endpoint_row["population"]),
@@ -290,6 +330,9 @@ def build_did_direct_count_intervals(
                 {
                     "country_code": "JPN",
                     "locality_id": row["origin_row_id_future"],
+                    "lag_row_id": row["origin_row_id_prior"],
+                    "origin_row_id": row["origin_row_id_future"],
+                    "endpoint_row_id": row["matched_endpoint_row_id_future"],
                     "period_start": forecast_origin,
                     "period_end": forecast_origin + 5,
                     "population_lag": lag,
@@ -306,6 +349,224 @@ def build_did_direct_count_intervals(
                 }
             )
     return pd.DataFrame(rows)
+
+
+def build_did_direct_count_denominator(
+    audit: pd.DataFrame, *, resolution_column: str
+) -> pd.DataFrame:
+    """Retain every forecast-origin DID and mark three-wave observability explicitly."""
+    if resolution_column not in {"dynamic_identity_resolved", "strict_stable_resolved"}:
+        raise SourceSchemaError("Unknown Japan DID concordance resolution rule")
+    rows: list[dict[str, object]] = []
+    for forecast_origin in YEARS[1:-1]:
+        prior = audit.loc[
+            audit["endpoint_year"].eq(forecast_origin) & audit[resolution_column]
+        ].set_index("matched_endpoint_row_id")
+        future = audit.loc[audit["origin_year"].eq(forecast_origin)]
+        for _, current in future.iterrows():
+            origin_row_id = current["origin_row_id"]
+            eligible = bool(current[resolution_column]) and origin_row_id in prior.index
+            lag_population = np.nan
+            recent_growth = np.nan
+            future_growth = np.nan
+            lag_row_id: object = pd.NA
+            endpoint_row_id: object = pd.NA
+            if eligible:
+                previous = prior.loc[origin_row_id]
+                lag_population = float(previous["origin_population"])
+                origin_population = float(current["origin_population"])
+                endpoint_population = float(current["endpoint_population"])
+                lag_row_id = previous["origin_row_id"]
+                endpoint_row_id = current["matched_endpoint_row_id"]
+                recent_growth = float((np.log(origin_population) - np.log(lag_population)) / 5)
+                future_growth = float((np.log(endpoint_population) - np.log(origin_population)) / 5)
+            rows.append(
+                {
+                    "country_code": "JPN",
+                    "locality_id": f"{origin_row_id}:{resolution_column}",
+                    "period_start": forecast_origin,
+                    "period_end": forecast_origin + 5,
+                    "lag_row_id": lag_row_id,
+                    "origin_row_id": origin_row_id,
+                    "endpoint_row_id": endpoint_row_id,
+                    "population_lag": lag_population,
+                    "population_start": float(current["origin_population"]),
+                    "population_end": (
+                        float(current["endpoint_population"])
+                        if bool(current[resolution_column])
+                        else np.nan
+                    ),
+                    "recent_growth": recent_growth,
+                    "future_growth": future_growth,
+                    "concordance_rule": resolution_column,
+                    "source": "direct_count",
+                    "analysis_eligible": eligible,
+                    "concordance_quality": resolution_column,
+                    "census_recency_years": 0,
+                    "boundary_mode": "dynamic_did",
+                }
+            )
+    result = pd.DataFrame(rows)
+    reject_duplicate_keys(
+        result, ["country_code", "locality_id", "period_start"],
+        source_name="Japan DID direct-count denominator",
+    )
+    return result
+
+
+def ghsl_japan_tile_names() -> list[str]:
+    """Return the registered 100 m GHS-POP tiles intersecting Japan DIDs."""
+    return [
+        f"GHS_POP_E{year}_GLOBE_R2023A_54009_100_V1_0_R{row}_C{column}.zip"
+        for year in YEARS
+        for row in range(4, 8)
+        for column in range(30, 32)
+    ]
+
+
+def ghsl_japan_tile_url(name: str) -> str:
+    if name not in ghsl_japan_tile_names():
+        raise SourceSchemaError(f"Unregistered Japan GHS-POP tile: {name}")
+    year = name.split("_E", 1)[1][:4]
+    layer = f"GHS_POP_E{year}_GLOBE_R2023A_54009_100"
+    return (
+        "https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/"
+        f"GHS_POP_GLOBE_R2023A/{layer}/V1-0/tiles/{name}"
+    )
+
+
+def _panel_row_ids(panel: pd.DataFrame) -> pd.Series:
+    return panel["year"].astype(str) + ":" + panel["did_id_vintage"].astype(str)
+
+
+def _population_in_polygon(datasets: list[object], geometry: object) -> float:
+    projected = transform(_TO_MOLLWEIDE.transform, geometry)
+    total = 0.0
+    intersects = 0
+    valid_cells = 0
+    for dataset in datasets:
+        left, bottom, right, top = dataset.bounds
+        minx, miny, maxx, maxy = projected.bounds
+        if maxx <= left or minx >= right or maxy <= bottom or miny >= top:
+            continue
+        values, _ = mask(dataset, [projected], crop=True, all_touched=False, filled=False)
+        valid = values[0].compressed()
+        total += float(valid.sum())
+        valid_cells += len(valid)
+        intersects += 1
+    if intersects == 0:
+        raise SourceSchemaError("Japan DID polygon does not intersect a registered GHS-POP tile")
+    return total if valid_cells else np.nan
+
+
+def build_matched_ghsl_intervals(
+    panel: pd.DataFrame,
+    direct_intervals: pd.DataFrame,
+    raster_dir: Path,
+    *,
+    boundary_mode: str,
+) -> pd.DataFrame:
+    """Aggregate GHS-POP to the exact fixed or vintage DID polygons in each interval."""
+    if boundary_mode not in {"fixed_origin_did", "dynamic_did"}:
+        raise SourceSchemaError("Unknown Japan GHS-POP boundary mode")
+    require_columns(
+        direct_intervals,
+        {
+            "period_start", "lag_row_id", "origin_row_id", "endpoint_row_id",
+            "locality_id", "concordance_rule",
+        },
+        source_name="Japan DID direct-count intervals",
+    )
+    panel = panel.copy()
+    panel["row_id"] = _panel_row_ids(panel)
+    reject_duplicate_keys(panel, ["row_id"], source_name="Japan DID geometry panel")
+    geometries = panel.set_index("row_id")["geometry"].to_dict()
+    missing = [name for name in ghsl_japan_tile_names() if not (raster_dir / name).is_file()]
+    if missing:
+        raise SourceSchemaError(f"Japan GHS-POP tiles missing: {', '.join(missing[:5])}")
+
+    rows: list[dict[str, object]] = []
+    with ExitStack() as stack:
+        by_year: dict[int, list[object]] = {year: [] for year in YEARS}
+        for name in ghsl_japan_tile_names():
+            year = int(name.split("_E", 1)[1][:4])
+            with ZipFile(raster_dir / name) as archive:
+                tif = next(
+                    (item for item in archive.namelist() if item.lower().endswith(".tif")), None
+                )
+            if tif is None:
+                raise SourceSchemaError(f"Japan GHS-POP archive lacks GeoTIFF: {name}")
+            path = f"/vsizip/{(raster_dir / name).resolve()}/{tif}"
+            dataset = stack.enter_context(rasterio.open(path))
+            if dataset.crs is None or dataset.count != 1:
+                raise SourceSchemaError(f"Japan GHS-POP raster schema changed: {name}")
+            by_year[year].append(dataset)
+
+        cache: dict[tuple[int, str], float] = {}
+        for _, interval in direct_intervals.iterrows():
+            origin = int(interval["period_start"])
+            if not bool(interval["analysis_eligible"]):
+                rows.append(
+                    {
+                        "country_code": "JPN",
+                        "locality_id": interval["locality_id"],
+                        "period_start": origin,
+                        "recent_growth": np.nan,
+                        "future_growth": np.nan,
+                        "source": "ghsl_pop_r2023a_100m",
+                        "analysis_eligible": False,
+                        "concordance_quality": interval["concordance_rule"],
+                        "census_recency_years": 0,
+                        "boundary_mode": boundary_mode,
+                        "population_lag": np.nan,
+                        "population_start": np.nan,
+                        "population_end": np.nan,
+                    }
+                )
+                continue
+            row_ids = {
+                origin - 5: str(interval["lag_row_id"]),
+                origin: str(interval["origin_row_id"]),
+                origin + 5: str(interval["endpoint_row_id"]),
+            }
+            if boundary_mode == "fixed_origin_did":
+                row_ids = {year: str(interval["origin_row_id"]) for year in row_ids}
+            populations: dict[int, float] = {}
+            for year, row_id in row_ids.items():
+                if row_id not in geometries:
+                    raise SourceSchemaError(f"Japan DID geometry row missing: {row_id}")
+                key = (year, row_id)
+                if key not in cache:
+                    cache[key] = _population_in_polygon(by_year[year], geometries[row_id])
+                populations[year] = cache[key]
+            lag, start, endpoint = (populations[origin - 5], populations[origin], populations[origin + 5])
+            observable = bool(np.isfinite([lag, start, endpoint]).all()) and min(
+                lag, start, endpoint
+            ) > 0
+            rows.append(
+                {
+                    "country_code": "JPN",
+                    "locality_id": interval["locality_id"],
+                    "period_start": origin,
+                    "recent_growth": (
+                        float((np.log(start) - np.log(lag)) / 5) if observable else np.nan
+                    ),
+                    "future_growth": (
+                        float((np.log(endpoint) - np.log(start)) / 5) if observable else np.nan
+                    ),
+                    "source": "ghsl_pop_r2023a_100m",
+                    "analysis_eligible": observable,
+                    "concordance_quality": interval["concordance_rule"],
+                    "census_recency_years": 0,
+                    "boundary_mode": boundary_mode,
+                    "population_lag": lag,
+                    "population_start": start,
+                    "population_end": endpoint,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 
 
 def direct_count_persistence_diagnostics(intervals: pd.DataFrame) -> pd.DataFrame:

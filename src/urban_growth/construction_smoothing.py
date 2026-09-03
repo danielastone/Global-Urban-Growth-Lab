@@ -131,7 +131,7 @@ def compare_direct_counts_with_ghsl(
 
     diagnostics: list[dict[str, object]] = []
     strata = [([], "overall")]
-    for column in ["direct_concordance_quality", "direct_census_recency_years"]:
+    for column in ["period_start", "direct_concordance_quality", "direct_census_recency_years"]:
         strata.append(([column], column.removeprefix("direct_")))
     for (ghsl_source, boundary), source_rows in matched.groupby(
         ["ghsl_source", "ghsl_boundary_mode"], dropna=False
