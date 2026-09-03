@@ -68,9 +68,15 @@
           "filename": "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx",
           "url": "https://population.un.org/wup/assets/Download/Cities/WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx",
           "measure": "population_density_per_km2"
+        },
+        {
+          "table": "M01",
+          "filename": "WUP2025-M01-DataSources-Degree-of-Urbanization.xlsx",
+          "url": "https://population.un.org/wup/assets/Download/WUP2025-M01-DataSources-Degree-of-Urbanization.xlsx",
+          "measure": "country_level_ghsl_population_input_metadata"
         }
       ],
-      "notes": "F21 contains cities that reach 50,000 during 1975-2050, but annual values are blank while a city is below 50,000. This is time-varying threshold truncation, not a balanced history and not selection only at 2025. Keep estimates and projections distinct."
+      "notes": "F21 contains cities that reach 50,000 during 1975-2050, but annual values are blank while a city is below 50,000. This is time-varying threshold truncation, not a balanced history and not selection only at 2025. Keep estimates and projections distinct. M01 documents the latest country-level population input used by the underlying GHSL grid; it does not establish direct census lineage for an individual WUP city-year."
     },
     {
       "source_id": "un_wup_2018_cities",

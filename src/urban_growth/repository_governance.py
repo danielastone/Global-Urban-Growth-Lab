@@ -12,6 +12,7 @@ EMPIRICAL_WORKFLOWS = {
     "ghsl-redteam-130.yml",
     "wup-contemporaneous-country.yml",
     "wup-h1-empirical.yml",
+    "wup-source-basis-h1.yml",
 }
 PROHIBITED_RELIABILITY_PATTERNS = {
     "legacy classifier entry point": "scripts/classify_reliability.py",
@@ -47,10 +48,7 @@ def governance_errors(root: Path = ROOT) -> list[str]:
     for label, pattern in PROHIBITED_RELIABILITY_PATTERNS.items():
         for directory in searchable:
             for path in directory.rglob("*"):
-                if (
-                    path.is_file()
-                    and pattern in path.read_text(encoding="utf-8", errors="ignore")
-                ):
+                if path.is_file() and pattern in path.read_text(encoding="utf-8", errors="ignore"):
                     errors.append(f"{path.relative_to(root)} contains prohibited {label}")
     return errors
 

@@ -1,0 +1,72 @@
+name: WUP H1 source-basis stratification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/wup-source-basis-h1.yml"
+      - "scripts/run_wup_source_basis_h1.py"
+      - "src/urban_growth/wup_source_basis.py"
+      - "src/urban_growth/adapters/wup.py"
+      - "src/urban_growth/forecast.py"
+  push:
+    branches:
+      - redteam/wup-source-basis-h1
+    paths:
+      - ".github/workflows/wup-source-basis-h1.yml"
+      - "scripts/run_wup_source_basis_h1.py"
+      - "src/urban_growth/wup_source_basis.py"
+
+permissions:
+  contents: read
+
+jobs:
+  source-basis:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: "0.11.33"
+      - run: uv sync --locked
+      - name: Acquire registered WUP inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/raw
+          city_base="https://population.un.org/wup/assets/Download/Cities"
+          for file in \
+            WUP2025-F21-DEGURBA-Cities_Pop.xlsx \
+            WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx \
+            WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx \
+            WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx
+          do
+            curl --fail --location --retry 3 --retry-delay 2 \
+              "$city_base/$file" --output "data/raw/$file"
+          done
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://population.un.org/wup/assets/Download/WUP2025-M01-DataSources-Degree-of-Urbanization.xlsx" \
+            --output "data/raw/WUP2025-M01-DataSources-Degree-of-Urbanization.xlsx"
+          grep -E '^[0-9a-f]{64}  ' results/wup_h1_incremental_source_sha256.txt \
+            | sed 's#  #  data/raw/#' \
+            | sha256sum --check --strict -
+          grep -E '^[0-9a-f]{64}  ' results/wup_m01_source_sha256.txt \
+            | sed 's#  #  data/raw/#' \
+            | sha256sum --check --strict -
+      - name: Run source-basis stratification
+        run: uv run --locked python scripts/run_wup_source_basis_h1.py
+      - name: Print metrics
+        run: cat outputs/wup_h1_source_basis_metrics.csv
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wup-h1-source-basis
+          path: |
+            outputs/wup_h1_source_basis_classification.csv
+            outputs/wup_h1_source_basis_metrics.csv
+            results/wup_h1_incremental_source_sha256.txt
+            results/wup_m01_source_sha256.txt
