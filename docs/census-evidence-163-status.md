@@ -47,13 +47,15 @@ input snapshots. The transformation ID is not embedded in the hashed staging out
 ID itself includes the output checksum; embedding it would create a circular identity.
 
 The generated CSV remains under ignored `data/processed/restricted/` storage and is not committed
-or distributed. A transformation run can be registered only after the generator commit is merged
-and the output is regenerated from that exact commit.
+or distributed. It was regenerated from merged generator commit
+`82ef329c147d758ab06b6b20cdf318570ae544c2` and contains 390,682 bytes with SHA-256
+`757ae466b5daf1074d619ac8cd897248749f13edb74398a80226b79f9a6383ad`. Transformation run
+`transform:1bce350d641834ec4ddfdb6948162d4057e217913ab666f0d5869b33ca87110c`
+records the exact code commit, both input snapshots, reviewed exception sets, timestamps, output
+path, and checksum.
 
 Issue #163 is not empirically complete. Required PES, undercount, coverage-adjustment,
 results-status, and WPP/IDB incorporation evidence is distributed across country reports and
 publisher notes. The UNFPA, WPP, and IDB artifacts still need release-specific capture,
-checksums, licenses, crosswalks, and transformation lineage. The parsed assertion output also
-needs a registered transformation run once the source-rights decision permits a committed
-derived table. A global census-date capture alone satisfies only part of one field and must not
-be presented as completion.
+checksums, licenses, crosswalks, and transformation lineage. A global census-date capture and its
+staging lineage alone satisfy only part of one field and must not be presented as completion.
