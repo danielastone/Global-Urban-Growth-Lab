@@ -12,12 +12,15 @@ on:
       - "src/urban_growth/adapters/ghsl_ucdb.py"
       - "src/urban_growth/forecast.py"
 
+permissions:
+  contents: read
+
 jobs:
   ghsl-redteam:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.11"
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
@@ -33,7 +36,7 @@ jobs:
           mtuc_url="https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_UCDB_GLOBE_R2024A/GHS_UCDB_MTUC_GLOBE_R2024A/V1-2/GHS_UCDB_MTUC_GLOBE_R2024A_V1_2.zip"
           curl --fail --location --retry 3 --retry-delay 2 "$theme_url" -o downloads/theme.zip
           curl --fail --location --retry 3 --retry-delay 2 "$mtuc_url" -o downloads/mtuc.zip
-          sha256sum downloads/theme.zip downloads/mtuc.zip | tee ghsl-source-zip-sha256.txt
+          head -n 2 results/ghsl_redteam_130_source_sha256.txt | sha256sum --check --strict -
           unzip -q downloads/theme.zip -d downloads/theme
           unzip -q downloads/mtuc.zip -d downloads/mtuc
           theme_csv=$(find downloads/theme -type f -iname '*.csv' | head -n 1)
@@ -57,7 +60,7 @@ jobs:
             curl --fail --location --retry 3 --retry-delay 2 \
               "$base/$file" --output "data/raw/$file"
           done
-          sha256sum data/raw/WUP2025-*.xlsx | tee wup-source-sha256.txt
+          tail -n +3 results/ghsl_redteam_130_source_sha256.txt | sha256sum --check --strict -
       - name: Run GHSL issue 130 diagnostics
         run: uv run --locked python scripts/run_ghsl_redteam_130.py
       - name: Print core diagnostics
@@ -69,11 +72,9 @@ jobs:
           cat outputs/ghsl_redteam_130/fixed_origin_risk_set_coverage.csv
           echo '--- built-up entanglement ---'
           cat outputs/ghsl_redteam_130/fixed_origin_built_up_entanglement.csv
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ghsl-redteam-130
           path: |
             outputs/ghsl_redteam_130/*.csv
-            ghsl-source-zip-sha256.txt
-            ghsl-source-csv-sha256.txt
-            wup-source-sha256.txt
+            results/ghsl_redteam_130_source_sha256.txt
