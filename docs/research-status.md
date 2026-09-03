@@ -634,6 +634,20 @@ strict geographic coverage is narrow, the country set has size one, and the full
 comparison is outside issue #124. See `docs/japan-ghsl-match-124-result.md` for the complete result
 and limits.
 
+## Japan direct-count H1 hierarchy
+
+Issue #191 extends the official DID panel to 1990 and 1995 so chronological evaluation has four
+independent test origins. On the strict 99.5%-overlap sample, raw persistence reduces RMSE by 39.4%
+versus the prior-origin mean and 40.3% versus size only. Two-way lineage/origin lower 95% bounds are
+19.8% and 18.4%, and MAE improves in both comparisons. All registered threshold-band exclusions
+also pass.
+
+That primary result covers only 122 of 1,706 forecast-origin rows (7.2%). The dynamic-identity
+diagnostic covers 82.9%, but persistence improves RMSE by only about 8% and its lower bounds cross
+zero; it does not pass. H1 therefore has direct-count support only for a highly selected,
+stable-geography Japanese subset. Universal H1 remains unsupported, and the geographic-selection
+conflict must accompany any use of the result. See `docs/japan-h1-191-result.md`.
+
 ## Reproduction
 
 With the registered raw files under `data/raw/`, run:
@@ -644,6 +658,7 @@ python scripts/run_wup2018_vintage.py
 python scripts/run_ghsl_fixed_baselines.py
 python scripts/run_ghsl_boundary_sensitivity.py
 python scripts/run_japan_ghsl_match_124.py
+python scripts/run_japan_h1_191.py
 python scripts/run_national_envelope.py
 python scripts/run_wup_dynamic_hierarchy.py
 ```
