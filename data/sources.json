@@ -60,6 +60,25 @@
       "notes": "The page is live rather than release-versioned. Snapshot identity is checksum-derived. The crosswalk must not force dissolved areas or UK constituent-country census rows into present-day sovereign codes."
     },
     {
+      "source_id": "unfpa_global_census_tracker_2023_02_28",
+      "priority": 1,
+      "status": "reliability_evidence",
+      "publisher": "United Nations Population Fund",
+      "dataset": "Global Census Tracker — census_joined feature layer",
+      "release": "Layer data last edited 28 February 2023 20:54:22.794 UTC; item modified 12 March 2024 18:20:36 UTC",
+      "landing_page": "https://www.unfpa.org/data",
+      "documentation_url": "https://experience.arcgis.com/experience/6c3954186a17429b84fe518af72aa674",
+      "retrieval": "pinned_arcgis_rest_capture",
+      "formats": ["json"],
+      "coverage": "292 feature rows; 229 carry tracker attributes; operational census timing and methods for the 2020 census round",
+      "unit": "ArcGIS feature row; multipart geography and source joins can produce repeated or conflicting country assertions",
+      "role": "Documentary census schedule, actual timing, reference basis, round type, collection method, and COVID-19 impact evidence; not evidence of results publication, PES, undercount, coverage adjustment, census quality, or incorporation into an estimate series",
+      "upstream_dependencies": [],
+      "redistribution": "not_committed_pending_terms_review",
+      "citation": "United Nations Population Fund. Global Census Tracker, census_joined feature layer. Layer data last edited 28 February 2023.",
+      "notes": "The feature service item contains no license or access-information text. The exact item metadata, layer schema, and ordered query responses are checksum-registered but not committed. Sixty-three rows lack tracker attributes; repeated countries and conflicting assertions must remain separate by OBJECTID. The 2023 layer is stale evidence, not a current 2026 status source."
+    },
+    {
       "source_id": "un_wup_2025_country_degurb",
       "priority": 1,
       "status": "core_control",

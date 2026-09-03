@@ -62,10 +62,15 @@ def test_repository_provenance_registries_have_locked_headers() -> None:
     catalog, licenses = _registries()
     snapshots = load_dataset_snapshots("data/reliability_snapshots.csv")
     runs = load_transformation_runs("data/reliability_transformations.csv")
-    assert len(snapshots) == 2
+    assert len(snapshots) == 5
     assert snapshots[0].source_id == "unsd_census_dates_2026_02_03"
     assert snapshots[0].redistribution_status == "not_committed_pending_terms_review"
     assert snapshots[1].source_id == "unsd_m49_overview_2026_09_03"
+    unfpa = snapshots[2:]
+    assert len(unfpa) == 3
+    assert {row.source_id for row in unfpa} == {"unfpa_global_census_tracker_2023_02_28"}
+    assert {row.license_id for row in unfpa} == {"unresolved_exact_service"}
+    assert all(row.redistribution_status == "not_committed_pending_terms_review" for row in unfpa)
     assert len(runs) == 1
     assert runs[0].code_commit == "82ef329c147d758ab06b6b20cdf318570ae544c2"
     assert runs[0].output_sha256 == (
