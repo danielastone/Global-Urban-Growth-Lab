@@ -62,7 +62,9 @@ def test_repository_provenance_registries_have_locked_headers() -> None:
     catalog, licenses = _registries()
     snapshots = load_dataset_snapshots("data/reliability_snapshots.csv")
     runs = load_transformation_runs("data/reliability_transformations.csv")
-    assert snapshots == []
+    assert len(snapshots) == 1
+    assert snapshots[0].source_id == "unsd_census_dates_2026_02_03"
+    assert snapshots[0].redistribution_status == "not_committed_pending_terms_review"
     assert runs == []
     validate_dataset_snapshots(snapshots, catalog=catalog, licenses=licenses)
     validate_transformation_runs(runs, snapshots=snapshots)
@@ -153,9 +155,7 @@ def test_revised_captures_coexist_without_overwriting_prior_bytes() -> None:
     validate_dataset_snapshots(snapshots, catalog=catalog, licenses=licenses)
     assert len({row.snapshot_id for row in snapshots}) == 2
     with pytest.raises(SourceCatalogError, match="Duplicate snapshot_id"):
-        validate_dataset_snapshots(
-            [snapshots[0], snapshots[0]], catalog=catalog, licenses=licenses
-        )
+        validate_dataset_snapshots([snapshots[0], snapshots[0]], catalog=catalog, licenses=licenses)
 
 
 def test_transformation_identity_is_deterministic_and_validated() -> None:
