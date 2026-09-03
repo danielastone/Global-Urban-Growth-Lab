@@ -665,6 +665,14 @@ and economy crosswalk status. A five-day pre-release comparison finds two revise
 182,280 common cells. No overall SPI score or population-accuracy claim is produced. See
 `docs/spi-evidence-166-result.md`.
 
+## Vintage-qualified census evidence contract
+
+Issue #163 now has executable census-event and estimate-incorporation schemas with controlled
+vocabularies, chronology checks, explicit unknowns, separate conflicting assertions, and
+estimate-series/vintage-qualified incorporation. Empirical acquisition remains open because
+PES, undercount, adjustment, and incorporation evidence is fragmented across publisher and
+country documents. See `docs/census-evidence-163-status.md`.
+
 ## Reproduction
 
 With the registered raw files under `data/raw/`, run:
