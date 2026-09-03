@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Create a staged city-reliability evidence artifact from workflow inputs."""
 
 from __future__ import annotations
@@ -41,3 +40,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+EXE002 The file is executable but no shebang is present
+--> scripts/capture_city_reliability_evidence.py:1:1
+
+Found 1 error.
