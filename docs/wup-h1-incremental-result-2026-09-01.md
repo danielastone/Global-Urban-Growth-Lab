@@ -8,6 +8,10 @@ Does a city's recent growth add predictive information beyond leave-city-out cou
 
 The run uses WUP 2025 DEGURBA city tables F21, F25, F30, and F34 acquired directly from UN DESA in GitHub Actions run `33559560861`. Source SHA256 values are registered in `results/wup_h1_incremental_source_sha256.txt`.
 
+Durable evidence package: wup-h1-incremental-2026-09-01. Its retained output is
+results/wup_h1_incremental_recent_growth_by_origin.csv. The Actions artifact is transient
+operational metadata only.
+
 The empirical-lineage gate treats 1975–2020 as GHS-WUP-POP reference estimates and post-2020 values as CRISP-generated projection values. Therefore the observed/reference-estimate diagnostic ends at the 2015 origin with a 2020 endpoint. The 2020→2025 interval is not part of this result.
 
 ## Nested test

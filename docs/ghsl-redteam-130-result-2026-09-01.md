@@ -15,6 +15,10 @@ This remains **retrospective, construction-sensitive evidence**. It is not headl
 - artifact SHA-256: `87ab96713d4b5f7e512cb6065da246eec950dc692491e09dc7159dedbc4e9f40`
 - official GHSL UCDB R2024A v1.2 and WUP 2025 inputs were downloaded inside the workflow; hashes are registered in `results/ghsl_redteam_130_source_sha256.txt`.
 
+Durable evidence package: ghsl-redteam-130-2026-09-01. Its permitted derived outputs are
+retained under results/evidence/ghsl-redteam-130/. The Actions artifact is transient
+operational metadata; the package registry and retained output hashes survive its expiry.
+
 Registered core output hashes from that artifact:
 
 - cross-source model ranking: `41fe9a76bae672bfc99ed9a5f728103b27104f7d83c6716cb50d6c8291ca0134`
