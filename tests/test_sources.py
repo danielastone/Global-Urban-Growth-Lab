@@ -16,7 +16,7 @@ from urban_growth.sources import (
 
 def test_repository_catalog_is_valid() -> None:
     catalog = load_catalog("data/sources.json")
-    assert len(catalog["sources"]) == 11
+    assert len(catalog["sources"]) == 12
     ghsl = source_by_id(catalog, "ec_ghsl_ucdb_r2024a_v1_2")
     wup = source_by_id(catalog, "un_wup_2025_cities")
     assert "ec_ghsl_degurb_r2023a" in ghsl["upstream_dependencies"]
@@ -24,6 +24,9 @@ def test_repository_catalog_is_valid() -> None:
     accessibility = source_by_id(catalog, "map_accessibility_2015")
     assert accessibility["release"] == "2015 nominal year"
     assert accessibility["status"] == "modern_validation"
+    census_dates = source_by_id(catalog, "unsd_census_dates_2026_02_03")
+    assert census_dates["release"] == "Last updated 03 February 2026"
+    assert "not evidence of results status" in census_dates["role"]
 
 
 def test_duplicate_source_ids_fail() -> None:
@@ -47,7 +50,9 @@ def test_inventory_hashes_exact_file(tmp_path) -> None:
     path.write_text("a,b\n1,2\n", encoding="utf-8")
     source = source_by_id(load_catalog("data/sources.json"), "un_wup_2025_cities")
     record = inventory_file(
-        path, source, source_url="https://population.un.org/example.csv",
+        path,
+        source,
+        source_url="https://population.un.org/example.csv",
         retrieved_at="2026-08-27",
     )
     assert record.sha256 == "492d5ea496056f1a6a6592241032fab764c321596317930b4fa0e1e8bc3b7470"
@@ -62,9 +67,7 @@ def test_repository_license_registry_is_complete_and_fail_closed() -> None:
 
 def test_permitted_ghsl_commercial_ingestion_passes() -> None:
     registry = load_licenses("data/licenses.json")
-    record = require_permitted_use(
-        registry, "ec_ghsl_ucdb_r2024a_v1_2", "internal_commercial_use"
-    )
+    record = require_permitted_use(registry, "ec_ghsl_ucdb_r2024a_v1_2", "internal_commercial_use")
     assert record["license_id"] == "CC-BY-4.0"
 
 
