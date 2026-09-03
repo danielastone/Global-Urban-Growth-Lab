@@ -62,9 +62,10 @@ def test_repository_provenance_registries_have_locked_headers() -> None:
     catalog, licenses = _registries()
     snapshots = load_dataset_snapshots("data/reliability_snapshots.csv")
     runs = load_transformation_runs("data/reliability_transformations.csv")
-    assert len(snapshots) == 1
+    assert len(snapshots) == 2
     assert snapshots[0].source_id == "unsd_census_dates_2026_02_03"
     assert snapshots[0].redistribution_status == "not_committed_pending_terms_review"
+    assert snapshots[1].source_id == "unsd_m49_overview_2026_09_03"
     assert runs == []
     validate_dataset_snapshots(snapshots, catalog=catalog, licenses=licenses)
     validate_transformation_runs(runs, snapshots=snapshots)
