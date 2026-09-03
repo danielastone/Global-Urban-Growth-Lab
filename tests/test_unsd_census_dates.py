@@ -1,10 +1,18 @@
+import csv
+import io
+
+import pytest
+
 from urban_growth.unsd_census_dates import (
     UNSD_TO_M49_ALIASES,
+    UNSDParseError,
     build_census_assertions,
     build_country_crosswalk,
+    census_assertions_csv_bytes,
     classify_date_text,
     parse_m49_countries,
     parse_raw_census_cells,
+    require_expected_exceptions,
 )
 
 CENSUS_HTML = """
@@ -82,3 +90,32 @@ def test_symbol_states_remain_distinct():
     }
     for raw, status in expected.items():
         assert classify_date_text(raw)[0] == status
+
+
+def test_exception_gate_requires_exact_reviewed_sets():
+    m49 = parse_m49_countries(M49_HTML)
+    crosswalk = build_country_crosswalk(["United States of America"], m49)
+    assertions = build_census_assertions(parse_raw_census_cells(CENSUS_HTML), crosswalk)
+    require_expected_exceptions(assertions, allowed_unmatched=set(), allowed_unparsed=set())
+    with pytest.raises(UNSDParseError, match="unmatched country labels changed"):
+        require_expected_exceptions(
+            assertions,
+            allowed_unmatched={"invented exception"},
+            allowed_unparsed=set(),
+        )
+
+
+def test_csv_serialization_is_deterministic_and_keeps_source_snapshot():
+    m49 = parse_m49_countries(M49_HTML)
+    crosswalk = build_country_crosswalk(["United States of America"], m49)
+    assertions = build_census_assertions(parse_raw_census_cells(CENSUS_HTML), crosswalk)
+    kwargs = {
+        "source_id": "unsd_dates",
+        "source_release": "release",
+        "snapshot_id": "snapshot:abc",
+    }
+    first = census_assertions_csv_bytes(assertions, **kwargs)
+    assert first == census_assertions_csv_bytes(assertions, **kwargs)
+    rows = list(csv.DictReader(io.StringIO(first.decode("utf-8"))))
+    assert rows[0]["snapshot_id"] == "snapshot:abc"
+    assert rows[0]["footnotes_json"] == '["(C)","(17)"]'

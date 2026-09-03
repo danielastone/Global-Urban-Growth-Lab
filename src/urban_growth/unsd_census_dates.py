@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import csv
+import io
+import json
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -23,6 +26,24 @@ ASSERTION_STATUSES = {
     "unparsed",
 }
 CROSSWALK_STATUSES = {"matched", "unmatched", "ambiguous"}
+ASSERTION_OUTPUT_FIELDS = [
+    "region",
+    "source_country_name",
+    "country_id",
+    "crosswalk_status",
+    "census_round",
+    "occurrence",
+    "raw_text",
+    "assertion_status",
+    "date_start",
+    "date_end",
+    "date_precision",
+    "footnotes_json",
+    "source_links_json",
+    "source_id",
+    "source_release",
+    "snapshot_id",
+]
 
 # Source-specific historical/abbreviated labels mapped to exact names in the pinned M49 page.
 # UK constituent-country rows and dissolved areas are deliberately absent: mapping them to a
@@ -493,3 +514,66 @@ def validate_census_assertions(assertions: list[CensusDateAssertion]) -> None:
         if identity in identities:
             raise UNSDParseError("duplicate source census cell")
         identities.add(identity)
+
+
+def require_expected_exceptions(
+    assertions: list[CensusDateAssertion],
+    *,
+    allowed_unmatched: set[str],
+    allowed_unparsed: set[str],
+) -> None:
+    """Require an exact, reviewed exception set rather than accepting new source drift."""
+    actual_unmatched = {
+        row.source_country_name for row in assertions if row.crosswalk_status != "matched"
+    }
+    actual_unparsed = {row.raw_text for row in assertions if row.assertion_status == "unparsed"}
+    if actual_unmatched != allowed_unmatched:
+        raise UNSDParseError(
+            f"unmatched country labels changed: expected={sorted(allowed_unmatched)!r}, "
+            f"actual={sorted(actual_unmatched)!r}"
+        )
+    if actual_unparsed != allowed_unparsed:
+        raise UNSDParseError(
+            f"unparsed date cells changed: expected={sorted(allowed_unparsed)!r}, "
+            f"actual={sorted(actual_unparsed)!r}"
+        )
+
+
+def census_assertions_csv_bytes(
+    assertions: list[CensusDateAssertion],
+    *,
+    source_id: str,
+    source_release: str,
+    snapshot_id: str,
+) -> bytes:
+    """Serialize staging assertions as deterministic UTF-8 CSV bytes."""
+    validate_census_assertions(assertions)
+    handle = io.StringIO(newline="")
+    writer = csv.DictWriter(handle, fieldnames=ASSERTION_OUTPUT_FIELDS, lineterminator="\n")
+    writer.writeheader()
+    for row in assertions:
+        writer.writerow(
+            {
+                "region": row.region,
+                "source_country_name": row.source_country_name,
+                "country_id": row.country_id or "",
+                "crosswalk_status": row.crosswalk_status,
+                "census_round": row.census_round,
+                "occurrence": row.occurrence,
+                "raw_text": row.raw_text,
+                "assertion_status": row.assertion_status,
+                "date_start": row.date_start or "",
+                "date_end": row.date_end or "",
+                "date_precision": row.date_precision or "",
+                "footnotes_json": json.dumps(
+                    row.footnotes, ensure_ascii=False, separators=(",", ":")
+                ),
+                "source_links_json": json.dumps(
+                    row.source_links, ensure_ascii=False, separators=(",", ":")
+                ),
+                "source_id": source_id,
+                "source_release": source_release,
+                "snapshot_id": snapshot_id,
+            }
+        )
+    return handle.getvalue().encode("utf-8")

@@ -39,6 +39,17 @@ Of the 1,530 cells, one remains syntactically unparsed because the source says
 promoted to a `CensusEvent`: the UNSD date table alone does not establish reference-date versus
 enumeration-date semantics, results status, geographic coverage, or census quality.
 
+`scripts/build_unsd_census_assertions.py` generates a deterministic staging CSV only from the two
+checksum-verified captures. The run must declare the exact reviewed unmatched-label and
+unparsed-value sets; any source drift fails closed. The staging rows carry the census-date source
+snapshot, while the transformation registry separately records both the census-date and M49
+input snapshots. The transformation ID is not embedded in the hashed staging output because the
+ID itself includes the output checksum; embedding it would create a circular identity.
+
+The generated CSV remains under ignored `data/processed/restricted/` storage and is not committed
+or distributed. A transformation run can be registered only after the generator commit is merged
+and the output is regenerated from that exact commit.
+
 Issue #163 is not empirically complete. Required PES, undercount, coverage-adjustment,
 results-status, and WPP/IDB incorporation evidence is distributed across country reports and
 publisher notes. The UNFPA, WPP, and IDB artifacts still need release-specific capture,
