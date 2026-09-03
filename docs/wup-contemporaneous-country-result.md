@@ -15,6 +15,10 @@ This diagnostic addresses red-team Finding 5. The comparator is fully origin-ava
 - observed/reference-estimate scoring origins: 1985–2015
 - 2020->2025 CRISP outcome excluded
 
+Durable evidence package: wup-contemporaneous-country-2026-09-01. Its permitted derived
+outputs are retained under results/evidence/wup-contemporaneous-country/. The Actions
+artifact is transient operational metadata; the package and output hashes survive expiry.
+
 Source workbook SHA-256 values match the registered WUP city inputs:
 
 - F21 population: `3a96030d87aec6c1c50f658d5321067d6345e1ab936c5d2854524f972caa75c0`

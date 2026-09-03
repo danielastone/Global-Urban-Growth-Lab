@@ -38,5 +38,8 @@ jobs:
       - name: Validate repository governance controls
         run: uv run --locked --extra dev python scripts/check_repository_governance.py
 
+      - name: Validate durable empirical evidence
+        run: uv run --locked --extra dev python scripts/verify_durable_evidence.py
+
       - name: Test
         run: uv run --locked --extra dev pytest -q
