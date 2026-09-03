@@ -166,10 +166,10 @@ def validate_durable_evidence(
         if not path.is_file():
             failures.append(f"missing output {output['repository_path']}")
             continue
-        if (
-            output["media_type"] != "text/csv"
-            or not SHA256_PATTERN.fullmatch(output["sha256"])
-        ):
+        if output["media_type"] not in {
+            "text/csv",
+            "application/gzip",
+        } or not SHA256_PATTERN.fullmatch(output["sha256"]):
             failures.append(f"invalid output metadata {output['repository_path']}")
             continue
         try:
@@ -193,10 +193,7 @@ def validate_durable_evidence(
     missing_packages = sorted(cited_documents.difference(registered_documents))
     if missing_packages:
         failures.append(
-            "transient artifact references lack durable packages: "
-            + ", ".join(missing_packages)
+            "transient artifact references lack durable packages: " + ", ".join(missing_packages)
         )
     if failures:
-        raise SourceSchemaError(
-            "Durable evidence validation failed: " + "; ".join(failures)
-        )
+        raise SourceSchemaError("Durable evidence validation failed: " + "; ".join(failures))
