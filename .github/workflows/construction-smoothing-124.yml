@@ -7,7 +7,9 @@ on:
       - ".github/workflows/construction-smoothing-124.yml"
       - "scripts/run_construction_smoothing_124.py"
       - "src/urban_growth/construction_smoothing.py"
+      - "src/urban_growth/india_census_124.py"
       - "tests/test_construction_smoothing.py"
+      - "tests/test_india_census_124.py"
 
 permissions:
   contents: read
@@ -24,9 +26,20 @@ jobs:
         with:
           version: "0.11.33"
       - run: uv sync --locked --extra dev
-      - run: uv run --locked --extra dev pytest tests/test_construction_smoothing.py
+      - run: >-
+          uv run --locked --extra dev pytest
+          tests/test_construction_smoothing.py tests/test_india_census_124.py
       - run: uv run --locked python scripts/run_construction_smoothing_124.py
+      - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot india
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: construction-smoothing-124-status
           path: outputs/construction_smoothing_124/benchmark_status.csv
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: construction-smoothing-124-india-status
+          path: |
+            outputs/construction_smoothing_124/india_source_qualification.csv
+            outputs/construction_smoothing_124/india_benchmark_status.csv
+          if-no-files-found: error

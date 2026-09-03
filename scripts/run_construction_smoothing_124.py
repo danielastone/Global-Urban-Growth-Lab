@@ -8,6 +8,10 @@ from pathlib import Path
 import pandas as pd
 
 from urban_growth.construction_smoothing import compare_direct_counts_with_ghsl
+from urban_growth.india_census_124 import (
+    india_issue_124_source_register,
+    qualify_india_issue_124_sources,
+)
 from urban_growth.io import SourceSchemaError
 
 
@@ -15,9 +19,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--direct-input", type=Path)
     parser.add_argument("--ghsl-input", type=Path)
+    parser.add_argument("--pilot", choices=["us", "india"], default="us")
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/construction_smoothing_124"))
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.pilot == "india":
+        register, status = qualify_india_issue_124_sources(india_issue_124_source_register())
+        register.to_csv(args.output_dir / "india_source_qualification.csv", index=False)
+        status.to_csv(args.output_dir / "india_benchmark_status.csv", index=False)
+        print(status.to_csv(index=False))
+        return
 
     status = {
         "issue": 124,
