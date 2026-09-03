@@ -66,7 +66,11 @@ def test_repository_provenance_registries_have_locked_headers() -> None:
     assert snapshots[0].source_id == "unsd_census_dates_2026_02_03"
     assert snapshots[0].redistribution_status == "not_committed_pending_terms_review"
     assert snapshots[1].source_id == "unsd_m49_overview_2026_09_03"
-    assert runs == []
+    assert len(runs) == 1
+    assert runs[0].code_commit == "82ef329c147d758ab06b6b20cdf318570ae544c2"
+    assert runs[0].output_sha256 == (
+        "757ae466b5daf1074d619ac8cd897248749f13edb74398a80226b79f9a6383ad"
+    )
     validate_dataset_snapshots(snapshots, catalog=catalog, licenses=licenses)
     validate_transformation_runs(runs, snapshots=snapshots)
 
