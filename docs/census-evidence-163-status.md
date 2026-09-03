@@ -56,6 +56,9 @@ path, and checksum.
 
 Issue #163 is not empirically complete. Required PES, undercount, coverage-adjustment,
 results-status, and WPP/IDB incorporation evidence is distributed across country reports and
-publisher notes. The UNFPA, WPP, and IDB artifacts still need release-specific capture,
-checksums, licenses, crosswalks, and transformation lineage. A global census-date capture and its
-staging lineage alone satisfy only part of one field and must not be presented as completion.
+publisher notes. The UNFPA tracker item, schema, and ordered feature query are now
+release-specifically captured and checksum-registered, but its adapter, reviewed crosswalk, and
+transformation lineage remain open; see `docs/unfpa-census-tracker-163-status.md`. WPP and IDB
+artifacts still need release-specific capture, checksums, licenses, crosswalks, and transformation
+lineage. A global census-date capture and its staging lineage alone satisfy only part of one field
+and must not be presented as completion.
