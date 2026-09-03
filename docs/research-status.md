@@ -648,6 +648,15 @@ zero; it does not pass. H1 therefore has direct-count support only for a highly 
 stable-geography Japanese subset. Universal H1 remains unsupported, and the geographic-selection
 conflict must accompany any use of the result. See `docs/japan-h1-191-result.md`.
 
+## Reliability-evidence missingness foundation
+
+Issue #169 implements the matrix-wide `scored`, `partially_observed`, and `unassessable`
+states as evidence-availability states scoped to country, dimension, use case, reference
+date, and source release. The derivation preserves missing source values, source noncoverage,
+staleness, invalid values, unresolved conflicts, and country-crosswalk failures as distinct
+reason codes. It never maps missingness to a low reliability value. The resulting records
+are population-share-ready but contain no composite score, tier, or country-quality claim.
+
 ## Reproduction
 
 With the registered raw files under `data/raw/`, run:

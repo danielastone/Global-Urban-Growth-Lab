@@ -195,6 +195,12 @@ reporting assigns it to `unmatched_geography`, not to an observed quality state.
 
 Implementation: [#169](https://github.com/danielastone/Global-Urban-Growth-Lab/issues/169).
 
+The executable derivation and validation contract is implemented in
+`src/urban_growth/reliability_assessment.py`. Zero and `False` are valid observed values;
+blank or null values are missing. Stale, invalid, conflicting, uncovered, and unresolved-
+crosswalk evidence is excluded from `observed_fields` and retained as a distinct reason.
+Contradictory primitives fail closed rather than being resolved by precedence.
+
 ## Dimension contracts
 
 ### Statistical-system capacity
