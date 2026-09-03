@@ -14,6 +14,7 @@ from urban_growth.adapters.wup import (
 from urban_growth.contemporaneous_baseline import (
     contemporaneous_country_baseline_errors,
     evaluate_contemporaneous_country_baseline,
+    evaluate_contemporaneous_country_h1_hierarchy,
 )
 from urban_growth.forecast import (
     build_forecast_intervals,
@@ -46,6 +47,11 @@ def main() -> None:
         type=Path,
         default=Path("outputs/wup_contemporaneous_country_time_bootstrap.csv"),
     )
+    parser.add_argument(
+        "--hierarchy-output",
+        type=Path,
+        default=Path("outputs/wup_contemporaneous_country_h1_hierarchy.csv"),
+    )
     args = parser.parse_args()
     raw = args.raw_dir
     population = classify_wup_city_population_lineage(
@@ -54,14 +60,16 @@ def main() -> None:
     city_year = build_wup_city_year_panel(
         population,
         read_f25_city_land_area(raw / "WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx"),
-        read_f30_built_up_area_per_capita(
-            raw / "WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx"
-        ),
+        read_f30_built_up_area_per_capita(raw / "WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx"),
         read_f34_population_density(raw / "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx"),
     )
     intervals = build_forecast_intervals(city_year, OBSERVED_PANEL_ORIGINS)
     scoring = intervals.loc[intervals["period_start"].isin(OBSERVED_SCORING_ORIGINS)].copy()
     metrics = evaluate_contemporaneous_country_baseline(scoring)
+    hierarchy = evaluate_contemporaneous_country_h1_hierarchy(
+        intervals,
+        OBSERVED_SCORING_ORIGINS,
+    )
     errors = contemporaneous_country_baseline_errors(scoring)
     bootstrap = cluster_bootstrap_paired_difference(
         errors,
@@ -78,6 +86,7 @@ def main() -> None:
         (args.metrics_output, metrics),
         (args.bootstrap_output, bootstrap),
         (args.country_time_bootstrap_output, country_time),
+        (args.hierarchy_output, hierarchy),
     ]:
         path.parent.mkdir(parents=True, exist_ok=True)
         frame.to_csv(path, index=False)

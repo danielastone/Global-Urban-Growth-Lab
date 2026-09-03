@@ -7,6 +7,27 @@ The registered diagnostic in `src/urban_growth/h1_information.py` therefore comp
 1. `country_loo_only`: the leave-city-out historical country mean; and
 2. `country_loo_plus_recent_growth`: the same country baseline plus a coefficient on the city's recent growth deviation from its country's training-sample recent-growth mean.
 
+## Contemporaneous-country re-test
+
+The separate #133 lineage uses the same-origin mean recent growth of all other cities in
+the focal city's country as the primary country-context predictor. A singleton-country
+row uses the same-origin global leave-city-out mean. Neither construction uses the focal
+city or a future outcome.
+
+For each forecast origin, coefficients are fit only on rows whose outcomes end by that
+origin. Four models are scored on identical test rows:
+
+1. contemporaneous leave-city-out country context;
+2. that context plus the focal city's deviation from it;
+3. historical leave-city-out country outcome context; and
+4. that historical context plus recent city growth, retained as a continuity sensitivity.
+
+The complete hierarchy is reported separately for each origin under row weighting and
+equal-country weighting. Equal-country fitting gives every country total weight one;
+equal-country MAE averages country MAEs and equal-country RMSE is the square root of the
+mean country MSE. Model winners are descriptive per-origin outputs. They are not pooled
+across origins and do not select a model or tune a hyperparameter for later origins.
+
 The recent-growth coefficient is estimated after country demeaning and uses only training intervals whose outcomes end by the forecast origin. The test reports the coefficient, matched row counts, MAE and RMSE for both models, and the recent-minus-country error deltas. A negative delta means recent growth improves the country-context forecast.
 
 This diagnostic does **not** retroactively redefine the preregistered universal H1. It separates two questions that were previously conflated:
