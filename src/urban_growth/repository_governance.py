@@ -11,6 +11,7 @@ PINNED_ACTION = re.compile(r"^[^/\s]+/[^@\s]+@[0-9a-f]{40}$")
 EMPIRICAL_WORKFLOWS = {
     "ghsl-redteam-130.yml",
     "japan-did-overlap-124.yml",
+    "japan-ghsl-match-124.yml",
     "wup-contemporaneous-country.yml",
     "wup-h1-empirical.yml",
     "wup-source-basis-h1.yml",

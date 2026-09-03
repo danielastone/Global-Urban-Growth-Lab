@@ -614,6 +614,26 @@ fixed-boundary GHSL retains 90 of 120 and 630 of 840, respectively. The omitted
 quarter consists of early cells lacking the two required prior origins, sometimes
 also lacking 100 prior rows. These are availability exclusions, not observed misses.
 
+## Japan direct-count construction-smoothing benchmark
+
+Issue #124 now has a direct-count benchmark using official Japan Population Census DIDs for
+2000–2020 and 100 m GHS-POP R2023A on identical locality-period rows. The origin cohort is fixed at
+25,000–100,000 direct-count population before concordance. Multipart official DID features are
+dissolved by vintage DID identifier before any denominator or overlap calculation.
+
+Dynamic one-to-one identity resolves 874 of 1,034 three-wave forecast-origin rows (84.5%); the
+99.5%-overlap strict-stability rule resolves only 74 (7.2%). On the dynamic sample, direct-count
+persistence beta is 0.622 versus 0.513 for fixed-origin GHS-POP and 0.449 for dynamic-DID GHS-POP.
+On the strict sample, direct beta is 0.812 versus 0.721 and 0.711. GHS-POP is not consistently
+stronger on coefficient, MAE/RMSE improvement, or sign reversal, so the registered
+construction-smoothing pattern is not established.
+
+Direct counts improve both MAE and RMSE over zero growth at every origin (2005, 2010, 2015), which
+provides independent Japan-specific support for persistence. It does not establish universal H1:
+strict geographic coverage is narrow, the country set has size one, and the full hierarchy-model
+comparison is outside issue #124. See `docs/japan-ghsl-match-124-result.md` for the complete result
+and limits.
+
 ## Reproduction
 
 With the registered raw files under `data/raw/`, run:
@@ -623,6 +643,7 @@ python scripts/run_wup_baselines.py
 python scripts/run_wup2018_vintage.py
 python scripts/run_ghsl_fixed_baselines.py
 python scripts/run_ghsl_boundary_sensitivity.py
+python scripts/run_japan_ghsl_match_124.py
 python scripts/run_national_envelope.py
 python scripts/run_wup_dynamic_hierarchy.py
 ```

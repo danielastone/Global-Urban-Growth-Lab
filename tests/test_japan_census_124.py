@@ -4,14 +4,14 @@ from urban_growth.japan_census_124 import (
 )
 
 
-def test_did_path_is_acquisition_ready_but_not_yet_empirically_qualified() -> None:
+def test_did_path_is_acquired_and_empirically_qualified() -> None:
     qualified, status = qualify_japan_issue_124_sources(japan_issue_124_source_register())
     did = qualified.set_index("candidate_id").loc["japan_did_2000_2020"]
     assert did["acquisition_ready"]
-    assert did["status"] == "acquisition_ready_inputs_not_registered"
-    assert not did["issue_124_qualified"]
+    assert did["status"] == "qualified"
+    assert did["issue_124_qualified"]
     assert status.iloc[0]["acquisition_ready_sources"] == 1
-    assert not status.iloc[0]["benchmark_estimable"]
+    assert status.iloc[0]["benchmark_estimable"]
 
 
 def test_municipality_panel_remains_administrative_sensitivity() -> None:
@@ -36,6 +36,7 @@ def test_did_path_qualifies_only_after_denominator_and_overlap_audit() -> None:
     candidate = japan_issue_124_source_register().iloc[[0]].copy()
     candidate["data_acquired"] = True
     candidate["origin_denominator_constructed"] = True
+    candidate["geometry_overlap_audited"] = False
     partly, _ = qualify_japan_issue_124_sources(candidate)
     assert partly.iloc[0]["status"] == "geometry_overlap_not_audited"
     candidate["geometry_overlap_audited"] = True

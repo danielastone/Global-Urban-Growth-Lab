@@ -19,7 +19,10 @@ official archive names and SHA-256 digests are registered in
 The product carries census DID polygons, population, published area, census year, and municipality
 identifiers. Legacy DBF text is decoded as Windows-31J (`cp932`); current archives provide UTF-8
 metadata. Zero-valued “affiliation undetermined” placeholder records are excluded because they are
-not DIDs and have neither a census year nor positive population or area.
+not DIDs and have neither a census year nor positive population or area. A DID can occupy multiple
+source features, each repeating the DID-level population and area. Features are therefore dissolved
+by census year and official vintage DID identifier before cohort construction; repeated population
+is not summed.
 
 ## Cohort and concordance rules
 
@@ -42,12 +45,16 @@ workflow runs in GitHub.
 
 | Origin | Origin DIDs | Dynamic identity | Strict stability |
 |---:|---:|---:|---:|
-| 2000 | 581 | 334 (57.5%) | 54 (9.3%) |
-| 2005 | 565 | 374 (66.2%) | 153 (27.1%) |
-| 2010 | 578 | 397 (68.7%) | 153 (26.5%) |
-| 2015 | 524 | 230 (43.9%) | 26 (5.0%) |
+| 2000 | 339 | 321 (94.7%) | 35 (10.3%) |
+| 2005 | 339 | 323 (95.3%) | 55 (16.2%) |
+| 2010 | 343 | 317 (92.4%) | 46 (13.4%) |
+| 2015 | 352 | 315 (89.5%) | 28 (8.0%) |
 
-The low strict-stability coverage means a fixed-boundary Japan result would describe a narrow,
-selected subset. The next GHSL comparison must therefore report the dynamic-identity result as the
-main direct-count benchmark, retain the full origin-denominator coverage table, and use strict
-stability as a sensitivity analysis.
+The strict-stability result is the primary geographic-validity result because it comes closest to
+a fixed locality within each interval, but its low coverage describes a narrow selected subset.
+The high-coverage dynamic-identity result is therefore required as a boundary-change diagnostic,
+not as a substitute for the fixed-geography result. Both retain the full origin denominator.
+
+An earlier feature-level dry run was invalid because it treated multipart DID features as separate
+localities. The level-ratio check in the matched GHS-POP stage exposed that defect. The table above
+supersedes the feature-level figures recorded before the dissolve correction.
