@@ -41,6 +41,25 @@
       "notes": "The live HTML capture is checksum-registered but not committed. Parenthesized dates, ranges, dashes, ellipses, symbols, and footnotes require explicit parsing states; they must not be coerced to exact reference dates."
     },
     {
+      "source_id": "unsd_m49_overview_2026_09_03",
+      "priority": 1,
+      "status": "reference_crosswalk",
+      "publisher": "United Nations Statistics Division",
+      "dataset": "Standard country or area codes for statistical use (M49) — Overview",
+      "release": "Captured 03 September 2026; page not versioned",
+      "landing_page": "https://unstats.un.org/unsd/methodology/m49/",
+      "documentation_url": "https://unstats.un.org/unsd/methodology/m49/overview/",
+      "retrieval": "pinned_https_capture",
+      "formats": ["html"],
+      "coverage": "English M49 country-or-area names, M49 codes, and ISO alpha-2 and alpha-3 codes",
+      "unit": "current country or area",
+      "role": "Country identifier crosswalk for reliability evidence; historical and subnational labels require explicit aliases or remain unmatched",
+      "upstream_dependencies": [],
+      "redistribution": "not_committed_pending_terms_review",
+      "citation": "United Nations Statistics Division. Standard country or area codes for statistical use (M49).",
+      "notes": "The page is live rather than release-versioned. Snapshot identity is checksum-derived. The crosswalk must not force dissolved areas or UK constituent-country census rows into present-day sovereign codes."
+    },
+    {
       "source_id": "un_wup_2025_country_degurb",
       "priority": 1,
       "status": "core_control",
