@@ -16,7 +16,7 @@ from urban_growth.sources import (
 
 def test_repository_catalog_is_valid() -> None:
     catalog = load_catalog("data/sources.json")
-    assert len(catalog["sources"]) == 13
+    assert len(catalog["sources"]) == 14
     ghsl = source_by_id(catalog, "ec_ghsl_ucdb_r2024a_v1_2")
     wup = source_by_id(catalog, "un_wup_2025_cities")
     assert "ec_ghsl_degurb_r2023a" in ghsl["upstream_dependencies"]
@@ -29,6 +29,9 @@ def test_repository_catalog_is_valid() -> None:
     assert "not evidence of results status" in census_dates["role"]
     m49 = source_by_id(catalog, "unsd_m49_overview_2026_09_03")
     assert m49["status"] == "reference_crosswalk"
+    unfpa = source_by_id(catalog, "unfpa_global_census_tracker_2023_02_28")
+    assert unfpa["release"].startswith("Layer data last edited 28 February 2023")
+    assert "not evidence of results publication" in unfpa["role"]
 
 
 def test_duplicate_source_ids_fail() -> None:
