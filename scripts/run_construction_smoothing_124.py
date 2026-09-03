@@ -17,13 +17,17 @@ from urban_growth.india_census_124 import (
     qualify_india_issue_124_sources,
 )
 from urban_growth.io import SourceSchemaError
+from urban_growth.japan_census_124 import (
+    japan_issue_124_source_register,
+    qualify_japan_issue_124_sources,
+)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--direct-input", type=Path)
     parser.add_argument("--ghsl-input", type=Path)
-    parser.add_argument("--pilot", choices=["us", "india", "china"], default="us")
+    parser.add_argument("--pilot", choices=["us", "india", "china", "japan"], default="us")
     parser.add_argument("--output-dir", type=Path, default=Path("outputs/construction_smoothing_124"))
     args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -38,6 +42,12 @@ def main() -> None:
         register, status = qualify_china_issue_124_sources(china_issue_124_source_register())
         register.to_csv(args.output_dir / "china_source_qualification.csv", index=False)
         status.to_csv(args.output_dir / "china_benchmark_status.csv", index=False)
+        print(status.to_csv(index=False))
+        return
+    if args.pilot == "japan":
+        register, status = qualify_japan_issue_124_sources(japan_issue_124_source_register())
+        register.to_csv(args.output_dir / "japan_source_qualification.csv", index=False)
+        status.to_csv(args.output_dir / "japan_benchmark_status.csv", index=False)
         print(status.to_csv(index=False))
         return
 
