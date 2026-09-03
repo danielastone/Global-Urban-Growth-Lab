@@ -39,7 +39,9 @@ jobs:
           sha256sum --check --strict ../../../results/japan_did_source_sha256.txt
           sha256sum --check --strict ../../../results/japan_historical_did_191_source_sha256.txt
       - name: Run chronological H1 hierarchy
-        run: uv run python scripts/run_japan_h1_191.py
+        run: >-
+          uv run python scripts/run_japan_h1_191.py
+          --did-dir data/raw/japan_did_h1
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: japan-h1-191
