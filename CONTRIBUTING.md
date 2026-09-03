@@ -60,5 +60,13 @@ not acceptable.
 
 ## Review ownership
 
-The repository owner currently performs final review. `CODEOWNERS` requests that
-review automatically; it does not replace branch protection or the required CI check.
+This is currently an owner-controlled repository. The owner authors and performs final
+review of changes; the project does not claim independent review, peer review, or
+segregation of duties. Requiring an approval would create false review theater because an
+author cannot supply independent approval of their own pull request.
+
+`CODEOWNERS` records decision ownership. Pull requests, the required CI check, current-
+branch enforcement, resolved review threads, and the owner-attestation checklist reduce
+accidental error, but none substitutes for an independent reviewer. If a qualified second
+reviewer is added later, the branch rules must then require their approval and dismiss
+stale approvals after new pushes.
