@@ -9,9 +9,11 @@ on:
       - "src/urban_growth/construction_smoothing.py"
       - "src/urban_growth/china_census_124.py"
       - "src/urban_growth/india_census_124.py"
+      - "src/urban_growth/japan_census_124.py"
       - "tests/test_construction_smoothing.py"
       - "tests/test_china_census_124.py"
       - "tests/test_india_census_124.py"
+      - "tests/test_japan_census_124.py"
 
 permissions:
   contents: read
@@ -32,13 +34,22 @@ jobs:
           uv run --locked --extra dev pytest
           tests/test_construction_smoothing.py tests/test_india_census_124.py
           tests/test_china_census_124.py
+          tests/test_japan_census_124.py
       - run: uv run --locked python scripts/run_construction_smoothing_124.py
       - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot india
       - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot china
+      - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot japan
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: construction-smoothing-124-status
           path: outputs/construction_smoothing_124/benchmark_status.csv
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: construction-smoothing-124-japan-status
+          path: |
+            outputs/construction_smoothing_124/japan_source_qualification.csv
+            outputs/construction_smoothing_124/japan_benchmark_status.csv
           if-no-files-found: error
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
