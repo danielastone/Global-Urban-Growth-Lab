@@ -32,3 +32,10 @@ Gate advanced:
 <!-- List unresolved licensing, geography, source-method, or governance decisions. Use
 "None" only after checking. A manual block cannot be closed by placeholder code. -->
 
+## Owner attestation
+
+<!-- This repository is owner-controlled and does not claim independent review. -->
+
+- [ ] I reviewed the final diff after the last push.
+- [ ] I checked applicable methodological, geographic, provenance, and licensing gates.
+- [ ] I am not representing this change as independently or peer reviewed.
