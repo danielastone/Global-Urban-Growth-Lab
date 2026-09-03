@@ -1,0 +1,41 @@
+name: Japan DID origin-overlap audit (issue 124)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/japan-did-overlap-124.yml'
+      - 'scripts/fetch_japan_did_124.py'
+      - 'scripts/run_japan_did_overlap_124.py'
+      - 'src/urban_growth/japan_did.py'
+      - 'results/japan_did_source_sha256.txt'
+      - 'pyproject.toml'
+      - 'uv.lock'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+      - run: uv sync --locked
+      - name: Acquire registered official DID archives
+        run: uv run python scripts/fetch_japan_did_124.py
+      - name: Verify registered source hashes
+        run: |
+          cd data/raw/japan_did
+          sha256sum --check --strict ../../../results/japan_did_source_sha256.txt
+      - name: Run origin-first overlap audit
+        run: uv run python scripts/run_japan_did_overlap_124.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: japan-did-overlap-124
+          path: outputs/japan_did_124/*.csv
+          if-no-files-found: error
