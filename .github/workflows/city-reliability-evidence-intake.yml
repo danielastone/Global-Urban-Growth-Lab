@@ -1,0 +1,66 @@
+name: City-level reliability evidence intake
+
+on:
+  workflow_dispatch:
+    inputs:
+      location_id:
+        description: "Stable project identifier; never a place name used as a join key"
+        required: true
+        type: string
+      location_label:
+        description: "Human-readable place or statistic label"
+        required: true
+        type: string
+      reference_date:
+        description: "Evidence-availability date (YYYY-MM-DD)"
+        required: true
+        type: string
+      use_case_id:
+        description: "Declared downstream use; this intake does not decide fitness"
+        required: true
+        type: choice
+        default: descriptive_city_evidence_v1
+        options:
+          - descriptive_city_evidence_v1
+          - city_growth_estimation
+          - locality_forecasting
+          - historical_city_panel
+      evidence_json:
+        description: >-
+          JSON object with verification, incentive, aggregate_check, conduit, and
+          granular_treatment assertions; see docs/city-reliability-evidence-intake.md
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-stage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Validate and stage documentary evidence
+        env:
+          LOCATION_ID: ${{ inputs.location_id }}
+          LOCATION_LABEL: ${{ inputs.location_label }}
+          REFERENCE_DATE: ${{ inputs.reference_date }}
+          USE_CASE_ID: ${{ inputs.use_case_id }}
+          EVIDENCE_JSON: ${{ inputs.evidence_json }}
+          SUBMITTED_BY: ${{ github.actor }}
+        run: PYTHONPATH=src python3 scripts/capture_city_reliability_evidence.py
+
+      - name: Upload staged evidence for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: city-reliability-evidence-${{ github.run_id }}
+          path: city-reliability-intake.json
+          if-no-files-found: error
+          retention-days: 30
