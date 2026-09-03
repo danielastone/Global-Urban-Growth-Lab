@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.11"
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
@@ -38,7 +38,9 @@ jobs:
             curl --fail --location --retry 3 --retry-delay 2 \
               "$base/$file" --output "data/raw/$file"
           done
-          sha256sum data/raw/WUP2025-*.xlsx | tee outputs-wup-source-sha256.txt
+          grep -E '^[0-9a-f]{64}  ' results/wup_h1_incremental_source_sha256.txt \
+            | sed 's#  #  data/raw/#' \
+            | sha256sum --check --strict -
       - name: Run corrected-lineage H1 diagnostic
         run: >-
           uv run --locked python scripts/run_wup_h1_incremental.py
@@ -46,10 +48,10 @@ jobs:
           --output outputs/wup_h1_incremental_recent_growth_by_origin.csv
       - name: Print empirical result
         run: cat outputs/wup_h1_incremental_recent_growth_by_origin.csv
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: wup-h1-incremental-empirical
           path: |
             outputs/wup_h1_incremental_recent_growth_by_origin.csv
-            outputs-wup-source-sha256.txt
+            results/wup_h1_incremental_source_sha256.txt
           if-no-files-found: error
