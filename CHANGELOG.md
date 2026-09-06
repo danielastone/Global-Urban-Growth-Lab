@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add synthetic MAP-accessibility sensitivity infrastructure: smooth exponential rival-mass exposure and preregistered threshold-proximity diagnostics for the 1h/2h/4h hard-band boundaries. This is measurement-error/robustness infrastructure, not an empirical accessibility finding.
+
 - Add fail-closed population-reliability snapshot and transformation provenance contracts,
   including deterministic lineage IDs, existing catalog/license foreign keys, exact UTC
   capture times, revision coexistence, and evidence-to-input validation. No empirical
