@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from urban_growth.io import SourceSchemaError, require_columns
 
 TRAVEL_TIME_BANDS = ((0, 1), (1, 2), (2, 4), (4, 8))
+DEFAULT_THRESHOLD_HOURS = (1.0, 2.0, 4.0)
 
 
 def _validate_accessibility_pairs(
@@ -56,6 +58,107 @@ def mutually_exclusive_rival_mass(
     result["accessibility_nominal_vintage"] = nominal_vintage
     result["band_definition"] = "mutually_exclusive_left_closed"
     return result.reset_index()
+
+
+def continuous_rival_mass(
+    pairs: pd.DataFrame,
+    *,
+    nominal_vintage: int,
+    decay_scale_hours: float = 1.0,
+    max_time_hours: float = 8.0,
+    focal_column: str = "focal_city_id",
+    travel_time_column: str = "travel_time_hours",
+    rival_population_column: str = "rival_population",
+) -> pd.DataFrame:
+    """Aggregate rival population with smooth exponential travel-time decay.
+
+    This is a robustness exposure for hard travel-time bands. It is descriptive and
+    predictive only: the weighted mass does not identify competition, agglomeration,
+    or a causal infrastructure effect.
+    """
+    _validate_accessibility_pairs(
+        pairs,
+        nominal_vintage=nominal_vintage,
+        focal_column=focal_column,
+        travel_time_column=travel_time_column,
+        rival_population_column=rival_population_column,
+    )
+    if decay_scale_hours <= 0:
+        raise SourceSchemaError("decay_scale_hours must be positive")
+    if max_time_hours <= 0:
+        raise SourceSchemaError("max_time_hours must be positive")
+
+    eligible = pairs.loc[pairs[travel_time_column].lt(max_time_hours)].copy()
+    eligible["_accessibility_weight"] = np.exp(
+        -eligible[travel_time_column].astype(float) / float(decay_scale_hours)
+    )
+    eligible["_weighted_rival_population"] = (
+        eligible[rival_population_column].astype(float) * eligible["_accessibility_weight"]
+    )
+
+    index = pd.Index(pairs[focal_column].drop_duplicates(), name=focal_column)
+    weighted = eligible.groupby(focal_column)["_weighted_rival_population"].sum()
+    result = pd.DataFrame(index=index)
+    result["rival_mass_exponential"] = weighted.reindex(index, fill_value=0.0)
+    result["decay_scale_hours"] = float(decay_scale_hours)
+    result["max_time_hours"] = float(max_time_hours)
+    result["accessibility_nominal_vintage"] = nominal_vintage
+    result["exposure_definition"] = "exponential_decay_border_neutral_or_registered_input"
+    return result.reset_index()
+
+
+def travel_time_threshold_diagnostics(
+    pairs: pd.DataFrame,
+    *,
+    nominal_vintage: int,
+    tolerance_minutes: float,
+    thresholds_hours: tuple[float, ...] = DEFAULT_THRESHOLD_HOURS,
+    focal_column: str = "focal_city_id",
+    travel_time_column: str = "travel_time_hours",
+    rival_population_column: str = "rival_population",
+) -> pd.DataFrame:
+    """Measure how much pair count and rival mass lie near hard band thresholds.
+
+    The tolerance must be preregistered before empirical growth outcomes are inspected.
+    Rows near a threshold are not automatically excluded; the output quantifies how much
+    exposure could change band under travel-time measurement error of that magnitude.
+    """
+    _validate_accessibility_pairs(
+        pairs,
+        nominal_vintage=nominal_vintage,
+        focal_column=focal_column,
+        travel_time_column=travel_time_column,
+        rival_population_column=rival_population_column,
+    )
+    if tolerance_minutes <= 0:
+        raise SourceSchemaError("tolerance_minutes must be positive")
+    if not thresholds_hours:
+        raise SourceSchemaError("At least one travel-time threshold is required")
+    if any(threshold <= 0 for threshold in thresholds_hours):
+        raise SourceSchemaError("Travel-time thresholds must be positive")
+    if len(set(thresholds_hours)) != len(thresholds_hours):
+        raise SourceSchemaError("Travel-time thresholds must be unique")
+
+    tolerance_hours = float(tolerance_minutes) / 60.0
+    total_pairs = len(pairs)
+    total_mass = float(pairs[rival_population_column].sum())
+    rows: list[dict[str, float | int]] = []
+    for threshold in thresholds_hours:
+        near = pairs[travel_time_column].sub(float(threshold)).abs().le(tolerance_hours)
+        pair_count = int(near.sum())
+        rival_mass = float(pairs.loc[near, rival_population_column].sum())
+        rows.append(
+            {
+                "threshold_hours": float(threshold),
+                "tolerance_minutes": float(tolerance_minutes),
+                "pair_count_near_threshold": pair_count,
+                "pair_share_near_threshold": pair_count / total_pairs if total_pairs else 0.0,
+                "rival_mass_near_threshold": rival_mass,
+                "rival_mass_share_near_threshold": rival_mass / total_mass if total_mass else 0.0,
+                "accessibility_nominal_vintage": nominal_vintage,
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def border_conditioned_rival_mass(
