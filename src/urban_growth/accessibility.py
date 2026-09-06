@@ -144,7 +144,9 @@ def travel_time_threshold_diagnostics(
     total_mass = float(pairs[rival_population_column].sum())
     rows: list[dict[str, float | int]] = []
     for threshold in thresholds_hours:
-        near = pairs[travel_time_column].sub(float(threshold)).abs().le(tolerance_hours)
+        distance = pairs[travel_time_column].astype(float).sub(float(threshold)).abs()
+        boundary_slack = np.finfo(float).eps * max(1.0, abs(float(threshold)), tolerance_hours) * 8
+        near = distance.le(tolerance_hours + boundary_slack)
         pair_count = int(near.sum())
         rival_mass = float(pairs.loc[near, rival_population_column].sum())
         rows.append(
