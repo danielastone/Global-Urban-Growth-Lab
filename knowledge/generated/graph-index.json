@@ -7,9 +7,17 @@
     "title": "WUP city population panel used for registered H1 evaluation",
     "type": "dataset"
   },
+  "GATE-H1-DIRECT-COUNT-10Y-OOS": {
+    "title": "H1 10-year direct-count external predictive improvement gate",
+    "type": "acceptance_gate"
+  },
   "GATE-H1-PERSISTENCE-OOS": {
     "title": "H1 predictive improvement gate",
     "type": "acceptance_gate"
+  },
+  "GEO-MEXICO": {
+    "title": "Mexico direct-count external validation geography",
+    "type": "geography"
   },
   "HYP-H1": {
     "title": "Recent city growth adds out-of-sample forecasting information beyond non-persistence baselines",
@@ -17,6 +25,22 @@
   },
   "ISSUE-133": {
     "title": "Contemporaneous country baseline and H1 re-test",
+    "type": "github_issue"
+  },
+  "ISSUE-216": {
+    "title": "External direct-count validation for H1",
+    "type": "github_issue"
+  },
+  "ISSUE-217": {
+    "title": "Mexico PR A \u2014 Freeze 10-year direct-count H1 external panel specification",
+    "type": "github_issue"
+  },
+  "ISSUE-220": {
+    "title": "Mexico source basis \u2014 assess INEGI/WUP independence before PR-A activation",
+    "type": "github_issue"
+  },
+  "ISSUE-221": {
+    "title": "Mexico concordance \u2014 preregister locality boundary-change exclusions for 2000/2010/2020",
     "type": "github_issue"
   },
   "RESULT-H1-OOS-WUP-COMPLETE-V1": {
@@ -30,6 +54,10 @@
   "RQ-PERSISTENCE": {
     "title": "Does recent city growth improve out-of-sample forecasts beyond non-persistence baselines?",
     "type": "research_question"
+  },
+  "TEST-H1-MEXICO-DIRECT-COUNT-10Y-OOS": {
+    "title": "H1 Mexico 10-year direct-count external validation",
+    "type": "validation_test"
   },
   "TEST-H1-PERSISTENCE-OOS": {
     "title": "H1 rolling-origin out-of-sample persistence test",
