@@ -11,7 +11,7 @@ import argparse
 import hashlib
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -485,7 +485,7 @@ def write_evidence_package(
     eligible_origins = eligibility.loc[
         eligibility["eligible"], "origin"
     ].astype(int).tolist()
-    generated_at = datetime.now(timezone.utc).isoformat()
+    generated_at = datetime.now(UTC).isoformat()
     command = (
         "python -m urban_growth.h1_oos build "
         f"--f21 {f21_path} --output-dir {output_dir} "
