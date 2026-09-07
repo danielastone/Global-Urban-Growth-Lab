@@ -1,0 +1,21 @@
+hypothesis:
+  specified:
+    requires_primary_falsification_test: true
+    requires_acceptance_gate: true
+  data_ready:
+    requires_dataset_availability: [ingested, validated]
+    requires_provenance: [documented, verified]
+  implemented:
+    requires_repository_artifact: true
+  internally_validated:
+    required_test_roles: [internal_validation]
+  externally_validated:
+    required_test_roles: [external_validation]
+  evidence_supported:
+    required_test_roles: [primary_falsification]
+  publication_ready:
+    enabled: false
+    reason: publication checks not yet specified
+blocking_failure_interpretations:
+  - falsifies_primary_claim
+  - contradicts_supporting_claim

@@ -1,0 +1,34 @@
+{
+  "ARTIFACT-FORECAST-PY": {
+    "title": "Forecast implementation",
+    "type": "artifact"
+  },
+  "DATA-WUP-CITY-POP": {
+    "title": "WUP city population panel used for registered H1 evaluation",
+    "type": "dataset"
+  },
+  "GATE-H1-PERSISTENCE-OOS": {
+    "title": "H1 predictive improvement gate",
+    "type": "acceptance_gate"
+  },
+  "HYP-H1": {
+    "title": "Recent city growth adds out-of-sample forecasting information beyond non-persistence baselines",
+    "type": "hypothesis"
+  },
+  "ISSUE-133": {
+    "title": "Contemporaneous country baseline and H1 re-test",
+    "type": "github_issue"
+  },
+  "RQ-PERSISTENCE": {
+    "title": "Does recent city growth improve out-of-sample forecasts beyond non-persistence baselines?",
+    "type": "research_question"
+  },
+  "TEST-H1-PERSISTENCE-OOS": {
+    "title": "H1 rolling-origin out-of-sample persistence test",
+    "type": "validation_test"
+  },
+  "VAR-RECENT-GROWTH": {
+    "title": "Focal-city recent population growth used in H1",
+    "type": "variable"
+  }
+}

@@ -1,0 +1,40 @@
+relations:
+  motivates:
+    sources: [research_question]
+    targets: [hypothesis]
+  requires:
+    sources: [hypothesis, variable]
+    targets: [dataset, variable]
+  derived_from:
+    sources: [variable, result]
+    targets: [dataset, variable, artifact]
+  produced_by:
+    sources: [variable]
+    targets: [artifact]
+  tested_by:
+    sources: [hypothesis]
+    targets: [validation_test]
+  judged_by:
+    sources: [validation_test]
+    targets: [acceptance_gate]
+  produces:
+    sources: [validation_test]
+    targets: [result]
+  implemented_by:
+    sources: [hypothesis, variable, validation_test]
+    targets: [artifact, github_issue]
+  supports:
+    sources: [result, finding]
+    targets: [hypothesis]
+  contradicts:
+    sources: [result, finding]
+    targets: [hypothesis]
+  threatened_by:
+    sources: [hypothesis, result, finding]
+    targets: [limitation]
+  blocked_by:
+    sources: [github_issue]
+    targets: [github_issue]
+  supersedes:
+    sources: [research_question, hypothesis, dataset, variable, artifact, validation_test, acceptance_gate, result, finding, limitation, github_issue]
+    targets: [research_question, hypothesis, dataset, variable, artifact, validation_test, acceptance_gate, result, finding, limitation, github_issue]

@@ -1,0 +1,16 @@
+id: HYP-H1
+type: hypothesis
+title: Recent city growth adds out-of-sample forecasting information beyond non-persistence baselines
+canonical_name: H1 recent-growth persistence
+aliases: [H1, persistence hypothesis]
+relations:
+  - type: requires
+    target: DATA-WUP-CITY-POP
+  - type: requires
+    target: VAR-RECENT-GROWTH
+  - type: implemented_by
+    target: ARTIFACT-FORECAST-PY
+  - type: implemented_by
+    target: ISSUE-133
+  - type: tested_by
+    target: TEST-H1-PERSISTENCE-OOS

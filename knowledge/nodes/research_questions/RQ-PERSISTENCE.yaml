@@ -1,0 +1,8 @@
+id: RQ-PERSISTENCE
+type: research_question
+title: Does recent city growth improve out-of-sample forecasts beyond non-persistence baselines?
+canonical_name: recent growth incremental forecasting information
+aliases: [H1 research question]
+relations:
+  - type: motivates
+    target: HYP-H1
