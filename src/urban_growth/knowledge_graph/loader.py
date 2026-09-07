@@ -10,7 +10,7 @@ def load_graph(root:str|Path)->KnowledgeGraph:
     nodes={}
     for path in sorted(root_path.rglob("*.yaml")):
         data=yaml.safe_load(path.read_text(encoding="utf-8"))
-        if not isinstance(data,dict): raise ValueError(f"Knowledge graph node must be a mapping: {path}")
+        if not isinstance(data,dict): raise TypeError(f"Knowledge graph node must be a mapping: {path}")
         node=parse_node(data)
         if node.id in nodes: raise ValueError(f"Duplicate node id {node.id}: {path}")
         nodes[node.id]=node
