@@ -1,4 +1,5 @@
 """Generate deterministic knowledge-graph views."""
+
 from __future__ import annotations
 
 import argparse
@@ -28,13 +29,17 @@ def render(root: Path) -> dict[str, str]:
 
     for node in sorted(graph.nodes.values(), key=lambda item: item.id):
         if node.type == NodeType.hypothesis:
-            status_lines.append(f"- `{node.id}` — **{hypothesis_lifecycle(graph, node.id)}** — {node.title}")
+            status_lines.append(
+                f"- `{node.id}` — **{hypothesis_lifecycle(graph, node.id)}** — {node.title}"
+            )
             for test_id in graph.targets(node.id, "tested_by"):
                 evaluation = test_evaluation(graph, test_id)
                 outcome = evaluation.outcome if evaluation else "pending"
                 evidence_lines.append(f"- `{node.id}` → `{test_id}` → **{outcome}**")
                 test = graph.get(test_id)
-                validation_lines.append(f"- `{node.id}` / `{test.role.value}` / `{test_id}` — {outcome}")
+                validation_lines.append(
+                    f"- `{node.id}` / `{test.role.value}` / `{test_id}` — {outcome}"
+                )
         for relation, target in graph.outgoing(node.id):
             if relation in {"requires", "implemented_by", "blocked_by"}:
                 dependency_lines.append(f"- `{node.id}` --{relation}--> `{target}`")
@@ -57,7 +62,12 @@ def main() -> None:
     output_dir = root / "generated"
     outputs = render(root)
     if args.check:
-        stale = [name for name, content in outputs.items() if not (output_dir / name).exists() or (output_dir / name).read_text(encoding="utf-8") != content]
+        stale = [
+            name
+            for name, content in outputs.items()
+            if not (output_dir / name).exists()
+            or (output_dir / name).read_text(encoding="utf-8") != content
+        ]
         if stale:
             raise SystemExit(f"Generated knowledge-graph outputs are stale: {', '.join(stale)}")
         return
