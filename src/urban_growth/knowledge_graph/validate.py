@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 
 from urban_growth.knowledge_graph.graph import KnowledgeGraph
-from urban_growth.knowledge_graph.models import NodeType, ResultNode
+from urban_growth.knowledge_graph.models import ClaimScope, HypothesisNode, NodeType, ResultNode
 
 
 def _load_relation_constraints(repo_root: Path):
@@ -43,6 +43,10 @@ def validate_graph(graph: KnowledgeGraph) -> list[str]:
             target = graph.get(rel.target)
             if node.type not in allowed_sources or target.type not in allowed_targets:
                 errors.append(f"{node.id}: illegal {rel.type} edge to {target.id}")
+            if rel.type == "has_supporting_claim" and (
+                not isinstance(target, HypothesisNode) or target.claim_scope != ClaimScope.supporting
+            ):
+                errors.append(f"{node.id}: has_supporting_claim target {target.id} must be supporting")
     for key, ids in canonical.items():
         if len(ids) > 1:
             errors.append(f"Duplicate canonical identity {key}: {sorted(ids)}")
@@ -51,7 +55,12 @@ def validate_graph(graph: KnowledgeGraph) -> list[str]:
             errors.append(f"Duplicate alias identity {key}: {sorted(set(ids))}")
     for node in graph.nodes.values():
         if node.type == NodeType.hypothesis and not graph.targets(node.id, "tested_by"):
-            errors.append(f"{node.id}: hypothesis has no validation test")
+            if not graph.targets(node.id, "has_supporting_claim"):
+                errors.append(f"{node.id}: hypothesis has no validation test")
+        if isinstance(node, HypothesisNode) and node.claim_scope == ClaimScope.supporting:
+            parents = graph.sources(node.id, "has_supporting_claim")
+            if len(parents) != 1:
+                errors.append(f"{node.id}: supporting claim must have exactly one parent hypothesis")
         if node.type == NodeType.validation_test and len(graph.targets(node.id, "judged_by")) != 1:
             errors.append(f"{node.id}: validation test must have exactly one acceptance gate")
         if isinstance(node, ResultNode):
