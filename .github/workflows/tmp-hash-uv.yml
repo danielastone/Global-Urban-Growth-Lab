@@ -37,12 +37,27 @@ jobs:
             --output-dir results/h1_panel_freeze \
             --commit 88d407928e3a77f6975e0791741cd59ae7b08994 \
             --repo-root .
-      - name: Emit permitted PR-A artifacts
+      - name: Verify frozen identities
         shell: bash
         run: |
-          echo '===UV_LOCK_SHA256==='; sha256sum uv.lock
-          echo '===ORIGIN_ELIGIBILITY==='; cat results/h1_panel_freeze/h1_oos_origin_eligibility.csv
-          echo '===SINGLETON_EXCLUSIONS==='; cat results/h1_panel_freeze/h1_oos_singleton_exclusions.csv
-          echo '===PANEL_DIAGNOSTICS==='; cat results/h1_panel_freeze/h1_oos_panel_diagnostics.json
-          echo '===PANEL_FREEZE_MANIFEST==='; cat results/h1_panel_freeze/h1_oos_panel_freeze_manifest.json
-          echo '===END_PR_A_ARTIFACTS==='
+          test "$(sha256sum uv.lock | cut -d' ' -f1)" = 'b889883333aa5d64a2b3ba36408a3859a7eb8e7ed0a816ea42be55a0798414e0'
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('results/h1_panel_freeze/h1_oos_panel_freeze_manifest.json')
+          m=json.loads(p.read_text())
+          assert m['panel_sha256']=='60fb73f234e34d8b7835283171185ffaa64cd679fc3f5ffe8ccd8ee411fcdca0'
+          assert m['performance_evaluation_performed'] is False
+          assert m['result_nodes_registered'] is False
+          PY
+      - name: Upload permitted PR-A text artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: h1-panel-freeze-pr-a-text
+          path: |
+            results/h1_panel_freeze/h1_oos_origin_eligibility.csv
+            results/h1_panel_freeze/h1_oos_singleton_exclusions.csv
+            results/h1_panel_freeze/h1_oos_panel_diagnostics.json
+            results/h1_panel_freeze/h1_oos_panel_freeze_manifest.json
+          if-no-files-found: error
+          retention-days: 1
