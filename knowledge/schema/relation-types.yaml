@@ -20,6 +20,9 @@ relations:
   produces:
     sources: [validation_test]
     targets: [result]
+  validated_in:
+    sources: [validation_test, result]
+    targets: [geography]
   implemented_by:
     sources: [hypothesis, variable, validation_test]
     targets: [artifact, github_issue]
@@ -39,5 +42,5 @@ relations:
     sources: [github_issue]
     targets: [github_issue]
   supersedes:
-    sources: [research_question, hypothesis, dataset, variable, artifact, validation_test, acceptance_gate, result, finding, limitation, github_issue]
-    targets: [research_question, hypothesis, dataset, variable, artifact, validation_test, acceptance_gate, result, finding, limitation, github_issue]
+    sources: [research_question, hypothesis, dataset, geography, variable, artifact, validation_test, acceptance_gate, result, finding, limitation, github_issue]
+    targets: [research_question, hypothesis, dataset, geography, variable, artifact, validation_test, acceptance_gate, result, finding, limitation, github_issue]
