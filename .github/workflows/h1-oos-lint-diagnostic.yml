@@ -1,0 +1,30 @@
+name: h1-oos-lint-diagnostic
+
+on:
+  push:
+    branches: [feature/h1-wup-oos-panel]
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: feature/h1-wup-oos-panel
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: "0.11.33"
+      - run: uv sync --locked --extra dev
+      - name: Capture lint
+        run: uv run --locked --extra dev ruff check . > h1-oos-lint.txt 2>&1 || true
+      - name: Commit diagnostic
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add h1-oos-lint.txt
+          git commit -m "Capture H1 OOS lint diagnostic" || exit 0
+          git push
