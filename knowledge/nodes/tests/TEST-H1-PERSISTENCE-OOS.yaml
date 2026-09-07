@@ -9,3 +9,7 @@ relations:
     target: GATE-H1-PERSISTENCE-OOS
   - type: implemented_by
     target: ARTIFACT-FORECAST-PY
+  - type: produces
+    target: RESULT-H1-OOS-WUP-INCONCLUSIVE-V1
+  - type: produces
+    target: RESULT-H1-OOS-WUP-COMPLETE-V1

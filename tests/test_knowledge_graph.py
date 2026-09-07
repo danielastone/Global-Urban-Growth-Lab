@@ -12,7 +12,7 @@ from urban_growth.knowledge_graph.models import AcceptanceGateNode, ResultNode, 
 def test_h1_status_is_derived_without_manual_status():
     graph = load_graph(Path("knowledge/nodes"))
     assert "status" not in graph.get("HYP-H1").model_fields_set
-    assert hypothesis_lifecycle(graph, "HYP-H1") == "implemented"
+    assert hypothesis_lifecycle(graph, "HYP-H1") == "evidence_supported"
 
 
 def test_result_rejects_stored_gate_evaluation():
