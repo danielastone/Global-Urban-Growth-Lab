@@ -52,7 +52,7 @@ def test_evaluation(graph:KnowledgeGraph,test_id:str)->GateEvaluation|None:
     results=[graph.get(item) for item in graph.targets(test_id,"produces")]
     results=[item for item in results if isinstance(item,ResultNode)]
     if not results:return None
-    return evaluate_gate(sorted(results,key=lambda item:item.executed_at)[-1],gate)
+    return evaluate_gate(max(results,key=lambda item:item.executed_at),gate)
 
 def _tests_for_role(graph:KnowledgeGraph,hypothesis_id:str,role:TestRole)->list[str]:
     return [test_id for test_id in graph.targets(hypothesis_id,"tested_by") if isinstance(graph.get(test_id),ValidationTestNode) and graph.get(test_id).role==role]
