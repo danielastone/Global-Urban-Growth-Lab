@@ -22,6 +22,7 @@ from urban_growth.knowledge_graph.models import (
     ResultNode,
     TestRole,
     ValidationTestNode,
+    ValidationType,
     VariableNode,
 )
 
@@ -115,6 +116,14 @@ def evaluate_gate(result: ResultNode, gate: AcceptanceGateNode) -> GateEvaluatio
     return GateEvaluation(gate.id, "pass", evaluated, gate.failure_interpretation)
 
 
+def _latest_result(graph: KnowledgeGraph, test_id: str) -> ResultNode | None:
+    results = [graph.get(item) for item in graph.targets(test_id, "produces")]
+    results = [item for item in results if isinstance(item, ResultNode)]
+    if not results:
+        return None
+    return max(results, key=lambda item: item.executed_at)
+
+
 def test_evaluation(graph: KnowledgeGraph, test_id: str) -> GateEvaluation | None:
     test = graph.get(test_id)
     if not isinstance(test, ValidationTestNode):
@@ -125,11 +134,10 @@ def test_evaluation(graph: KnowledgeGraph, test_id: str) -> GateEvaluation | Non
     gate = graph.get(gate_ids[0])
     if not isinstance(gate, AcceptanceGateNode):
         return None
-    results = [graph.get(item) for item in graph.targets(test_id, "produces")]
-    results = [item for item in results if isinstance(item, ResultNode)]
-    if not results:
+    result = _latest_result(graph, test_id)
+    if result is None:
         return None
-    return evaluate_gate(max(results, key=lambda item: item.executed_at), gate)
+    return evaluate_gate(result, gate)
 
 
 def _required_roles(rules: dict[str, Any], transition: str, scope: ClaimScope) -> set[TestRole]:
@@ -157,13 +165,7 @@ def transition_test_disposition(
     test_id: str,
     transition: str,
 ) -> str:
-    """Classify one test for one hypothesis transition using the v1 R4 rules.
-
-    A failure is blocking only when the test role is required for the transition and the
-    gate's failure interpretation is blocking for the evaluated hypothesis claim scope.
-    Failures outside that scope are diagnostics. Missing/invalid results remain
-    inconclusive and can never be silently promoted to blocking failures.
-    """
+    """Classify one test for one hypothesis transition using the v1 R4 rules."""
     rules = _load_lifecycle_rules(graph.repo_root)
     hypothesis = graph.get(hypothesis_id)
     test = graph.get(test_id)
@@ -251,6 +253,48 @@ def _test_transition_satisfied(
     return all(item == "pass" for item in dispositions)
 
 
+def external_validation_scope(graph: KnowledgeGraph, hypothesis_id: str) -> tuple[str, ...]:
+    """Return deterministic geography scope from passing direct-count external results."""
+    rules = _load_lifecycle_rules(graph.repo_root)
+    hypothesis = graph.get(hypothesis_id)
+    if not isinstance(hypothesis, HypothesisNode):
+        raise TypeError(f"{hypothesis_id} is not a hypothesis")
+    spec = rules["hypothesis"].get("externally_validated", {})
+    required_type = ValidationType(spec.get("requires_validation_type", "direct_count_external"))
+    roles = _required_roles(rules, "externally_validated", hypothesis.claim_scope)
+    scopes: set[str] = set()
+    for test_id in _tests_for_roles(graph, hypothesis_id, roles):
+        if transition_test_disposition(graph, hypothesis_id, test_id, "externally_validated") != "pass":
+            continue
+        result = _latest_result(graph, test_id)
+        if result is None or result.validation_type != required_type or not result.geography:
+            continue
+        scopes.add(result.geography)
+    return tuple(sorted(scopes))
+
+
+def _external_transition_satisfied(
+    graph: KnowledgeGraph,
+    hypothesis: HypothesisNode,
+    rules: dict[str, Any],
+) -> bool | None:
+    roles = _required_roles(rules, "externally_validated", hypothesis.claim_scope)
+    tests = _tests_for_roles(graph, hypothesis.id, roles)
+    if not tests:
+        return None
+    dispositions = {
+        test_id: transition_test_disposition(graph, hypothesis.id, test_id, "externally_validated")
+        for test_id in tests
+    }
+    if any(item == "blocking_failure" for item in dispositions.values()):
+        return False
+    if external_validation_scope(graph, hypothesis.id):
+        return True
+    if rules["hypothesis"]["externally_validated"].get("pending_tests_block_later_states", True):
+        return False
+    return None
+
+
 def hypothesis_lifecycle(graph: KnowledgeGraph, hypothesis_id: str) -> str:
     rules = _load_lifecycle_rules(graph.repo_root)
     hypothesis = graph.get(hypothesis_id)
@@ -267,8 +311,11 @@ def hypothesis_lifecycle(graph: KnowledgeGraph, hypothesis_id: str) -> str:
         return state
     state = "implemented"
 
-    for transition in ("internally_validated", "externally_validated", "evidence_supported"):
-        satisfied = _test_transition_satisfied(graph, hypothesis, transition, rules)
+    for transition in ("internally_validated", "evidence_supported", "externally_validated"):
+        if transition == "externally_validated":
+            satisfied = _external_transition_satisfied(graph, hypothesis, rules)
+        else:
+            satisfied = _test_transition_satisfied(graph, hypothesis, transition, rules)
         if satisfied is None:
             continue
         if not satisfied:
