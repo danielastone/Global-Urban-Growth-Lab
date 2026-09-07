@@ -1,0 +1,44 @@
+hypothesis:
+  specified:
+    requires_primary_falsification_test: true
+    requires_acceptance_gate: true
+  data_ready:
+    requires_dataset_availability: [ingested, validated]
+    requires_provenance: [documented, verified]
+  implemented:
+    requires_repository_artifact: true
+  internally_validated:
+    required_test_roles:
+      primary: [internal_validation]
+      supporting: [internal_validation]
+  externally_validated:
+    required_test_roles:
+      primary: [external_validation]
+      supporting: [external_validation]
+  evidence_supported:
+    required_test_roles:
+      primary: [primary_falsification]
+      supporting: [supporting]
+  publication_ready:
+    enabled: false
+    reason: publication checks not yet specified
+
+test_disposition:
+  pass: pass
+  inconclusive: inconclusive
+  fail:
+    falsifies_primary_claim:
+      blocking_claim_scopes: [primary]
+      otherwise: diagnostic
+    contradicts_supporting_claim:
+      blocking_claim_scopes: [supporting]
+      otherwise: diagnostic
+    weakens_evidence:
+      blocking_claim_scopes: []
+      otherwise: diagnostic
+    inconclusive:
+      blocking_claim_scopes: []
+      otherwise: inconclusive
+    diagnostic_only:
+      blocking_claim_scopes: []
+      otherwise: diagnostic

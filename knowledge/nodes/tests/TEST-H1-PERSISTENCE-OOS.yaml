@@ -1,0 +1,11 @@
+id: TEST-H1-PERSISTENCE-OOS
+type: validation_test
+title: H1 rolling-origin out-of-sample persistence test
+canonical_name: H1 rolling-origin OOS test
+aliases: []
+role: primary_falsification
+relations:
+  - type: judged_by
+    target: GATE-H1-PERSISTENCE-OOS
+  - type: implemented_by
+    target: ARTIFACT-FORECAST-PY
