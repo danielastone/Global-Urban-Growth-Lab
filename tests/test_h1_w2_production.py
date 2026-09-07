@@ -3,7 +3,7 @@ from pathlib import Path
 from urban_growth.knowledge_graph.lifecycle import (
     evaluate_gate,
     hypothesis_lifecycle,
-    test_evaluation,
+    test_evaluation as evaluate_test_result,
 )
 from urban_growth.knowledge_graph.loader import load_graph
 from urban_growth.knowledge_graph.models import AcceptanceGateNode, ResultNode
@@ -29,5 +29,5 @@ def test_w2_sequence_incomplete_then_complete_resolves_from_newer_result():
     complete_eval = evaluate_gate(complete, gate)
     assert complete_eval.outcome == "pass"
     assert complete.executed_at > incomplete.executed_at
-    assert test_evaluation(graph, "TEST-H1-PERSISTENCE-OOS").outcome == "pass"
+    assert evaluate_test_result(graph, "TEST-H1-PERSISTENCE-OOS").outcome == "pass"
     assert hypothesis_lifecycle(graph, "HYP-H1") == "evidence_supported"
