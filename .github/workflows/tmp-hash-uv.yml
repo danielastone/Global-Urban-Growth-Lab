@@ -1,12 +1,17 @@
 name: tmp-hash-uv
+
 on:
   push:
     branches:
       - feature/h1-panel-freeze-pr-a
+
+permissions:
+  contents: read
+
 jobs:
   hash:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Hash uv.lock
         run: sha256sum uv.lock
