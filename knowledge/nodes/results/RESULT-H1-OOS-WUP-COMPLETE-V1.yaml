@@ -21,6 +21,8 @@ sample:
   panel_spec_version: H1-WUP-OOS-V1
   origins: [1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
   scoring_rows: 66983
+  performance_rows_sha256: a2e0782b7adf5bc20e606834ed41265b0108ce00b16d8096dc1a2aac189ab73a
+  canonical_summary_sha256: b0528643f6c1f2fcf8fdd6bdabf8f33b3f41fd511ac518cf6a316a6b3c8ce840
   limitation: >-
     Historical pseudo-OOS using harmonized WUP series; passing this gate does not substitute for external direct-count census validation. The aggregate pass is not uniform across origins: 2020 fails both RMSE and MAE conditions under both weighting schemes, and 2000 fails the RMSE condition under row weighting; these reversals remain visible in the committed per-origin summary and must not be interpreted away by aggregation.
 inputs:
@@ -28,4 +30,5 @@ inputs:
   artifacts:
     - results/h1_panel_freeze_a/h1_oos_panel_freeze_manifest.json
     - results/h1_oos_pr_b/h1_oos_summary.csv
+    - results/h1_oos_pr_b/h1_oos_rows.parquet
 relations: []
