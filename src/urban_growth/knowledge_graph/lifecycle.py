@@ -1,17 +1,23 @@
-"""Derived readiness, gate evaluation, and hypothesis lifecycle computation."""
+"""Derived readiness, gate evaluation, and rule-driven hypothesis lifecycle computation."""
 
 from __future__ import annotations
 
 import operator
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 from urban_growth.knowledge_graph.graph import KnowledgeGraph
 from urban_growth.knowledge_graph.models import (
     AcceptanceGateNode,
     ArtifactNode,
+    ClaimScope,
     DatasetAvailability,
     DatasetNode,
     FailureInterpretation,
+    HypothesisNode,
     ProvenanceState,
     ResultNode,
     TestRole,
@@ -20,12 +26,6 @@ from urban_growth.knowledge_graph.models import (
 )
 
 OPS = {">=": operator.ge, ">": operator.gt, "<=": operator.le, "<": operator.lt, "==": operator.eq}
-READY_DATASET_AVAILABILITY = {DatasetAvailability.ingested, DatasetAvailability.validated}
-READY_PROVENANCE = {ProvenanceState.documented, ProvenanceState.verified}
-BLOCKING_FAILURES = {
-    FailureInterpretation.falsifies_primary_claim,
-    FailureInterpretation.contradicts_supporting_claim,
-}
 
 
 @dataclass(frozen=True)
@@ -36,20 +36,42 @@ class GateEvaluation:
     failure_interpretation: FailureInterpretation
 
 
+def _load_lifecycle_rules(repo_root: Path) -> dict[str, Any]:
+    path = repo_root / "knowledge" / "schema" / "lifecycle-rules.yaml"
+    data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or "hypothesis" not in data or "test_disposition" not in data:
+        raise ValueError(f"Invalid lifecycle rule file: {path}")
+    return data
+
+
 def artifact_ready(graph: KnowledgeGraph, artifact_id: str) -> bool:
     node = graph.get(artifact_id)
     return isinstance(node, ArtifactNode) and (graph.repo_root / node.path).is_file()
 
 
-def dataset_ready(node: DatasetNode) -> bool:
-    return node.availability in READY_DATASET_AVAILABILITY and node.provenance in READY_PROVENANCE
+def dataset_ready(node: DatasetNode, rules: dict[str, Any]) -> bool:
+    spec = rules["hypothesis"]["data_ready"]
+    allowed_availability = {DatasetAvailability(item) for item in spec["requires_dataset_availability"]}
+    allowed_provenance = {ProvenanceState(item) for item in spec["requires_provenance"]}
+    return node.availability in allowed_availability and node.provenance in allowed_provenance
 
 
-def variable_ready(graph: KnowledgeGraph, variable_id: str, stack: tuple[str, ...] = ()) -> bool:
+def variable_ready(
+    graph: KnowledgeGraph,
+    variable_id: str,
+    rules: dict[str, Any] | None = None,
+    stack: tuple[str, ...] = (),
+) -> bool:
+    if rules is None:
+        rules = _load_lifecycle_rules(graph.repo_root)
     if variable_id in stack:
         raise ValueError(f"Variable dependency cycle: {' -> '.join((*stack, variable_id))}")
     node = graph.get(variable_id)
-    if not isinstance(node, VariableNode) or node.provenance not in READY_PROVENANCE:
+    allowed_provenance = {
+        ProvenanceState(item)
+        for item in rules["hypothesis"]["data_ready"]["requires_provenance"]
+    }
+    if not isinstance(node, VariableNode) or node.provenance not in allowed_provenance:
         return False
     if node.raw_source:
         datasets = graph.targets(variable_id, "derived_from")
@@ -57,7 +79,7 @@ def variable_ready(graph: KnowledgeGraph, variable_id: str, stack: tuple[str, ..
             bool(datasets)
             and node.field_mapping_documented
             and all(
-                isinstance(graph.get(item), DatasetNode) and dataset_ready(graph.get(item))
+                isinstance(graph.get(item), DatasetNode) and dataset_ready(graph.get(item), rules)
                 for item in datasets
             )
         )
@@ -69,14 +91,14 @@ def variable_ready(graph: KnowledgeGraph, variable_id: str, stack: tuple[str, ..
         for item in graph.targets(variable_id, "derived_from")
         if isinstance(graph.get(item), DatasetNode)
     ]
-    if not all(dataset_ready(graph.get(item)) for item in datasets):
+    if not all(dataset_ready(graph.get(item), rules) for item in datasets):
         return False
     upstream = [
         item
         for item in graph.targets(variable_id, "requires")
         if isinstance(graph.get(item), VariableNode)
     ]
-    return all(variable_ready(graph, item, (*stack, variable_id)) for item in upstream)
+    return all(variable_ready(graph, item, rules, (*stack, variable_id)) for item in upstream)
 
 
 def evaluate_gate(result: ResultNode, gate: AcceptanceGateNode) -> GateEvaluation:
@@ -110,56 +132,151 @@ def test_evaluation(graph: KnowledgeGraph, test_id: str) -> GateEvaluation | Non
     return evaluate_gate(max(results, key=lambda item: item.executed_at), gate)
 
 
-def _tests_for_role(graph: KnowledgeGraph, hypothesis_id: str, role: TestRole) -> list[str]:
+def _required_roles(rules: dict[str, Any], transition: str, scope: ClaimScope) -> set[TestRole]:
+    raw = rules["hypothesis"].get(transition, {}).get("required_test_roles", {})
+    if isinstance(raw, list):
+        return {TestRole(item) for item in raw}
+    return {TestRole(item) for item in raw.get(scope.value, [])}
+
+
+def _tests_for_roles(
+    graph: KnowledgeGraph,
+    hypothesis_id: str,
+    roles: set[TestRole],
+) -> list[str]:
     return [
         test_id
         for test_id in graph.targets(hypothesis_id, "tested_by")
-        if isinstance(graph.get(test_id), ValidationTestNode) and graph.get(test_id).role == role
+        if isinstance(graph.get(test_id), ValidationTestNode) and graph.get(test_id).role in roles
     ]
 
 
-def _role_satisfied(graph: KnowledgeGraph, hypothesis_id: str, role: TestRole) -> bool:
-    tests = _tests_for_role(graph, hypothesis_id, role)
-    return bool(tests) and all(
-        (ev := test_evaluation(graph, test_id)) is not None and ev.outcome == "pass"
-        for test_id in tests
-    )
+def transition_test_disposition(
+    graph: KnowledgeGraph,
+    hypothesis_id: str,
+    test_id: str,
+    transition: str,
+) -> str:
+    """Classify one test for one hypothesis transition using the v1 R4 rules.
+
+    A failure is blocking only when the test role is required for the transition and the
+    gate's failure interpretation is blocking for the evaluated hypothesis claim scope.
+    Failures outside that scope are diagnostics. Missing/invalid results remain
+    inconclusive and can never be silently promoted to blocking failures.
+    """
+    rules = _load_lifecycle_rules(graph.repo_root)
+    hypothesis = graph.get(hypothesis_id)
+    test = graph.get(test_id)
+    if not isinstance(hypothesis, HypothesisNode):
+        raise TypeError(f"{hypothesis_id} is not a hypothesis")
+    if not isinstance(test, ValidationTestNode):
+        raise TypeError(f"{test_id} is not a validation test")
+
+    evaluation = test_evaluation(graph, test_id)
+    if evaluation is None:
+        return "inconclusive"
+    if evaluation.outcome == "pass":
+        required = test.role in _required_roles(rules, transition, hypothesis.claim_scope)
+        return "pass" if required else "diagnostic"
+    if evaluation.outcome == "inconclusive":
+        return "inconclusive"
+
+    required = test.role in _required_roles(rules, transition, hypothesis.claim_scope)
+    if not required:
+        return "diagnostic"
+    fail_rules = rules["test_disposition"]["fail"]
+    failure_rule = fail_rules[evaluation.failure_interpretation.value]
+    blocking_scopes = {ClaimScope(item) for item in failure_rule["blocking_claim_scopes"]}
+    if hypothesis.claim_scope in blocking_scopes:
+        return "blocking_failure"
+    return failure_rule["otherwise"]
+
+
+def _specified(graph: KnowledgeGraph, hypothesis: HypothesisNode, rules: dict[str, Any]) -> bool:
+    spec = rules["hypothesis"]["specified"]
+    if hypothesis.claim_scope == ClaimScope.primary:
+        required_roles = {TestRole.primary_falsification}
+    else:
+        required_roles = {TestRole.supporting}
+    tests = _tests_for_roles(graph, hypothesis.id, required_roles)
+    if spec.get("requires_primary_falsification_test") and not tests:
+        return False
+    if spec.get("requires_acceptance_gate") and any(
+        len(graph.targets(test_id, "judged_by")) != 1 for test_id in tests
+    ):
+        return False
+    return True
+
+
+def _data_ready(
+    graph: KnowledgeGraph,
+    hypothesis: HypothesisNode,
+    rules: dict[str, Any],
+) -> bool:
+    for node_id in graph.targets(hypothesis.id, "requires"):
+        node = graph.get(node_id)
+        if isinstance(node, DatasetNode) and not dataset_ready(node, rules):
+            return False
+        if isinstance(node, VariableNode) and not variable_ready(graph, node_id, rules):
+            return False
+    return True
+
+
+def _implemented(graph: KnowledgeGraph, hypothesis: HypothesisNode, rules: dict[str, Any]) -> bool:
+    spec = rules["hypothesis"]["implemented"]
+    if not spec.get("requires_repository_artifact"):
+        return True
+    artifacts = [
+        item
+        for item in graph.targets(hypothesis.id, "implemented_by")
+        if isinstance(graph.get(item), ArtifactNode)
+    ]
+    return bool(artifacts) and all(artifact_ready(graph, item) for item in artifacts)
+
+
+def _test_transition_satisfied(
+    graph: KnowledgeGraph,
+    hypothesis: HypothesisNode,
+    transition: str,
+    rules: dict[str, Any],
+) -> bool | None:
+    roles = _required_roles(rules, transition, hypothesis.claim_scope)
+    if not roles:
+        return None
+    tests = _tests_for_roles(graph, hypothesis.id, roles)
+    if not tests:
+        return None
+    dispositions = [
+        transition_test_disposition(graph, hypothesis.id, test_id, transition) for test_id in tests
+    ]
+    return all(item == "pass" for item in dispositions)
 
 
 def hypothesis_lifecycle(graph: KnowledgeGraph, hypothesis_id: str) -> str:
+    rules = _load_lifecycle_rules(graph.repo_root)
     hypothesis = graph.get(hypothesis_id)
-    if hypothesis.type.value != "hypothesis":
+    if not isinstance(hypothesis, HypothesisNode):
         raise TypeError(f"{hypothesis_id} is not a hypothesis")
-    primary = _tests_for_role(graph, hypothesis_id, TestRole.primary_falsification)
-    if not primary or any(len(graph.targets(test_id, "judged_by")) != 1 for test_id in primary):
+    if not _specified(graph, hypothesis, rules):
         return "unspecified"
+
     state = "specified"
-    for node_id in graph.targets(hypothesis_id, "requires"):
-        node = graph.get(node_id)
-        if isinstance(node, DatasetNode) and not dataset_ready(node):
-            return state
-        if isinstance(node, VariableNode) and not variable_ready(graph, node_id):
-            return state
+    if not _data_ready(graph, hypothesis, rules):
+        return state
     state = "data_ready"
-    artifacts = [
-        item
-        for item in graph.targets(hypothesis_id, "implemented_by")
-        if isinstance(graph.get(item), ArtifactNode)
-    ]
-    if not artifacts or not all(artifact_ready(graph, item) for item in artifacts):
+    if not _implemented(graph, hypothesis, rules):
         return state
     state = "implemented"
-    internal = _tests_for_role(graph, hypothesis_id, TestRole.internal_validation)
-    if internal:
-        if not _role_satisfied(graph, hypothesis_id, TestRole.internal_validation):
+
+    for transition in ("internally_validated", "externally_validated", "evidence_supported"):
+        satisfied = _test_transition_satisfied(graph, hypothesis, transition, rules)
+        if satisfied is None:
+            continue
+        if not satisfied:
             return state
-        state = "internally_validated"
-    external = _tests_for_role(graph, hypothesis_id, TestRole.external_validation)
-    if external:
-        if not _role_satisfied(graph, hypothesis_id, TestRole.external_validation):
-            return state
-        state = "externally_validated"
-    primary_evaluations = [test_evaluation(graph, test_id) for test_id in primary]
-    if not all(item is not None and item.outcome == "pass" for item in primary_evaluations):
-        return state
-    return "evidence_supported"
+        state = transition
+
+    publication = rules["hypothesis"].get("publication_ready", {})
+    if publication.get("enabled"):
+        raise NotImplementedError("publication_ready checks must be specified before enabling")
+    return state
