@@ -89,7 +89,7 @@ def route_quality_summary(routes: pd.DataFrame) -> pd.DataFrame:
         rows.append(
             {
                 "crosses_international_border": bool(cross_border),
-                "pair_count": int(len(group)),
+                "pair_count": len(group),
                 "route_success_rate": float(success.mean()) if len(group) else 0.0,
                 "median_max_snap_distance_m": float(snap_max.median()) if len(group) else 0.0,
             }
