@@ -21,7 +21,7 @@ sample:
   panel_spec_version: H1-WUP-OOS-V1
   origins: [1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
   scoring_rows: 66983
-  limitation: Historical pseudo-OOS using harmonized WUP series; passing this gate does not substitute for external direct-count census validation.
+  limitation: Historical pseudo-OOS using harmonized WUP series; passing this gate does not substitute for external direct-count census validation. The aggregate pass is not uniform across origins: 2020 fails both RMSE and MAE conditions under both weighting schemes, and 2000 fails the RMSE condition under row weighting; these reversals remain visible in the committed per-origin summary and must not be interpreted away by aggregation.
 inputs:
   datasets: [DATA-WUP-CITY-POP]
   artifacts:
