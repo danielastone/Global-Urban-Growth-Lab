@@ -19,6 +19,14 @@
     "title": "Contemporaneous country baseline and H1 re-test",
     "type": "github_issue"
   },
+  "RESULT-H1-OOS-WUP-COMPLETE-V1": {
+    "title": "H1 WUP rolling-origin OOS completed result",
+    "type": "result"
+  },
+  "RESULT-H1-OOS-WUP-INCONCLUSIVE-V1": {
+    "title": "H1 WUP OOS deliberately incomplete W2 probe",
+    "type": "result"
+  },
   "RQ-PERSISTENCE": {
     "title": "Does recent city growth improve out-of-sample forecasts beyond non-persistence baselines?",
     "type": "research_question"
