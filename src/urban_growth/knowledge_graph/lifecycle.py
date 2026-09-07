@@ -201,11 +201,10 @@ def _specified(graph: KnowledgeGraph, hypothesis: HypothesisNode, rules: dict[st
     tests = _tests_for_roles(graph, hypothesis.id, required_roles)
     if spec.get("requires_primary_falsification_test") and not tests:
         return False
-    if spec.get("requires_acceptance_gate") and any(
-        len(graph.targets(test_id, "judged_by")) != 1 for test_id in tests
-    ):
-        return False
-    return True
+    return not (
+        spec.get("requires_acceptance_gate")
+        and any(len(graph.targets(test_id, "judged_by")) != 1 for test_id in tests)
+    )
 
 
 def _data_ready(
