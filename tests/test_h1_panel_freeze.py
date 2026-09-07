@@ -6,6 +6,8 @@ import pandas as pd
 from urban_growth.h1_oos import attach_strict_country_peer_growth, build_five_year_intervals
 from urban_growth.h1_panel_freeze import (
     FORBIDDEN_PR_A_COLUMNS,
+    PANEL_HASH_METHOD,
+    canonical_panel_sha256,
     freeze_scoring_panel,
     panel_diagnostics,
 )
@@ -80,6 +82,18 @@ def test_panel_diagnostics_are_outcome_blind_and_weights_sum_to_one():
             "winner",
         }
         assert not prohibited_keys.intersection(row)
+
+
+def test_canonical_panel_hash_is_order_invariant_and_content_sensitive():
+    panel, _ = _frozen_panel()
+    baseline = canonical_panel_sha256(panel)
+    shuffled = panel.sample(frac=1.0, random_state=17).reset_index(drop=True)
+    assert PANEL_HASH_METHOD == "canonical-jsonl-v1"
+    assert canonical_panel_sha256(shuffled) == baseline
+
+    changed = panel.copy()
+    changed.loc[0, "population_origin"] = float(changed.loc[0, "population_origin"]) + 1.0
+    assert canonical_panel_sha256(changed) != baseline
 
 
 def test_pr_a_module_source_contains_no_performance_builder_call():
