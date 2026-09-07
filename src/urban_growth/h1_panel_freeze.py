@@ -1,8 +1,10 @@
 """Blind H1 panel-freeze builder for preregistered fence PR A.
 
-This module constructs and hashes the eligible H1 scoring panel without fitting
-B0/B1, computing errors, producing performance summaries, evaluating gates, or
-registering result nodes. It exists specifically to keep PR A outcome-blind.
+Constructs and hashes the eligible H1 scoring panel without fitting B0/B1,
+computing errors, producing performance summaries, evaluating gates, or
+registering result nodes. Scientific panel identity uses a canonical row-content
+hash rather than raw parquet bytes because parquet serialization is not a stable
+cross-process identity.
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ from urban_growth.h1_oos import (
 )
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys
 
+PANEL_HASH_METHOD = "canonical-jsonl-v1"
 FORBIDDEN_PR_A_COLUMNS = frozenset(
     {
         "b0_prediction",
@@ -59,6 +62,56 @@ def _sha256(path: Path) -> str:
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _canonical_scalar(value: Any) -> Any:
+    """Normalize a dataframe scalar for stable content hashing."""
+    if isinstance(value, np.generic):
+        value = value.item()
+    if value is None or pd.isna(value):
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        if not np.isfinite(value):
+            raise SourceSchemaError("Canonical panel hash received non-finite float")
+        return {"float64_hex": value.hex()}
+    if isinstance(value, str):
+        return value
+    return str(value)
+
+
+def canonical_panel_sha256(panel: pd.DataFrame) -> str:
+    """Hash sorted panel contents independently of parquet serialization bytes."""
+    required_sort = ["period_start", "country_code", "city_id"]
+    missing = [name for name in required_sort if name not in panel.columns]
+    if missing:
+        raise SourceSchemaError(
+            "Canonical panel hash missing sort columns: " + ", ".join(missing)
+        )
+    ordered = panel.sort_values(required_sort).reset_index(drop=True)
+    columns = sorted(ordered.columns)
+    digest = hashlib.sha256()
+    header = {
+        "hash_method": PANEL_HASH_METHOD,
+        "columns": columns,
+        "row_count": len(ordered),
+    }
+    digest.update(
+        (json.dumps(header, sort_keys=True, separators=(",", ":")) + "\n").encode(
+            "utf-8"
+        )
+    )
+    for row in ordered[columns].itertuples(index=False, name=None):
+        normalized = [_canonical_scalar(value) for value in row]
+        digest.update(
+            (json.dumps(normalized, ensure_ascii=False, separators=(",", ":")) + "\n").encode(
+                "utf-8"
+            )
+        )
     return digest.hexdigest()
 
 
@@ -110,6 +163,8 @@ def freeze_scoring_panel(
         out["training_precedes_or_equals_origin"] = (
             out["training_max_period_end"] <= origin
         )
+        # Pairing is guaranteed by construction: PR A freezes one common row set
+        # before either B0 or B1 exists. These fields do not compare fitted models.
         out["b0_b1_training_rows_identical"] = True
         out["b0_b1_scoring_rows_identical"] = True
         out["wup_vintage"] = WUP_VINTAGE
@@ -268,7 +323,11 @@ def write_panel_freeze_package(
         "protocol": asdict(PROTOCOL),
         "eligible_origins": diagnostics["eligible_origins"],
         "panel_path": str(panel_path),
-        "panel_sha256": _sha256(panel_path),
+        "panel_sha256": canonical_panel_sha256(panel),
+        "panel_hash_method": PANEL_HASH_METHOD,
+        "panel_parquet_sha256": _sha256(panel_path),
+        "panel_row_count": len(panel),
+        "panel_column_count": len(panel.columns),
         "origin_eligibility_path": str(eligibility_path),
         "origin_eligibility_sha256": _sha256(eligibility_path),
         "singleton_exclusions_path": str(exclusions_path),
