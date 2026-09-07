@@ -47,6 +47,11 @@ class TestRole(str, Enum):
     diagnostic = "diagnostic"
 
 
+class ClaimScope(str, Enum):
+    primary = "primary"
+    supporting = "supporting"
+
+
 class FailureInterpretation(str, Enum):
     falsifies_primary_claim = "falsifies_primary_claim"
     contradicts_supporting_claim = "contradicts_supporting_claim"
@@ -74,6 +79,7 @@ class Node(BaseModel):
 class HypothesisNode(Node):
     model_config = ConfigDict(extra="forbid")
     type: Literal[NodeType.hypothesis]
+    claim_scope: ClaimScope = ClaimScope.primary
 
 
 class DatasetNode(Node):
