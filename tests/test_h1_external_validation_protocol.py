@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
 from urban_growth.knowledge_graph.graph import KnowledgeGraph
 from urban_growth.knowledge_graph.lifecycle import external_validation_scope, hypothesis_lifecycle
@@ -13,7 +13,6 @@ from urban_growth.knowledge_graph.models import (
     ValidationType,
 )
 from urban_growth.knowledge_graph.validate import validate_graph
-
 
 HYPOTHESIS_ID = "HYP-H1"
 TEST_ID = "TEST-H1-MEXICO-DIRECT-COUNT-10Y-OOS"
