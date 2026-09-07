@@ -1,3 +1,3 @@
 # Evidence graph
 
-- `HYP-H1` → `TEST-H1-PERSISTENCE-OOS` → **pending**
+- `HYP-H1` → `TEST-H1-PERSISTENCE-OOS` → **pass**
