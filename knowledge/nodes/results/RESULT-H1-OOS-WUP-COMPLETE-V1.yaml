@@ -1,0 +1,30 @@
+id: RESULT-H1-OOS-WUP-COMPLETE-V1
+type: result
+title: H1 WUP rolling-origin OOS completed result
+canonical_name: H1 WUP OOS completed result v1
+aliases: []
+test: TEST-H1-PERSISTENCE-OOS
+status: completed
+executed_at: "2026-09-07T15:55:00+00:00"
+metrics:
+  relative_rmse_improvement: 0.10618885517341208
+  mae_difference: -0.0024207976593659496
+execution:
+  commit: e3505aad2f1e2682e3e88b3eb98af6140e59efc8
+  environment_lock: b889883333aa5d64a2b3ba36408a3859a7eb8e7ed0a816ea42be55a0798414e0
+  command: "python -m urban_growth.h1_oos build --f21 data/raw/WUP2025-F21-DEGURBA-Cities_Pop.xlsx --output-dir results/h1_oos_pr_b --commit e3505aad2f1e2682e3e88b3eb98af6140e59efc8 --repo-root ."
+sample:
+  frozen_panel_sha256: a38203c78c42c95b27b2850d4c305eee077f132733f6eceb8f8d1d8e75cec9f2
+  frozen_panel_hash_method: canonical-jsonl-v1
+  freeze_construction_commit: 88d407928e3a77f6975e0791741cd59ae7b08994
+  performance_builder_commit: e3505aad2f1e2682e3e88b3eb98af6140e59efc8
+  panel_spec_version: H1-WUP-OOS-V1
+  origins: [1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
+  scoring_rows: 66983
+  limitation: Historical pseudo-OOS using harmonized WUP series; passing this gate does not substitute for external direct-count census validation.
+inputs:
+  datasets: [DATA-WUP-CITY-POP]
+  artifacts:
+    - results/h1_panel_freeze_a/h1_oos_panel_freeze_manifest.json
+    - results/h1_oos_pr_b/h1_oos_summary.csv
+relations: []
