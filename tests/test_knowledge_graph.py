@@ -92,6 +92,12 @@ def test_missing_gate_metric_is_inconclusive():
 def _r4_graph(tmp_path: Path, *, claim_scope: str, interpretation: str, metrics: dict[str, float]):
     artifact = tmp_path / "artifact.py"
     artifact.write_text("# fixture\n", encoding="utf-8")
+    schema = tmp_path / "knowledge" / "schema"
+    schema.mkdir(parents=True)
+    schema.joinpath("lifecycle-rules.yaml").write_text(
+        Path("knowledge/schema/lifecycle-rules.yaml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
     nodes = [
         parse_node(
             {
