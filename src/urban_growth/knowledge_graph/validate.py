@@ -54,9 +54,12 @@ def validate_graph(graph: KnowledgeGraph) -> list[str]:
         if len(set(ids)) > 1:
             errors.append(f"Duplicate alias identity {key}: {sorted(set(ids))}")
     for node in graph.nodes.values():
-        if node.type == NodeType.hypothesis and not graph.targets(node.id, "tested_by"):
-            if not graph.targets(node.id, "has_supporting_claim"):
-                errors.append(f"{node.id}: hypothesis has no validation test")
+        if (
+            node.type == NodeType.hypothesis
+            and not graph.targets(node.id, "tested_by")
+            and not graph.targets(node.id, "has_supporting_claim")
+        ):
+            errors.append(f"{node.id}: hypothesis has no validation test")
         if isinstance(node, HypothesisNode) and node.claim_scope == ClaimScope.supporting:
             parents = graph.sources(node.id, "has_supporting_claim")
             if len(parents) != 1:
