@@ -1,9 +1,11 @@
 from pathlib import Path
 
-from urban_growth.knowledge_graph.lifecycle import evaluate_gate, hypothesis_lifecycle
+from urban_growth.knowledge_graph.lifecycle import (
+    evaluate_gate,
+    hypothesis_lifecycle,
+)
 from urban_growth.knowledge_graph.loader import load_graph
 from urban_growth.knowledge_graph.models import AcceptanceGateNode, ResultNode
-
 
 ROOT = Path(__file__).parents[1]
 
