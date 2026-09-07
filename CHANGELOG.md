@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an outcome-blind H5 historical-OSM routing pilot preregistration and fail-closed routed-pair validation contract. Primary routes must be border-neutral, within preregistered snap/time limits, and explicitly successful before they can feed H5 exposures. This is pilot infrastructure, not an empirical border finding.
+
 - Add synthetic MAP-accessibility sensitivity infrastructure: smooth exponential rival-mass exposure and preregistered threshold-proximity diagnostics for the 1h/2h/4h hard-band boundaries. This is measurement-error/robustness infrastructure, not an empirical accessibility finding.
 
 - Add fail-closed population-reliability snapshot and transformation provenance contracts,
