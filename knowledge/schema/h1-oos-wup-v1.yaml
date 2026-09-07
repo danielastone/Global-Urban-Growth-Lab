@@ -1,0 +1,78 @@
+panel_spec_version: H1-WUP-OOS-V1
+status: preregistered_awaiting_source_bytes
+source:
+  source_id: un_wup_2025_cities
+  table: F21
+  vintage: WUP_2025_F21
+  repository_policy: manual_acquisition_review_before_commit
+primary_test:
+  hypothesis_id: HYP-H1
+  test_id: TEST-H1-PERSISTENCE-OOS
+  gate_id: GATE-H1-PERSISTENCE-OOS
+  horizon_years: 5
+  growth_window_years: 5
+  origin_step_years: 5
+  growth_definition: annualized_log_population_growth
+  estimators:
+    b0: intercept_plus_leave_city_out_contemporaneous_country_growth
+    b1: b0_plus_focal_city_recent_growth_deviation
+    fitting: pooled_ols_refit_at_each_origin
+    training_information_rule: outcome_period_end_must_be_less_than_or_equal_to_forecast_origin
+    hyperparameter_search: prohibited
+    later_origin_model_selection: prohibited
+  paired_rows:
+    training: identical_b0_b1_rows
+    scoring: identical_b0_b1_rows
+origin_eligibility:
+  minimum_training_rows: 100
+  minimum_training_countries: 30
+  both_required: true
+  threshold_revision_after_results: prohibited
+singleton_country_rule:
+  action: exclude_from_both_models
+  scope: every_city_origin_row_where_leave_city_out_signal_is_required
+  global_fallback: prohibited
+weighting:
+  primary: country_balanced_within_origin_equal_origin_across_aggregate
+  sensitivity: row_weighted_within_origin_equal_origin_across_aggregate
+  balanced_city_panel_required: false
+summary_fields:
+  authoritative_gate_fields:
+    - relative_rmse_improvement
+    - mae_difference
+    - rmse_condition_passed
+    - mae_condition_passed
+    - gate_passed
+  winner_field: prohibited
+gate:
+  relative_rmse_improvement:
+    operator: ">="
+    threshold: 0.05
+  mae_difference:
+    operator: "<="
+    threshold: 0.0
+w2:
+  reserved_result_ids:
+    inconclusive_probe: RESULT-H1-OOS-WUP-INCONCLUSIVE-V1
+    completed: RESULT-H1-OOS-WUP-COMPLETE-V1
+  inconclusive_probe_missing_metric: mae_difference
+  completed_result_is_only_gate_resolving_node: true
+lineage:
+  row_fields:
+    - wup_vintage
+    - period_start
+    - period_end
+    - horizon_years
+    - growth_window_years
+    - construction_commit
+    - panel_spec_version
+  file_manifest_fields:
+    - source_sha256
+    - construction_commit
+    - environment_lock_sha256
+    - construction_command
+    - eligible_origins
+    - panel_sha256
+limitations:
+  - WUP historical pseudo-OOS series may be smoother than direct-count census observations.
+  - Passing the WUP gate does not substitute for external direct-count validation.
