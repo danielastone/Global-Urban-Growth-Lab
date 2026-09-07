@@ -1,6 +1,6 @@
 panel_spec_version: H1-WUP-OOS-V1
 status: preregistered_source_acquired
-empirical_activation: blocked_source_validation
+empirical_activation: ready_for_panel_construction
 empirical_activation_enum:
   - blocked_source_unavailable
   - blocked_source_identity
