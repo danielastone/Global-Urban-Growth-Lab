@@ -3,6 +3,8 @@ from pathlib import Path
 from urban_growth.knowledge_graph.lifecycle import (
     evaluate_gate,
     hypothesis_lifecycle,
+)
+from urban_growth.knowledge_graph.lifecycle import (
     test_evaluation as evaluate_test_result,
 )
 from urban_growth.knowledge_graph.loader import load_graph
