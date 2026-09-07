@@ -6,14 +6,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  diagnose:
+  archive:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: feature/h1-pr-b-w2
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
@@ -42,7 +44,7 @@ jobs:
             'data/raw/WUP2025-F21-DEGURBA-Cities_Pop.xlsx' > /tmp/f21.sha256
           sha256sum --check --strict /tmp/f21.sha256
 
-      - name: Reproduce and diff committed summary
+      - name: Build canonical locked PR B outputs
         shell: bash
         run: |
           set -euo pipefail
@@ -52,12 +54,321 @@ jobs:
             --output-dir /tmp/h1_oos_pr_b \
             --commit e3505aad2f1e2682e3e88b3eb98af6140e59efc8 \
             --repo-root .
-          echo '--- committed summary sha256'
-          sha256sum results/h1_oos_pr_b/h1_oos_summary.csv
-          echo '--- reproduced summary sha256'
-          sha256sum /tmp/h1_oos_pr_b/h1_oos_summary.csv
-          echo '--- summary diff'
-          diff -u results/h1_oos_pr_b/h1_oos_summary.csv /tmp/h1_oos_pr_b/h1_oos_summary.csv || true
-          echo '--- reproduced summary'
-          cat /tmp/h1_oos_pr_b/h1_oos_summary.csv
-          exit 1
+          uv run --locked python - <<'PY'
+          import pandas as pd
+          summary = pd.read_csv('/tmp/h1_oos_pr_b/h1_oos_summary.csv')
+          primary = summary[(summary['scope'] == 'aggregate') & (summary['weighting'] == 'country_balanced')].iloc[0]
+          row_weighted = summary[(summary['scope'] == 'aggregate') & (summary['weighting'] == 'row_weighted')].iloc[0]
+          assert int(primary['n_cities']) == 66983
+          assert float(primary['relative_rmse_improvement']) == 0.10618885517341208
+          assert float(primary['mae_difference']) == -0.0024207976593659496
+          assert bool(primary['gate_passed'])
+          assert float(row_weighted['relative_rmse_improvement']) == 0.11161138129389944
+          assert bool(row_weighted['gate_passed'])
+          PY
+          cp /tmp/h1_oos_pr_b/h1_oos_summary.csv results/h1_oos_pr_b/h1_oos_summary.csv
+          cp /tmp/h1_oos_pr_b/h1_oos_rows.parquet results/h1_oos_pr_b/h1_oos_rows.parquet
+          printf '%s  %s\n' \
+            '3a96030d87aec6c1c50f658d5321067d6345e1ab936c5d2854524f972caa75c0' \
+            'data/raw/WUP2025-F21-DEGURBA-Cities_Pop.xlsx' \
+            > results/h1_oos_pr_b/input_sha256.txt
+
+      - name: Capture derived artifact metadata
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          parquet_sha="$(sha256sum results/h1_oos_pr_b/h1_oos_rows.parquet | awk '{print $1}')"
+          summary_sha="$(sha256sum results/h1_oos_pr_b/h1_oos_summary.csv | awk '{print $1}')"
+          input_manifest_sha="$(sha256sum results/h1_oos_pr_b/input_sha256.txt | awk '{print $1}')"
+          read -r parquet_rows parquet_columns < <(uv run --locked python - <<'PY'
+          import pyarrow.parquet as pq
+          metadata = pq.ParquetFile('results/h1_oos_pr_b/h1_oos_rows.parquet').metadata
+          print(metadata.num_rows, metadata.num_columns)
+          PY
+          )
+          read -r summary_rows summary_columns < <(uv run --locked python - <<'PY'
+          import pandas as pd
+          frame = pd.read_csv('results/h1_oos_pr_b/h1_oos_summary.csv')
+          print(len(frame), len(frame.columns))
+          PY
+          )
+          test "$parquet_rows" = "66983"
+          {
+            echo "parquet_sha=$parquet_sha"
+            echo "summary_sha=$summary_sha"
+            echo "input_manifest_sha=$input_manifest_sha"
+            echo "parquet_rows=$parquet_rows"
+            echo "parquet_columns=$parquet_columns"
+            echo "summary_rows=$summary_rows"
+            echo "summary_columns=$summary_columns"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload reproduced H1 evidence artifact
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wup-h1-oos-pr-b
+          path: |
+            results/h1_oos_pr_b/h1_oos_rows.parquet
+            results/h1_oos_pr_b/h1_oos_summary.csv
+            results/h1_oos_pr_b/input_sha256.txt
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Register result provenance and durable evidence
+        env:
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.upload.outputs.artifact-digest }}
+          PARQUET_SHA: ${{ steps.metadata.outputs.parquet_sha }}
+          SUMMARY_SHA: ${{ steps.metadata.outputs.summary_sha }}
+          INPUT_MANIFEST_SHA: ${{ steps.metadata.outputs.input_manifest_sha }}
+          PARQUET_ROWS: ${{ steps.metadata.outputs.parquet_rows }}
+          PARQUET_COLUMNS: ${{ steps.metadata.outputs.parquet_columns }}
+          SUMMARY_ROWS: ${{ steps.metadata.outputs.summary_rows }}
+          SUMMARY_COLUMNS: ${{ steps.metadata.outputs.summary_columns }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run --locked python - <<'PY'
+          import csv
+          import json
+          import os
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          package_id = 'wup-h1-oos-v1'
+          construction_commit = 'e3505aad2f1e2682e3e88b3eb98af6140e59efc8'
+          freeze_commit = '88d407928e3a77f6975e0791741cd59ae7b08994'
+          frozen_panel_sha = 'a38203c78c42c95b27b2850d4c305eee077f132733f6eceb8f8d1d8e75cec9f2'
+          parquet_path = 'results/h1_oos_pr_b/h1_oos_rows.parquet'
+          summary_path = 'results/h1_oos_pr_b/h1_oos_summary.csv'
+          manifest_path = 'results/h1_oos_pr_b/input_sha256.txt'
+          result_path = Path('knowledge/nodes/results/RESULT-H1-OOS-WUP-COMPLETE-V1.yaml')
+
+          text = result_path.read_text(encoding='utf-8')
+          if 'performance_rows_sha256:' not in text:
+              text = text.replace(
+                  '  scoring_rows: 66983\n',
+                  f"  scoring_rows: 66983\n  performance_rows_sha256: {os.environ['PARQUET_SHA']}\n  canonical_summary_sha256: {os.environ['SUMMARY_SHA']}\n",
+              )
+          artifact_line = f'    - {parquet_path}\n'
+          if artifact_line not in text:
+              text = text.replace(
+                  f'    - {summary_path}\n',
+                  f'    - {summary_path}\n{artifact_line}',
+              )
+          result_path.write_text(text, encoding='utf-8')
+
+          document = Path('docs/h1-oos-wup-pr-b-result-2026-09-07.md')
+          document.write_text(
+              '# H1 WUP rolling-origin OOS result — PR B\n\n'
+              'The preregistered aggregate country-balanced gate passes: relative RMSE improvement '
+              'is 10.62% (threshold ≥5%) and MAE difference is −0.002421 (threshold ≤0). '
+              'The row-weighted aggregate also passes. H1 therefore derives to `evidence_supported`; '
+              'no lifecycle field or gate threshold was manually edited.\n\n'
+              'Per-origin reversals remain material: the 2020 origin fails both RMSE and MAE under both '
+              'weighting regimes, and the 2000 origin fails the RMSE condition under row weighting. '
+              'The aggregate pass must not be interpreted as uniform persistence across origins.\n\n'
+              f'Frozen panel identity: `{frozen_panel_sha}`. Performance builder commit: '
+              f'`{construction_commit}`. Freeze construction commit: `{freeze_commit}`. '
+              'Source identity is the registered WUP 2025 F21 workbook, SHA-256 '
+              '`3a96030d87aec6c1c50f658d5321067d6345e1ab936c5d2854524f972caa75c0`.\n\n'
+              f'Committed performance rows SHA-256: `{os.environ["PARQUET_SHA"]}`. '
+              f'Canonical locked summary SHA-256: `{os.environ["SUMMARY_SHA"]}`. '
+              'The prior committed summary differed only in two last-bit floating-point string renderings '
+              '(approximately 10^-18) while all aggregate metrics, gate decisions, and substantive '
+              'per-origin conclusions were identical; the locked builder output is retained as canonical.\n\n'
+              'Limitation: this is historical pseudo-OOS on harmonized WUP series. Passing this gate '
+              'does not substitute for external validation against direct-count census observations.\n',
+              encoding='utf-8',
+          )
+
+          package_path = Path('results/durable_evidence_packages.csv')
+          with package_path.open(newline='', encoding='utf-8') as handle:
+              reader = csv.DictReader(handle)
+              fieldnames = reader.fieldnames
+              packages = list(reader)
+          assert fieldnames is not None
+          expiry = (datetime.now(timezone.utc) + timedelta(days=90)).replace(microsecond=0).isoformat()
+          artifact_digest = os.environ['ARTIFACT_DIGEST'].removeprefix('sha256:')
+          if not any(row['package_id'] == package_id for row in packages):
+              packages.append({
+                  'package_id': package_id,
+                  'result_document': document.as_posix(),
+                  'workflow_path': '.github/workflows/h1-wup-oos-pr-b.yml',
+                  'workflow_run_id': os.environ['GITHUB_RUN_ID'],
+                  'artifact_id': os.environ['ARTIFACT_ID'],
+                  'artifact_name': 'wup-h1-oos-pr-b',
+                  'artifact_sha256': artifact_digest,
+                  'artifact_expires_at': expiry,
+                  'producing_commit': os.environ['GITHUB_SHA'],
+                  'generation_command': 'uv run --locked python -m urban_growth.h1_oos build --f21 data/raw/WUP2025-F21-DEGURBA-Cities_Pop.xlsx --output-dir results/h1_oos_pr_b --commit e3505aad2f1e2682e3e88b3eb98af6140e59efc8',
+                  'parameters_json': json.dumps({
+                      'construction_commit': construction_commit,
+                      'freeze_construction_commit': freeze_commit,
+                      'fence_stage': 'pr_b_performance',
+                      'frozen_panel_sha256': frozen_panel_sha,
+                      'summary_sha256': os.environ['SUMMARY_SHA'],
+                  }, separators=(',', ':')),
+                  'source_ids_json': json.dumps(['un_wup_2025_cities'], separators=(',', ':')),
+                  'input_hash_manifest': manifest_path,
+                  'input_hash_manifest_sha256': os.environ['INPUT_MANIFEST_SHA'],
+                  'storage_class': 'git_repository',
+                  'retention_policy': 'retained_with_git_history',
+                  'evidence_owner': 'danielastone',
+                  'expected_availability': 'public_while_repository_retained',
+                  'restoration_procedure': 'retrieve the registered F21 source from data/sources.json, verify the committed input hash manifest, and rerun the registered generation command',
+                  'rights_scope': 'derived_parquet_committable_cc_by_3_0_igo',
+                  'notes': 'PR B performance evidence; raw F21 bytes remain excluded; locked builder output is canonical; fence_stage=pr_b_performance',
+              })
+          with package_path.open('w', newline='', encoding='utf-8') as handle:
+              writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator='\n')
+              writer.writeheader()
+              writer.writerows(packages)
+
+          output_path = Path('results/durable_evidence_outputs.csv')
+          with output_path.open(newline='', encoding='utf-8') as handle:
+              reader = csv.DictReader(handle)
+              output_fields = reader.fieldnames
+              outputs = list(reader)
+          assert output_fields is not None
+          additions = [
+              {
+                  'package_id': package_id,
+                  'artifact_member': 'outputs/h1_oos_rows.parquet',
+                  'repository_path': parquet_path,
+                  'sha256': os.environ['PARQUET_SHA'],
+                  'rows': os.environ['PARQUET_ROWS'],
+                  'columns': os.environ['PARQUET_COLUMNS'],
+                  'media_type': 'application/vnd.apache.parquet',
+                  'storage_status': 'committed',
+              },
+              {
+                  'package_id': package_id,
+                  'artifact_member': 'outputs/h1_oos_summary.csv',
+                  'repository_path': summary_path,
+                  'sha256': os.environ['SUMMARY_SHA'],
+                  'rows': os.environ['SUMMARY_ROWS'],
+                  'columns': os.environ['SUMMARY_COLUMNS'],
+                  'media_type': 'text/csv',
+                  'storage_status': 'committed',
+              },
+          ]
+          existing_paths = {row['repository_path'] for row in outputs}
+          outputs.extend(row for row in additions if row['repository_path'] not in existing_paths)
+          with output_path.open('w', newline='', encoding='utf-8') as handle:
+              writer = csv.DictWriter(handle, fieldnames=output_fields, lineterminator='\n')
+              writer.writeheader()
+              writer.writerows(outputs)
+          PY
+
+      - name: Retain read-only reproduction workflow
+        shell: bash
+        run: |
+          cat > .github/workflows/h1-wup-oos-pr-b.yml <<'YAML'
+          name: H1 WUP OOS PR B evidence
+
+          on:
+            workflow_dispatch:
+
+          permissions:
+            contents: read
+
+          jobs:
+            reproduce:
+              runs-on: ubuntu-latest
+              steps:
+                - name: Check out repository
+                  uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+                - name: Set up Python
+                  uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+                  with:
+                    python-version: "3.11"
+
+                - name: Install uv
+                  uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+                  with:
+                    version: "0.11.33"
+                    enable-cache: true
+
+                - name: Sync locked environment
+                  run: uv sync --locked --extra dev
+
+                - name: Download and verify registered F21 source
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    mkdir -p data/raw
+                    curl --fail --location --retry 3 \
+                      --output data/raw/WUP2025-F21-DEGURBA-Cities_Pop.xlsx \
+                      https://population.un.org/wup/assets/Download/Cities/WUP2025-F21-DEGURBA-Cities_Pop.xlsx
+                    printf '%s  %s\n' \
+                      '3a96030d87aec6c1c50f658d5321067d6345e1ab936c5d2854524f972caa75c0' \
+                      'data/raw/WUP2025-F21-DEGURBA-Cities_Pop.xlsx' > /tmp/f21.sha256
+                    sha256sum --check --strict /tmp/f21.sha256
+
+                - name: Reproduce and verify registered outputs
+                  shell: bash
+                  run: |
+                    set -euo pipefail
+                    rm -rf /tmp/h1_oos_pr_b
+                    uv run --locked python -m urban_growth.h1_oos build \
+                      --f21 data/raw/WUP2025-F21-DEGURBA-Cities_Pop.xlsx \
+                      --output-dir /tmp/h1_oos_pr_b \
+                      --commit e3505aad2f1e2682e3e88b3eb98af6140e59efc8 \
+                      --repo-root .
+                    uv run --locked python - <<'PY'
+                    import csv
+                    import hashlib
+                    from pathlib import Path
+                    registered = {}
+                    with Path('results/durable_evidence_outputs.csv').open(newline='', encoding='utf-8') as handle:
+                        for row in csv.DictReader(handle):
+                            if row['package_id'] == 'wup-h1-oos-v1':
+                                registered[row['repository_path']] = row['sha256']
+                    checks = [
+                        (Path('/tmp/h1_oos_pr_b/h1_oos_rows.parquet'), 'results/h1_oos_pr_b/h1_oos_rows.parquet'),
+                        (Path('/tmp/h1_oos_pr_b/h1_oos_summary.csv'), 'results/h1_oos_pr_b/h1_oos_summary.csv'),
+                    ]
+                    for generated, registered_path in checks:
+                        digest = hashlib.sha256(generated.read_bytes()).hexdigest()
+                        if digest != registered[registered_path]:
+                            raise SystemExit(f'hash mismatch for {registered_path}: {digest}')
+                    PY
+          YAML
+
+      - name: Regenerate knowledge graph views
+        run: uv run --locked python -m urban_growth.knowledge_graph.generate
+
+      - name: Validate final repository state
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run --locked --extra dev ruff check .
+          uv run --locked --extra dev urban-growth-sources verify-licenses
+          uv run --locked --extra dev python scripts/check_repository_governance.py
+          uv run --locked --extra dev python scripts/verify_durable_evidence.py
+          uv run --locked --extra dev python -m urban_growth.knowledge_graph.generate --check
+          uv run --locked --extra dev pytest -q
+
+      - name: Commit derived evidence only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            .github/workflows/h1-wup-oos-pr-b.yml \
+            docs/h1-oos-wup-pr-b-result-2026-09-07.md \
+            knowledge/nodes/results/RESULT-H1-OOS-WUP-COMPLETE-V1.yaml \
+            knowledge/generated \
+            results/h1_oos_pr_b/h1_oos_summary.csv \
+            results/h1_oos_pr_b/h1_oos_rows.parquet \
+            results/h1_oos_pr_b/input_sha256.txt \
+            results/durable_evidence_packages.csv \
+            results/durable_evidence_outputs.csv
+          git status --short
+          git commit -m 'Archive canonical locked H1 PR B evidence'
+          git push origin HEAD:feature/h1-pr-b-w2
