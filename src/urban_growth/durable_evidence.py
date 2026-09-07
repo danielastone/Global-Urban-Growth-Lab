@@ -9,6 +9,8 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 
+import pyarrow.parquet as pq
+
 from urban_growth.io import SourceSchemaError
 from urban_growth.result_manifest import csv_dimensions, file_sha256
 
@@ -52,6 +54,7 @@ EXPIRING_REFERENCE_PATTERN = re.compile(
     r"(?:artifact ID|GitHub Actions run|successful run)[^\n]*?\d{6,}",
     re.IGNORECASE,
 )
+PARQUET_MEDIA_TYPE = "application/vnd.apache.parquet"
 
 
 def _records(path: Path, fields: list[str]) -> list[dict[str, str]]:
@@ -78,6 +81,13 @@ def _unique(rows: list[dict[str, str]], field: str) -> None:
     )
     if duplicates:
         raise SourceSchemaError(f"Duplicate {field}: {', '.join(duplicates)}")
+
+
+def _output_dimensions(path: Path, media_type: str) -> tuple[int, int]:
+    if media_type == PARQUET_MEDIA_TYPE:
+        metadata = pq.ParquetFile(path).metadata
+        return metadata.num_rows, metadata.num_columns
+    return csv_dimensions(path)
 
 
 def validate_durable_evidence(
@@ -169,6 +179,7 @@ def validate_durable_evidence(
         if output["media_type"] not in {
             "text/csv",
             "application/gzip",
+            PARQUET_MEDIA_TYPE,
         } or not SHA256_PATTERN.fullmatch(output["sha256"]):
             failures.append(f"invalid output metadata {output['repository_path']}")
             continue
@@ -178,7 +189,7 @@ def validate_durable_evidence(
         except ValueError:
             failures.append(f"invalid output dimensions {output['repository_path']}")
             continue
-        rows, columns = csv_dimensions(path)
+        rows, columns = _output_dimensions(path, output["media_type"])
         if file_sha256(path) != output["sha256"]:
             failures.append(f"output checksum {output['repository_path']}")
         if rows != expected_rows or columns != expected_columns:
