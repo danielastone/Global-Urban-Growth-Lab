@@ -83,6 +83,7 @@ def test_origin_eligibility_requires_both_100_rows_and_30_countries():
         _synthetic_city_year_panel(country_count=31, cities_per_country=3)
     )
     too_few_rows, _ = attach_strict_country_peer_growth(too_few_rows)
+    too_few_rows = too_few_rows.loc[too_few_rows["period_start"] <= 2010]
     assert not derive_eligible_origins(too_few_rows)["eligible"].any()
 
 
