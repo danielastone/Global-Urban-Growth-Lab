@@ -23,6 +23,9 @@ relations:
   implemented_by:
     sources: [hypothesis, variable, validation_test]
     targets: [artifact, github_issue]
+  has_supporting_claim:
+    sources: [hypothesis]
+    targets: [hypothesis]
   supports:
     sources: [result, finding]
     targets: [hypothesis]
