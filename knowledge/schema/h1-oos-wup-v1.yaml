@@ -1,6 +1,14 @@
 panel_spec_version: H1-WUP-OOS-V1
-status: preregistered_awaiting_source_bytes
-empirical_activation: blocked_pending_exact_f21_acquisition
+status: preregistered_source_acquired
+empirical_activation: ready_for_panel_construction
+empirical_activation_enum:
+  - blocked_source_unavailable
+  - blocked_source_identity
+  - blocked_source_validation
+  - ready_for_panel_construction
+  - panel_frozen
+  - ready_for_performance_evaluation
+  - evaluation_complete
 source:
   source_id: un_wup_2025_cities
   table: F21
@@ -74,6 +82,34 @@ lineage:
     - construction_command
     - eligible_origins
     - panel_sha256
+panel_fence_protocol:
+  pr_a_panel_freeze:
+    permitted:
+      - origin_eligibility_table
+      - singleton_exclusion_counts
+      - city_and_country_counts_by_origin
+      - paired_row_counts
+      - weight_sums_and_distribution
+      - leakage_assertions
+      - schema_checks
+      - panel_sha256
+    prohibited:
+      - b0_errors
+      - b1_errors
+      - rmse
+      - mae
+      - relative_rmse_improvement
+      - mae_difference
+      - gate_evaluation
+      - model_preference_language
+    acceptance: recorded_checklist_decision_required_before_merge
+  pr_b_performance:
+    prerequisite: pr_a_merged
+    contains:
+      - performance_metrics
+      - w2_inconclusive_probe_registration
+      - w2_complete_result_registration
+      - gate_resolution
 limitations:
   - WUP historical pseudo-OOS series may be smoother than direct-count census observations.
   - Passing the WUP gate does not substitute for external direct-count validation.

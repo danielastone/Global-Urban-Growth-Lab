@@ -1,0 +1,100 @@
+{
+  "activation_state": "ready_for_panel_construction",
+  "adapter_module": "urban_growth.f21_acquisition_gate",
+  "construction_commit": "70249dad153f4ba864fd7d566d05893be2421813",
+  "content": {
+    "below_threshold_populated_rows": 0,
+    "city_count": 16828,
+    "country_count": 194,
+    "duplicate_city_id_count": 0,
+    "estimate_cutoff_year": 2025,
+    "estimate_rows": 439711,
+    "null_population_rows": 0,
+    "passed": true,
+    "projection_rows": 340007,
+    "total_rows": 779718,
+    "year_columns_observed": [
+      1975, 1976, 1977, 1978, 1979, 1980, 1981, 1982, 1983, 1984,
+      1985, 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994,
+      1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+      2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014,
+      2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024,
+      2025, 2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033, 2034,
+      2035, 2036, 2037, 2038, 2039, 2040, 2041, 2042, 2043, 2044,
+      2045, 2046, 2047, 2048, 2049, 2050
+    ]
+  },
+  "identity": {
+    "expected_bytes": 10671837,
+    "expected_sha256": "3a96030d87aec6c1c50f658d5321067d6345e1ab936c5d2854524f972caa75c0",
+    "observed_bytes": 10671837,
+    "observed_sha256": "3a96030d87aec6c1c50f658d5321067d6345e1ab936c5d2854524f972caa75c0",
+    "passed": true
+  },
+  "licensing": {
+    "license": "CC BY 3.0 IGO",
+    "redistribution_notes": "CC BY 3.0 IGO permits redistribution with attribution. UN copyright notice and citation required.",
+    "redistribution_permitted": true,
+    "repository_policy": "review_before_commit",
+    "repository_policy_notes": "Raw workbook intentionally not committed pending project review-before-commit policy. Legal permission and repository policy are distinct: redistribution is permitted under CC BY 3.0 IGO; committing to this repository requires explicit review per CONTRIBUTING.md."
+  },
+  "local_path": "/mnt/data/WUP2025-F21-DEGURBA-Cities_Pop.xlsx",
+  "overall_outcome": "pass",
+  "panel_fence_protocol": {
+    "pr_a_panel_freeze": {
+      "acceptance": "recorded_checklist_decision_required_before_merge",
+      "permitted": [
+        "origin_eligibility_table",
+        "singleton_exclusion_counts",
+        "city_and_country_counts_by_origin",
+        "paired_row_counts",
+        "weight_sums_and_distribution",
+        "leakage_assertions",
+        "schema_checks",
+        "panel_sha256"
+      ],
+      "prohibited": [
+        "b0_errors",
+        "b1_errors",
+        "rmse",
+        "mae",
+        "relative_rmse_improvement",
+        "mae_difference",
+        "gate_evaluation",
+        "model_preference_language"
+      ]
+    },
+    "pr_b_performance": {
+      "contains": [
+        "performance_metrics",
+        "w2_inconclusive_probe_registration",
+        "w2_complete_result_registration",
+        "gate_resolution"
+      ],
+      "prerequisite": "pr_a_merged"
+    }
+  },
+  "schema_check": {
+    "missing_columns": [],
+    "passed": true,
+    "required_columns": [
+      "1975",
+      "2025",
+      "2050",
+      "City_Code",
+      "City_Name",
+      "ISO3_Code",
+      "LocID",
+      "PWCent_Latitude",
+      "PWCent_Longitude"
+    ],
+    "required_columns_present": true,
+    "required_sheet": "Data",
+    "required_sheet_present": true
+  },
+  "source_id": "un_wup_2025_cities",
+  "table": "F21",
+  "validated_at": "2026-09-07T13:03:15.582800+00:00",
+  "validator_commit": "6da6d369b1b64b696d581ab038f7b4b7d5a0ecdb",
+  "vintage": "WUP_2025_F21"
+}
