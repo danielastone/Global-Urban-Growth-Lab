@@ -152,7 +152,7 @@ def panel_diagnostics(panel: pd.DataFrame, eligibility: pd.DataFrame) -> dict[st
         rows.append(
             {
                 "origin": int(origin),
-                "scoring_rows": int(len(group)),
+                "scoring_rows": len(group),
                 "scoring_countries": country_count,
                 "training_rows": int(group["training_rows"].iloc[0]),
                 "training_countries": int(group["training_countries"].iloc[0]),
