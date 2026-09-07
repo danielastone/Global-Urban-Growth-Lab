@@ -226,7 +226,7 @@ def test_r4_passing_required_test_is_pass(tmp_path):
     assert transition_test_disposition(graph, "HYP-CLAIM", "TEST-X", "evidence_supported") == "pass"
 
 
-def test_lifecycle_rules_file_drives_transition_roles(tmp_path):
+def test_lifecycle_rules_file_drives_data_readiness(tmp_path):
     source = Path("knowledge")
     target = tmp_path / "knowledge"
     target.mkdir()
@@ -234,13 +234,14 @@ def test_lifecycle_rules_file_drives_transition_roles(tmp_path):
     (target / "schema").mkdir()
     original = (source / "schema" / "lifecycle-rules.yaml").read_text(encoding="utf-8")
     altered = original.replace(
-        "required_test_roles: [primary_falsification]",
-        "required_test_roles: [diagnostic]",
+        "requires_dataset_availability: [ingested, validated]",
+        "requires_dataset_availability: [validated]",
     )
+    assert altered != original
     (target / "schema" / "lifecycle-rules.yaml").write_text(altered, encoding="utf-8")
     (target / "schema" / "relation-types.yaml").write_text(
         (source / "schema" / "relation-types.yaml").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
     graph = load_graph(target / "nodes")
-    assert hypothesis_lifecycle(graph, "HYP-H1") == "implemented"
+    assert hypothesis_lifecycle(graph, "HYP-H1") == "specified"
