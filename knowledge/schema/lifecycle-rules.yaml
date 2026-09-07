@@ -15,6 +15,9 @@ hypothesis:
     required_test_roles:
       primary: [external_validation]
       supporting: [external_validation]
+    requires_validation_type: direct_count_external
+    requires_geography_scope: true
+    pending_tests_block_later_states: false
   evidence_supported:
     required_test_roles:
       primary: [primary_falsification]

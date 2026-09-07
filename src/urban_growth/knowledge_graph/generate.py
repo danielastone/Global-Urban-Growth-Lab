@@ -6,7 +6,11 @@ import argparse
 import json
 from pathlib import Path
 
-from urban_growth.knowledge_graph.lifecycle import hypothesis_lifecycle, test_evaluation
+from urban_growth.knowledge_graph.lifecycle import (
+    external_validation_scope,
+    hypothesis_lifecycle,
+    test_evaluation,
+)
 from urban_growth.knowledge_graph.loader import load_graph
 from urban_growth.knowledge_graph.models import NodeType
 from urban_growth.knowledge_graph.validate import validate_graph
@@ -29,9 +33,10 @@ def render(root: Path) -> dict[str, str]:
 
     for node in sorted(graph.nodes.values(), key=lambda item: item.id):
         if node.type == NodeType.hypothesis:
-            status_lines.append(
-                f"- `{node.id}` — **{hypothesis_lifecycle(graph, node.id)}** — {node.title}"
-            )
+            lifecycle = hypothesis_lifecycle(graph, node.id)
+            scope = external_validation_scope(graph, node.id)
+            scope_suffix = f" — external scope: {', '.join(scope)}" if scope else ""
+            status_lines.append(f"- `{node.id}` — **{lifecycle}** — {node.title}{scope_suffix}")
             for test_id in graph.targets(node.id, "tested_by"):
                 evaluation = test_evaluation(graph, test_id)
                 outcome = evaluation.outcome if evaluation else "pending"

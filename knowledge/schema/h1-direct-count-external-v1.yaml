@@ -1,0 +1,58 @@
+schema_version: H1-DIRECT-COUNT-EXTERNAL-V1
+purpose: Shared schema for geography-scoped external validation of H1 using direct census counts.
+validation_type: direct_count_external
+canonical_columns:
+  - geography
+  - city_id
+  - city_name
+  - origin_year
+  - target_year
+  - horizon_years
+  - origin_population
+  - target_population
+  - recent_growth_annualized_log
+  - future_growth_annualized_log
+  - country_peer_growth_leave_city_out
+  - focal_deviation_from_country_peer
+  - source_id
+  - source_vintage
+  - concordance_version
+  - boundary_exclusion_reason
+primary_estimand:
+  horizon_years: 10
+  annualized_log_growth_formula: (ln(P_target) - ln(P_origin)) / 10
+  note: A 10-year annualized growth rate has lower variance than the 5-year WUP estimand; identical numeric gate thresholds do not imply identical error scale.
+peer_signal:
+  primary: country-wide leave-city-out peer growth
+  prohibited_primary_substitution: subnational/state peer signal
+  sensitivity_only: subnational/state hierarchical peer signal
+performance_gate:
+  gate_id: GATE-H1-DIRECT-COUNT-10Y-OOS
+  relative_rmse_improvement_minimum: 0.05
+  mae_difference_maximum: 0.0
+pr_a_fence:
+  allowed:
+    - source acquisition and provenance validation
+    - WUP independence assessment
+    - locality/city concordance
+    - boundary-change exclusions
+    - candidate and eligible row counts
+    - peer-count distributions
+    - historical-transition counts
+    - medium-city coverage counts
+    - blind sample-adequacy thresholds
+    - deterministic frozen sample hash
+  prohibited:
+    - b0_error
+    - b1_error
+    - rmse
+    - mae
+    - relative_rmse_improvement
+    - mae_difference
+    - gate_passed
+    - winner
+  rule: Any change to eligibility, concordance, horizon, peer-signal definition, or adequacy thresholds after PR-A acceptance requires a new PR-A version before performance can be rerun.
+legacy_naming:
+  wup_package_columns: [period_start, period_end]
+  external_canonical_columns: [origin_year, target_year]
+  action: Record as a known naming inconsistency only; do not rewrite or invalidate the merged WUP evidence package.

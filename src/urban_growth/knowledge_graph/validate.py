@@ -8,7 +8,16 @@ from pathlib import Path
 import yaml
 
 from urban_growth.knowledge_graph.graph import KnowledgeGraph
-from urban_growth.knowledge_graph.models import ClaimScope, HypothesisNode, NodeType, ResultNode
+from urban_growth.knowledge_graph.models import (
+    AcceptanceGateNode,
+    ClaimScope,
+    GeographyNode,
+    HypothesisNode,
+    NodeType,
+    ResultNode,
+    ValidationTestNode,
+    ValidationType,
+)
 
 
 def _load_relation_constraints(repo_root: Path):
@@ -64,8 +73,21 @@ def validate_graph(graph: KnowledgeGraph) -> list[str]:
             parents = graph.sources(node.id, "has_supporting_claim")
             if len(parents) != 1:
                 errors.append(f"{node.id}: supporting claim must have exactly one parent hypothesis")
-        if node.type == NodeType.validation_test and len(graph.targets(node.id, "judged_by")) != 1:
-            errors.append(f"{node.id}: validation test must have exactly one acceptance gate")
+        if isinstance(node, ValidationTestNode):
+            gate_ids = graph.targets(node.id, "judged_by")
+            if len(gate_ids) != 1:
+                errors.append(f"{node.id}: validation test must have exactly one acceptance gate")
+            elif isinstance(graph.get(gate_ids[0]), AcceptanceGateNode):
+                gate = graph.get(gate_ids[0])
+                if (
+                    node.horizon_years is not None
+                    and gate.horizon_years is not None
+                    and node.horizon_years != gate.horizon_years
+                ):
+                    errors.append(
+                        f"{node.id}: horizon_years {node.horizon_years} does not match "
+                        f"{gate.id} horizon_years {gate.horizon_years}"
+                    )
         if isinstance(node, ResultNode):
             if node.test not in graph.nodes:
                 errors.append(f"{node.id}: result.test targets missing node {node.test}")
@@ -73,6 +95,16 @@ def validate_graph(graph: KnowledgeGraph) -> list[str]:
                 errors.append(
                     f"{node.id}: result must be linked by {node.test} --produces--> {node.id}"
                 )
+            if node.validation_type == ValidationType.direct_count_external:
+                geography = graph.get(node.geography) if node.geography in graph.nodes else None
+                if not isinstance(geography, GeographyNode):
+                    errors.append(
+                        f"{node.id}: direct_count_external geography must reference geography node"
+                    )
+                elif node.geography not in graph.targets(node.test, "validated_in"):
+                    errors.append(
+                        f"{node.id}: geography {node.geography} must match {node.test} validated_in"
+                    )
     _validate_variable_cycles(graph, errors)
     return errors
 
