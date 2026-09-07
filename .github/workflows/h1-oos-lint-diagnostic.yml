@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  repair:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -19,12 +19,12 @@ jobs:
         with:
           version: "0.11.33"
       - run: uv sync --locked --extra dev
-      - name: Capture lint
-        run: uv run --locked --extra dev ruff check . > h1-oos-lint.txt 2>&1 || true
-      - name: Commit diagnostic
+      - name: Apply Ruff fix and remove helper
         run: |
+          uv run --locked --extra dev ruff check . --fix
+          rm .github/workflows/h1-oos-lint-diagnostic.yml
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add h1-oos-lint.txt
-          git commit -m "Capture H1 OOS lint diagnostic" || exit 0
+          git add -A
+          git commit -m "Fix H1 OOS lint and remove diagnostic helper"
           git push
