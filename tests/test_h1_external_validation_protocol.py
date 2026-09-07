@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from urban_growth.knowledge_graph.graph import KnowledgeGraph
 from urban_growth.knowledge_graph.lifecycle import external_validation_scope, hypothesis_lifecycle
