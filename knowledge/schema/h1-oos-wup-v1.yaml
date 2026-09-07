@@ -1,5 +1,6 @@
 panel_spec_version: H1-WUP-OOS-V1
 status: preregistered_awaiting_source_bytes
+empirical_activation: blocked_pending_exact_f21_acquisition
 source:
   source_id: un_wup_2025_cities
   table: F21
