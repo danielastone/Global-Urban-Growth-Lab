@@ -39,26 +39,26 @@ jobs:
       - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot india
       - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot china
       - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot japan
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: construction-smoothing-124-status
           path: outputs/construction_smoothing_124/benchmark_status.csv
           if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: construction-smoothing-124-japan-status
           path: |
             outputs/construction_smoothing_124/japan_source_qualification.csv
             outputs/construction_smoothing_124/japan_benchmark_status.csv
           if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: construction-smoothing-124-china-status
           path: |
             outputs/construction_smoothing_124/china_source_qualification.csv
             outputs/construction_smoothing_124/china_benchmark_status.csv
           if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: construction-smoothing-124-india-status
           path: |
