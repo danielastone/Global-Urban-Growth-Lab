@@ -1,0 +1,50 @@
+spec_version: H1-MEXICO-DIRECT-COUNT-10Y-PR-A-V1
+parent_schema: H1-DIRECT-COUNT-EXTERNAL-V1
+geography: GEO-MEXICO
+test_id: TEST-H1-MEXICO-DIRECT-COUNT-10Y-OOS
+gate_id: GATE-H1-DIRECT-COUNT-10Y-OOS
+status: methodology_only
+primary_source:
+  institution: INEGI
+  rounds: [2000, 2010, 2020]
+  measurement_type: direct census count
+  wup_independence_status: pending_issue_220
+excluded_primary_sources:
+  - source: INEGI Encuesta Intercensal 2015
+    reason: probabilistic sample estimate rather than independent direct census count
+    allowed_role: later sensitivity after separate comparability assessment
+horizon:
+  years: 10
+  growth_formula: (ln(P_target) - ln(P_origin)) / 10
+  no_interpolation_to_five_years: true
+population_scope:
+  medium_city_origin_population_min: 50000
+  medium_city_origin_population_max: 250000
+peer_signal:
+  primary: country-wide leave-city-out Mexico peer growth
+  state_level_peer_signal: sensitivity_only
+concordance:
+  required_issue: 221
+  silent_harmonization_prohibited: true
+  exclusion_reasons_required: true
+  boundary_change_threshold: pending_blind_pr_a_decision
+sample_adequacy:
+  minimum_scoring_cities: pending_blind_post_count_freeze
+  minimum_peer_count: pending_blind_post_count_freeze
+  minimum_historical_transitions: pending_blind_post_count_freeze
+  rule: Thresholds may be set after eligibility counts are visible but before any performance metric is computed or exposed.
+measurement_context:
+  census_2020:
+    reference_date: 2020-03-15
+    requirement: Carry this context in the primary panel metadata and any later result limitation whenever the 2020 round contributes to evidence.
+pr_a_outputs:
+  - source/provenance record
+  - WUP independence assessment
+  - locality concordance and boundary exclusions
+  - eligibility diagnostics by origin_year and target_year
+  - peer-count distribution
+  - historical-transition counts
+  - medium-city coverage
+  - blind adequacy thresholds
+  - deterministic frozen sample identity and hash
+performance_prohibited_until_pr_b: true

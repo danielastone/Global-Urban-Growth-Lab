@@ -1,0 +1,12 @@
+id: ISSUE-217
+type: github_issue
+title: Mexico PR A — Freeze 10-year direct-count H1 external panel specification
+canonical_name: GitHub issue 217
+aliases: []
+number: 217
+repository: danielastone/Global-Urban-Growth-Lab
+relations:
+  - type: blocked_by
+    target: ISSUE-220
+  - type: blocked_by
+    target: ISSUE-221

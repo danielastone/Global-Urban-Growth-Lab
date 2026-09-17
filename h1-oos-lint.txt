@@ -1,0 +1,25 @@
+UP017 [*] Use `datetime.UTC` alias
+   --> src/urban_growth/h1_oos.py:488:33
+    |
+486 |         eligibility["eligible"], "origin"
+487 |     ].astype(int).tolist()
+488 |     generated_at = datetime.now(timezone.utc).isoformat()
+    |                                 ^^^^^^^^^^^^
+489 |     command = (
+490 |         "python -m urban_growth.h1_oos build "
+    |
+help: Convert to `datetime.UTC` alias
+    |
+13  | from dataclasses import asdict, dataclass
+    - from datetime import datetime, timezone
+14  + from datetime import datetime, timezone, UTC
+15  | from pathlib import Path
+--------------------------------------------------------------------------------
+487 |     ].astype(int).tolist()
+    -     generated_at = datetime.now(timezone.utc).isoformat()
+488 +     generated_at = datetime.now(UTC).isoformat()
+489 |     command = (
+    |
+
+Found 1 error.
+[*] 1 fixable with the `--fix` option.

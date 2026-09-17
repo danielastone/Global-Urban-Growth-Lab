@@ -1,0 +1,14 @@
+id: TEST-H1-MEXICO-DIRECT-COUNT-10Y-OOS
+type: validation_test
+title: H1 Mexico 10-year direct-count external validation
+canonical_name: H1 Mexico direct-count 10-year OOS test
+aliases: []
+role: external_validation
+horizon_years: 10
+relations:
+  - type: judged_by
+    target: GATE-H1-DIRECT-COUNT-10Y-OOS
+  - type: validated_in
+    target: GEO-MEXICO
+  - type: implemented_by
+    target: ISSUE-217
