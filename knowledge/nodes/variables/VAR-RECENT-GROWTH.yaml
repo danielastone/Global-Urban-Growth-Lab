@@ -1,0 +1,13 @@
+id: VAR-RECENT-GROWTH
+type: variable
+title: Focal-city recent population growth used in H1
+canonical_name: focal city recent growth
+aliases: [recent growth]
+provenance: documented
+field_mapping_documented: true
+raw_source: false
+relations:
+  - type: derived_from
+    target: DATA-WUP-CITY-POP
+  - type: produced_by
+    target: ARTIFACT-FORECAST-PY
