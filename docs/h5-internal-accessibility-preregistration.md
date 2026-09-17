@@ -1,8 +1,8 @@
-# H5 internal accessibility control — draft preregistration
+# H5 internal accessibility control — preregistration
 
-Status: **draft preregistration**. The computational architecture is fixed in principle, but empirical activation remains blocked pending OSM source/vintage acquisition and routing-quality assessment. Three residual specification TODOs (R1–R3) must be closed before preregistration is complete.
+Status: **preregistered computational specification**. The computational architecture and routing-support gates are frozen before empirical routing or inspection of city-growth outcomes. Empirical activation remains blocked pending exact OSM source/vintage acquisition, engine/profile registration, source/license governance, and outcome-blind routing-quality assessment.
 
-Related: #157, #203, #205, #206, PR #207.
+Related: #142, #157, #161, #203, #205, #206, PR #207.
 
 ## Purpose
 
@@ -37,7 +37,13 @@ Adding `secondary` roads is a preregistered sensitivity only.
 
 Directional egress toward a specific rival city is a sensitivity analysis only. It is not the primary `InternalAccess_i` measure because pair-specific egress would contaminate the focal-city control with external-exposure direction.
 
-**TODO R1 — urban footprint pointer:** link this definition to the exact project city-boundary/urban-footprint layer already used by the city concordance and spatial modules. Internal-accessibility cells, gateway selection, and H5 rival-mass city extents must use the same city-extent semantics unless an explicitly preregistered sensitivity says otherwise.
+### Urban-footprint rule (R1 closed)
+
+The primary footprint is the repository-registered **GHS Urban Centre Database R2024A v1.2** source, `source_id = ec_ghsl_ucdb_r2024a_v1_2`, using the **fixed 2025 urban-centre boundary stream** from `GHS_UCDB_THEME_GHSL_GLOBE_R2024A_V1_2.zip`. This is the same fixed-polygon semantics used by Module C for comparable within-city aggregation; the multi-temporal `MTUC` geometry stream is not substituted into the primary InternalAccess measure.
+
+Population cells used in `InternalAccess_i`, gateway eligibility, snap-coverage denominators, and Module C joint diagnostics must all reference that same fixed polygon for a city. City identity still comes from the project concordance rather than OSM place nodes.
+
+Because the fixed 2025 polygon is not an origin-available boundary for pre-2025 forecasting, InternalAccess computed on this footprint is a **standardized modern validation/control measure**, not an origin-available historical predictor. Any forecast-origin use before 2025 requires a separately preregistered, origin-available boundary treatment and may not silently reuse the fixed-2025 footprint.
 
 ## Rival-side access
 
@@ -63,7 +69,13 @@ Any deliberate divergence belongs in a separately labeled sensitivity and must s
 
 A later road network is never carried backward to an earlier growth period. Unsupported city-rounds remain in the underlying city panel but receive `internal_access_status = vintage_unavailable` and are excluded only from specifications requiring InternalAccess.
 
-**TODO R2 — vintage tolerance:** set the maximum allowed lag between the accessibility reference date and the admissible OSM snapshot. The rule must be numeric and applied identically across cities before empirical routing.
+### Vintage tolerance (R2 closed)
+
+The primary OSM snapshot must be dated **no more than 12 months before** the accessibility reference date and may not post-date that reference date. Formally, an admissible snapshot satisfies:
+
+`0 <= reference_date - osm_snapshot_date <= 365 days`.
+
+If no otherwise admissible snapshot exists within that window, the city-round receives `internal_access_status = vintage_unavailable`. The tolerance is global and may not be relaxed for individual cities after inspecting routing or growth outcomes. Alternative wider windows, if later studied, are sensitivity analyses and must be labeled as such.
 
 ## Routing-support adequacy
 
@@ -75,11 +87,15 @@ Define population-weighted snap coverage as:
 
 Primary InternalAccess requires `SnapCoverage_i >= 0.90`.
 
-Also report the fraction of successfully snapped population connected to a graph component containing at least one eligible gateway node.
+Define conditional gateway-connected coverage as:
 
-**TODO R3 — connectivity gate:** either set a numeric minimum connected-population fraction for primary acceptance or state explicitly that the connectivity statistic is informational only. This choice must be frozen before empirical routing.
+`GatewayConnected_i = population among successfully snapped cells whose snapped nodes lie in a graph component containing at least one eligible gateway / population successfully snapped within 2 km`.
 
-A city failing a required routing-support gate receives `internal_access_status = insufficient_routing_support` rather than a high travel-time value.
+### Connectivity gate (R3 closed)
+
+Primary InternalAccess requires **`GatewayConnected_i >= 0.95`** in addition to the 90% snap-coverage gate. The two gates are evaluated separately and both must pass. This prevents a city with nominally successful snapping but a fragmented routing graph from being treated as having a valid internal-accessibility estimate.
+
+A city failing either required routing-support gate receives `internal_access_status = insufficient_routing_support` rather than a high travel-time value.
 
 **Measurement unavailable is not measured low accessibility. A sparse OSM network must never be interpreted as evidence of poor internal connectivity.**
 
@@ -109,12 +125,12 @@ These states may not be collapsed into high accessibility cost.
 
 ## Empirical activation gate
 
-This draft may be implemented with synthetic tests now. Empirical H5 use remains blocked until:
+The computational specification is preregistered, but empirical H5 use remains blocked until:
 
-1. R1–R3 are closed;
-2. exact OSM source, vintage, checksum, engine, and profile are registered;
-3. source/license governance is resolved;
-4. routing-support adequacy is evaluated outcome-blind;
-5. no growth outcomes have influenced network/profile/gateway choices.
+1. exact OSM source, vintage, checksum, engine, and profile are registered;
+2. source/license governance is resolved;
+3. routing-support adequacy is evaluated outcome-blind under the frozen 90% snap and 95% conditional-connectivity gates;
+4. no growth outcomes have influenced network/profile/gateway choices;
+5. any pre-2025 forecast-origin application uses a separately preregistered origin-available city-boundary treatment rather than the fixed-2025 UCDB polygon.
 
 Only after those conditions are met may InternalAccess enter H5 empirical specifications.
