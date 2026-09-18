@@ -72,6 +72,11 @@ PR A may contain source/provenance checks, WUP independence evidence, concordanc
 
 PR B can evaluate performance only against the accepted PR-A sample identity. Changing eligibility, concordance, horizon, peer signal, or adequacy thresholds requires a new PR-A version before rerunning performance.
 
+The executable counterpart is `MexicoH1StageRecord` in
+`src/urban_growth/mexico_concordance.py`. It fails closed if Stage A2 is attempted without an
+accepted Stage A1, if PR B is attempted without both passes plus frozen sample identity and
+adequacy thresholds, or if either concordance pass exposes performance fields.
+
 ## Lifecycle semantics
 
 An external-validation test may be registered while pending without erasing H1's existing `evidence_supported` state. `externally_validated` becomes reachable only when a required external-validation test has a completed gate pass whose result is typed `validation_type: direct_count_external` and references a valid geography node. The external validation scope is derived from those passing result geographies; it is not manually asserted on H1.
