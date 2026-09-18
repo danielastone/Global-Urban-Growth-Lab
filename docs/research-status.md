@@ -94,11 +94,13 @@ cells therefore fail for overcoverage: the interval is too conservative to be tr
 calibrated uncertainty. The pooled and uncorrected city-FE rows remain diagnostic and were
 ineligible for this gate; their coverage values are not additional gate failures.
 
-The combined 27-row output is registered in
-`results/dynamic_bootstrap_coverage_expected_manifest.csv`. The failed gate is a statistical
-result, not a workflow failure to retry. Thresholds were not changed and no claim should use
-the jackknife multiplier interval as validated uncertainty pending a separately specified
-estimator or interval redesign.
+The combined 27-row output is retained at
+`results/evidence/dynamic-bootstrap-coverage/dynamic_bootstrap_coverage.csv`, registered in the
+durable-evidence package `dynamic-bootstrap-coverage-2026-08-30`, and independently checked
+against `results/dynamic_bootstrap_coverage_expected_manifest.csv`. The failed gate is a
+statistical result, not a workflow failure to retry. Thresholds were not changed and no claim
+should use the jackknife multiplier interval as validated uncertainty pending a separately
+specified estimator or interval redesign.
 
 The empirical hierarchy runner now absorbs country-period and city fixed effects by weighted
 alternating projections rather than materializing a global city-dummy matrix. Small-panel tests

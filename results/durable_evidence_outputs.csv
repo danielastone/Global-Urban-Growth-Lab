@@ -20,3 +20,4 @@ wup-h1-source-basis-2026-09-03,outputs/wup_h1_source_basis_classification.csv,re
 wup-h1-source-basis-2026-09-03,outputs/wup_h1_source_basis_metrics.csv,results/evidence/wup-h1-source-basis/wup_h1_source_basis_metrics.csv,e51c88822772b0bd8f961dfbcd0ac39f9645e336bf3d344bc21d8abb7a3fae3f,166,23,text/csv,committed
 wup-h1-oos-v1,outputs/h1_oos_rows.parquet,results/h1_oos_pr_b/h1_oos_rows.parquet,a2e0782b7adf5bc20e606834ed41265b0108ce00b16d8096dc1a2aac189ab73a,66983,34,application/vnd.apache.parquet,committed
 wup-h1-oos-v1,outputs/h1_oos_summary.csv,results/h1_oos_pr_b/h1_oos_summary.csv,b0528643f6c1f2fcf8fdd6bdabf8f33b3f41fd511ac518cf6a316a6b3c8ce840,18,14,text/csv,committed
+dynamic-bootstrap-coverage-2026-08-30,outputs/dynamic_bootstrap_coverage.csv,results/evidence/dynamic-bootstrap-coverage/dynamic_bootstrap_coverage.csv,fbe939575ddf8d3341798aaef64bd3d539210bd70e90fc75f8f777899f9a07cf,27,18,text/csv,committed
