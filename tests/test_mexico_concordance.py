@@ -5,8 +5,11 @@ import pytest
 
 from urban_growth.io import SourceSchemaError
 from urban_growth.mexico_concordance import (
+    MexicoH1Stage,
+    MexicoH1StageRecord,
     build_mexico_multiwave_history,
     mexico_transition_coverage,
+    require_mexico_h1_stage_ready,
     validate_mexico_locality_transition,
 )
 
@@ -169,3 +172,45 @@ def test_coverage_keeps_unresolved_records_in_denominator() -> None:
     assert coverage.loc[0, "eligible_localities"] == 1
     assert coverage.loc[0, "count_coverage"] == 0.5
     assert coverage.loc[0, "population_coverage"] == 0.4
+
+
+def test_mexico_h1_a2_is_blocked_until_a1_is_accepted() -> None:
+    record = MexicoH1StageRecord(
+        stage=MexicoH1Stage.a2_extend_to_2000,
+        census_years=(2000, 2010, 2020),
+    )
+    with pytest.raises(SourceSchemaError, match="Stage A2 requires accepted Stage A1"):
+        require_mexico_h1_stage_ready(record)
+
+
+def test_mexico_h1_diagnostic_stages_reject_performance_fields() -> None:
+    record = MexicoH1StageRecord(
+        stage=MexicoH1Stage.a1_2010_2020,
+        census_years=(2010, 2020),
+        output_fields={"count_coverage", "rmse"},
+    )
+    with pytest.raises(SourceSchemaError, match="may not expose performance fields: rmse"):
+        require_mexico_h1_stage_ready(record)
+
+
+def test_mexico_h1_pr_b_requires_both_passes_and_frozen_decisions() -> None:
+    incomplete = MexicoH1StageRecord(
+        stage=MexicoH1Stage.pr_b_performance,
+        accepted_stages={MexicoH1Stage.a1_2010_2020},
+        census_years=(2000, 2010, 2020),
+    )
+    with pytest.raises(SourceSchemaError, match="a2_extend_to_2000"):
+        require_mexico_h1_stage_ready(incomplete)
+
+    ready = MexicoH1StageRecord(
+        stage=MexicoH1Stage.pr_b_performance,
+        accepted_stages={
+            MexicoH1Stage.a1_2010_2020,
+            MexicoH1Stage.a2_extend_to_2000,
+        },
+        census_years=(2000, 2010, 2020),
+        sample_identity_frozen=True,
+        adequacy_thresholds_frozen=True,
+        output_fields={"rmse", "mae", "gate_passed"},
+    )
+    assert require_mexico_h1_stage_ready(ready) == ready
