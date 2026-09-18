@@ -38,6 +38,20 @@ The WUP >=30-country training gate is inapplicable to a single-country panel. Ex
 
 Primary rounds are INEGI 2000, 2010, and 2020 direct census counts. The 2015 Encuesta Intercensal is excluded from primary evidence because it is a probabilistic sample estimate; it may be evaluated later as a mixed-source sensitivity after a separate comparability assessment.
 
+PR A is one accepted three-round package, but its concordance must be constructed in two
+ordered passes. **Stage A1** audits the 2010–2020 transition against the coverage and boundary
+rules in `docs/mexico-locality-concordance-feasibility.md`. Only after A1 passes may **Stage
+A2** extend the same concordance back to 2000. This preserves the feasibility document's
+2010–2020-first safeguard without allowing an A1-only panel to proceed to performance. PR B
+remains blocked until both passes, the full 2000/2010/2020 row identity, and the adequacy
+thresholds are accepted.
+
+The threshold-entry pilot and H1 external validation share source acquisition and concordance
+evidence, but not their analytic cohorts or gates. The threshold pilot fixes a 25,000–100,000
+2010 origin cohort for G2. H1 reports its separately registered 50,000–250,000 origin coverage
+and requires the historical transition needed to forecast the later transition. Passing one
+gate does not silently pass the other.
+
 The 2020 census measurement context is part of the primary evidence record whenever that round is used: the reference date is March 15, 2020. This context must appear in the panel metadata and later result limitation.
 
 Before PR B, Mexico PR A must freeze:
