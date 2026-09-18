@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from enum import Enum
+
 import numpy as np
 import pandas as pd
+from pydantic import BaseModel, ConfigDict, Field
 
 from urban_growth.io import SourceSchemaError, reject_duplicate_keys, require_columns
 
@@ -13,6 +16,83 @@ ACCEPTED_MATCH_STATUS = {
     "harmonized_common_geography",
 }
 ALLOWED_EVENT_TYPES = {"census", "population_count"}
+MEXICO_H1_FORBIDDEN_DIAGNOSTIC_FIELDS = frozenset(
+    {
+        "b0_error",
+        "b1_error",
+        "rmse",
+        "mae",
+        "relative_rmse_improvement",
+        "mae_difference",
+        "gate_passed",
+        "winner",
+    }
+)
+
+
+class MexicoH1Stage(str, Enum):
+    """Ordered construction and evaluation stages for Mexico H1 validation."""
+
+    a1_2010_2020 = "a1_2010_2020"
+    a2_extend_to_2000 = "a2_extend_to_2000"
+    pr_b_performance = "pr_b_performance"
+
+
+class MexicoH1StageRecord(BaseModel):
+    """Machine-readable evidence that a Mexico H1 stage is ready to run."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    stage: MexicoH1Stage
+    accepted_stages: set[MexicoH1Stage] = Field(default_factory=set)
+    census_years: tuple[int, ...]
+    sample_identity_frozen: bool = False
+    adequacy_thresholds_frozen: bool = False
+    output_fields: set[str] = Field(default_factory=set)
+
+
+def require_mexico_h1_stage_ready(record: MexicoH1StageRecord) -> MexicoH1StageRecord:
+    """Fail closed when the A1 -> A2 -> PR-B sequence or output fence is violated."""
+    expected_years = {
+        MexicoH1Stage.a1_2010_2020: (2010, 2020),
+        MexicoH1Stage.a2_extend_to_2000: (2000, 2010, 2020),
+        MexicoH1Stage.pr_b_performance: (2000, 2010, 2020),
+    }
+    observed_years = tuple(sorted(set(record.census_years)))
+    if observed_years != expected_years[record.stage]:
+        raise SourceSchemaError(
+            f"Mexico H1 {record.stage.value} requires census years "
+            f"{expected_years[record.stage]}, observed {observed_years}"
+        )
+
+    if record.stage is MexicoH1Stage.a2_extend_to_2000:
+        if MexicoH1Stage.a1_2010_2020 not in record.accepted_stages:
+            raise SourceSchemaError("Mexico H1 Stage A2 requires accepted Stage A1")
+    elif record.stage is MexicoH1Stage.pr_b_performance:
+        required = {
+            MexicoH1Stage.a1_2010_2020,
+            MexicoH1Stage.a2_extend_to_2000,
+        }
+        missing = sorted(stage.value for stage in required - record.accepted_stages)
+        if missing:
+            raise SourceSchemaError(
+                "Mexico H1 PR B requires accepted concordance stages: " + ", ".join(missing)
+            )
+        if not record.sample_identity_frozen or not record.adequacy_thresholds_frozen:
+            raise SourceSchemaError(
+                "Mexico H1 PR B requires frozen sample identity and adequacy thresholds"
+            )
+
+    if record.stage is not MexicoH1Stage.pr_b_performance:
+        prohibited = sorted(
+            MEXICO_H1_FORBIDDEN_DIAGNOSTIC_FIELDS.intersection(record.output_fields)
+        )
+        if prohibited:
+            raise SourceSchemaError(
+                "Mexico H1 concordance stages may not expose performance fields: "
+                + ", ".join(prohibited)
+            )
+    return record
 
 
 def validate_mexico_locality_transition(transition: pd.DataFrame) -> pd.DataFrame:
