@@ -11,6 +11,18 @@ The first empirical interval is **2010–2020**. Extension to 2000 is conditiona
 interval meeting the coverage and audit rules below. This sequencing avoids mixing two
 geographic transitions before the most recent transition has been measured.
 
+This document governs **Stage A1** of the newer H1 external-validation protocol; it was not
+superseded when the locked protocol selected 2000, 2010, and 2020 as the complete Mexico PR-A
+source family. If A1 passes, Stage A2 extends the concordance to 2000 inside the same PR-A
+program. An A1 pass authorizes that extension only. It does not authorize forecast scoring,
+and it does not create an H1 result.
+
+The 25,000–100,000 cohort below is the G2 threshold-entry pilot. H1 external validation uses a
+separately registered 50,000–250,000 origin-coverage diagnostic and a three-round predictive
+sample. The two programs should reuse acquired files, official relationship evidence, and
+audited longitudinal identities, but must retain separate denominators, eligibility decisions,
+sample hashes, and gate outcomes.
+
 ## Registered empirical object
 
 The origin cohort contains every 2010 census locality with directly enumerated population from
@@ -71,7 +83,7 @@ The following are prohibited as acceptance evidence:
 
 Names and coordinates may generate review candidates, but never determine accepted status.
 
-## Proposed pilot acceptance gate
+## Proposed Stage-A1 / G2 pilot acceptance gate
 
 These thresholds are a proposal for review before the empirical run; they are not yet part of
 the locked specification. G2 should pass for Mexico only if the 2010–2020 run achieves all of
@@ -85,8 +97,10 @@ the following:
 - exact download URLs, retrieval dates and SHA-256 hashes registered for every raw input;
 - a national exclusion table by state, origin size band, relationship type and reason.
 
-Passing these conditions would establish one Global South census pilot. It would not establish
-global availability or make the Mexico results representative of other national systems.
+Passing these conditions would establish one Global South census pilot and permit the
+conditional Stage-A2 extension to 2000. It would not complete the H1 PR-A freeze, authorize
+PR-B performance, establish global availability, or make the Mexico results representative of
+other national systems.
 
 ## Required outputs
 

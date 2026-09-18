@@ -43,6 +43,13 @@ relationships and vintage geometry determine acceptance. G2 remains open until t
 concordance and exclusion tables pass an approved coverage gate. See
 `docs/mexico-locality-concordance-feasibility.md`.
 
+This 2010–2020 run is also the first concordance pass for Mexico H1 external validation, but the
+two gates are not interchangeable. The G2 pilot uses the 25,000–100,000 threshold cohort. H1 PR
+A separately requires 2000/2010/2020 direct-count evidence, 50,000–250,000 origin coverage,
+historical-transition diagnostics, blind adequacy thresholds, and a frozen scoring-row hash.
+Extension to 2000 begins only after the 2010–2020 concordance passes its coverage and audit
+review; no forecast performance is exposed until the complete H1 PR-A package is accepted.
+
 ## Dynamic-estimator implementation gate
 
 The locked hierarchy now has a machine-readable registry and one common-sample constructor.
