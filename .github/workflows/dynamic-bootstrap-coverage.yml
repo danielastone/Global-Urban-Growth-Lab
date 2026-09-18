@@ -43,7 +43,7 @@ jobs:
           --cities 48 --countries 6 --seed 314159
           --persistence ${{ matrix.persistence }} --panel-length ${{ matrix.panel_length }}
           --output outputs/dynamic_bootstrap_coverage_${{ matrix.tag }}.csv
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dynamic-bootstrap-coverage-${{ matrix.tag }}
           path: outputs/dynamic_bootstrap_coverage_${{ matrix.tag }}.csv
@@ -71,7 +71,7 @@ jobs:
           uv run --locked python scripts/combine_dynamic_bootstrap_coverage.py
           --input-dir coverage-artifacts
           --output outputs/dynamic_bootstrap_coverage.csv
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dynamic-bootstrap-coverage-combined
           path: outputs/dynamic_bootstrap_coverage.csv
