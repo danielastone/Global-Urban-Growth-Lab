@@ -53,6 +53,7 @@ def _panel() -> pd.DataFrame:
                     "availability_provenance_verified": True,
                     "forecast_origin_registration_verified": True,
                     "forecast_origin_date": f"{start}-12-31",
+                    "forecast_origin_registration": "annual December 31 as-of",
                     "predictor_available_date": f"{start}-01-01",
                     "concordance_available_date": f"{start}-01-01",
                     "predictor_availability_source": f"predictor-release-{start}",
@@ -101,6 +102,9 @@ def test_headline_metrics_attach_registered_policy_and_coverage() -> None:
     assert result["minimum_observed_outcome_share"].eq(0.60).all()
     assert result["forecast_origin_registration_gate_enforced"].all()
     assert result["training_uses_current_origin_as_of"].all()
+    assert result["point_in_time_evidence_recomputed"].all()
+    assert result["derived_point_in_time_flags_reconciled"].all()
+    assert result["headline_point_in_time_integrity_enforced"].all()
 
 
 def test_headline_errors_attach_same_registered_policy() -> None:
@@ -111,12 +115,24 @@ def test_headline_errors_attach_same_registered_policy() -> None:
     assert result["coverage_policy_id"].eq(TEST_POLICY_ID).all()
     assert result["forecast_origin_registration_gate_enforced"].all()
     assert result["training_uses_current_origin_as_of"].all()
+    assert result["point_in_time_evidence_recomputed"].all()
+    assert result["headline_point_in_time_integrity_enforced"].all()
 
 
-def test_headline_rejects_unverified_origin_registration() -> None:
+def test_headline_rejects_forged_origin_registration_flag() -> None:
     panel = _panel()
     panel.loc[0, "forecast_origin_registration_verified"] = False
-    with pytest.raises(SourceSchemaError, match="verified forecast-origin registration"):
+    with pytest.raises(SourceSchemaError, match="disagrees with the value recomputed"):
+        evaluate_headline_point_in_time_persistence(
+            panel, [2005, 2010], _coverage(), coverage_policy_id=TEST_POLICY_ID
+        )
+
+
+def test_headline_rejects_forged_availability_flag() -> None:
+    panel = _panel()
+    panel.loc[0, "predictor_available_date"] = "2001-01-01"
+    panel.loc[0, "point_in_time_available"] = True
+    with pytest.raises(SourceSchemaError, match="point_in_time_available disagrees"):
         evaluate_headline_point_in_time_persistence(
             panel, [2005, 2010], _coverage(), coverage_policy_id=TEST_POLICY_ID
         )
@@ -185,3 +201,14 @@ def test_invalid_registered_policy_fails_closed(monkeypatch: pytest.MonkeyPatch)
     )
     with pytest.raises(SourceSchemaError, match="invalid minimum"):
         _evaluate()
+
+
+def test_headline_reconciles_custom_availability_column() -> None:
+    panel = _panel()
+    panel["custom_available"] = panel["point_in_time_available"]
+    panel.loc[0, "custom_available"] = False
+    with pytest.raises(SourceSchemaError, match="custom_available disagrees"):
+        evaluate_headline_point_in_time_persistence(
+            panel, [2005, 2010], _coverage(), coverage_policy_id=TEST_POLICY_ID,
+            availability_column="custom_available",
+        )
