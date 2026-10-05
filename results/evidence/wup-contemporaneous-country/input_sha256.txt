@@ -1,0 +1,4 @@
+3a96030d87aec6c1c50f658d5321067d6345e1ab936c5d2854524f972caa75c0  data/raw/WUP2025-F21-DEGURBA-Cities_Pop.xlsx
+1174b1d46344a14c6d92d5a85e8b852cb789cf4d67835c2ff96c1634450af25f  data/raw/WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx
+942a9d74e66949cd8eb818fa208b9402bbd5225a1dbce7f98c3101f9904ba34f  data/raw/WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx
+aff1240a0db72de6adabb5fb8a734df2d9be3159f94886c18ff61d5eaea1f0b0  data/raw/WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx

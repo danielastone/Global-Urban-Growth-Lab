@@ -45,3 +45,12 @@ The training gate therefore evaluates availability **as of the current origin**,
 Reference years, enumeration dates, endpoint years, current download dates, or analyst-entered assumptions are not sufficient provenance for availability dates. Evidence should point to the relevant statistical release, archived publication, geography release, metadata record, or equivalent source establishing when the information became observable.
 
 The original `evaluate_fitness_gated_persistence_baselines` remains available for retrospective sensitivity analysis and must not by itself be described as real-time or deployable-at-origin performance.
+
+## Audit and result versioning
+
+Recomputed panels retain each input flag as `supplied_<column>` and record
+`point_in_time_derivation_version = recompute_point_in_time_evidence/v1`. Metric and
+row-error outputs carry the same derivation version. Custom scorer column names
+are reconciled before scoring. This change does not regenerate any committed
+empirical result. Future empirical runs must register a new sample/version and
+hash; historical packages remain unchanged.

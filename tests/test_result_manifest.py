@@ -1,4 +1,5 @@
 import csv
+import gzip
 from pathlib import Path
 
 import pytest
@@ -23,14 +24,23 @@ def test_result_manifest_verifies_hash_and_dimensions(tmp_path) -> None:
         writer.writeheader()
         writer.writerow(
             {
-                "path": "result.csv", "sha256": file_sha256(result),
-                "rows": rows, "columns": columns,
+                "path": "result.csv",
+                "sha256": file_sha256(result),
+                "rows": rows,
+                "columns": columns,
             }
         )
     verify_result_manifest(manifest, root=tmp_path)
     result.write_text("a,b\n1,3\n", encoding="utf-8")
     with pytest.raises(SourceSchemaError, match="checksum"):
         verify_result_manifest(manifest, root=tmp_path)
+
+
+def test_csv_dimensions_reads_deterministic_gzip_csv(tmp_path: Path) -> None:
+    result = tmp_path / "result.csv.gz"
+    with gzip.open(result, mode="wt", newline="", encoding="utf-8") as handle:
+        handle.write("a,b\n1,2\n3,4\n")
+    assert csv_dimensions(result) == (2, 2)
 
 
 def test_provenance_manifest_verifies_artifact_and_inputs(tmp_path) -> None:
@@ -60,8 +70,7 @@ def test_provenance_manifest_rejects_partial_metadata(tmp_path) -> None:
     result.write_text("a\n1\n", encoding="utf-8")
     manifest = tmp_path / "manifest.csv"
     manifest.write_text(
-        "path,sha256,rows,columns,code_commit\n"
-        f"result.csv,{file_sha256(result)},1,1,{'a' * 40}\n",
+        f"path,sha256,rows,columns,code_commit\nresult.csv,{file_sha256(result)},1,1,{'a' * 40}\n",
         encoding="utf-8",
     )
     with pytest.raises(SourceSchemaError, match="partial provenance"):

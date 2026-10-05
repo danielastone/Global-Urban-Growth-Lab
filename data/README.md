@@ -41,3 +41,29 @@ notes
 The manifest records acquired files. It does not grant permission. Source-level legal
 decisions and attribution requirements are maintained separately in
 `data/licenses.json`; see [THIRD_PARTY_DATA.md](../THIRD_PARTY_DATA.md).
+
+## Population-reliability provenance
+
+`reliability_snapshots.csv` and `reliability_transformations.csv` extend the existing
+source, license, and file-manifest registries for the population-data reliability matrix.
+They are deliberately header-only until an open input is actually captured and a
+transformation is executed.
+
+- A snapshot identifies exact captured bytes using `source_id` plus SHA-256 and carries an
+  ISO-8601 UTC retrieval timestamp and an explicit observation period. It does not replace
+  `manifest.csv` or licensing review.
+- A transformation identifies its full Git commit, canonical parameters, exact input
+  snapshots, output hash, and UTC execution interval.
+- An evidence row fails validation unless its declared snapshot is an input to its declared
+  transformation.
+
+Legacy `manifest.csv` rows contain only retrieval dates. They may be promoted into the new
+snapshot registry only when the missing capture timestamp, observation period, and media
+metadata can be supplied from evidence; the implementation does not invent midnight
+timestamps.
+
+Validate the committed registries with:
+
+```bash
+uv run --locked --extra dev urban-growth-sources verify-reliability-provenance
+```

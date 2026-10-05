@@ -35,6 +35,77 @@ The form module has three distinct specifications:
 If C2 and C3 both predict, report joint dynamic adjustment rather than selecting a one-way
 causal story.
 
+### Module C density and form extension
+
+Module C uses fixed, validated polygons. F01 Cities-class change is not a density outcome:
+it mixes in-place change with territory entering or leaving the class. Density metrics must
+identify the numerator, denominator, spatial support, reference date, availability date and
+lineage in a versioned metric registry before use. Lineage is enforced for the
+predictor/outcome pair: `clean` for a built-form metric means clean against a registered
+direct-count outcome on enumerated support, not globally clean. Pairing the same metric with a
+GHS-POP- or WUP-based outcome is sensitivity-only.
+This pair registry includes WUP population growth, GHS-POP population growth and direct-census
+population growth as well as density outcomes; an unlisted outcome fails closed.
+
+Any metric pairing GHS-POP, or GHS-POP-based WUP, with GHS-BUILT is
+`lineage_entangled` because the population surface inherits built-layer allocation. Such a
+metric is sensitivity-only and cannot validate the built layer or serve as the primary density
+outcome. A census count is an independent numerator only on its enumerated support. If census
+units are allocated into an analysis polygon, the allocation method, overlap coverage and
+uncertainty are explicit; the resulting polygon estimate is not described as direct enumeration.
+
+GHS-BUILT-H is a 2018 snapshot. Historical GHS-BUILT-V epochs combine changing built
+surface with that snapshot height and therefore do not observe multi-epoch vertical change.
+They may describe constructed volume under the tag `snapshot_height_scaled_surface`, but
+vertical-growth language requires an independent multi-date height or floor-space source.
+The registered decomposition reports horizontal extent change, within-common-support vertical
+change, entering-cell composition and an interaction or residual separately.
+
+Every C3 form or density feature carries `source_date` and `available_from`. The 2018 snapshot
+height is unavailable to forecast origins before 2020. Feature selection, tuning and practical
+improvement thresholds are fixed without later-origin outcomes. The primary test compares
+origin-available features against the contemporaneous-country baseline on a registered
+direct-count density outcome; persistence is also reported where applicable. Shared-lineage
+reconciliation is an accounting check or sensitivity, not external validation.
+
+Measurement epoch and public availability are separate clocks. Retrospective measurement tests
+may use a time-indexed observation at its measurement epoch but must not call it real-time or
+vintage-correct when the product was released later. Google Open Buildings Temporal is measured
+annually from 2016–2023 (level from 2016; first change from 2017) but is publicly available only
+from 2024. Copernicus DEM slope may be backcast as a registered time-invariant physical
+constraint in retrospective tests while retaining its actual public-availability date.
+
+`volume_per_surface` from GHSL snapshot-height-scaled epochs is a spatial level only. It is not
+an admissible change outcome or a measure of vertical growth.
+
+### Open-covariate density model pre-registration
+
+No empirical density-model run may precede this registration or use a covariate absent from
+`density_covariate_registry()`. The primary change outcome is annualized log direct-census
+density change on validated fixed polygons; the cross-sectional outcome is log direct-census
+density. Log GHS-POP density change is lineage-entangled and sensitivity-only.
+
+The comparator ladder is density persistence, contemporaneous-country density mean, and a
+national-envelope-only comparator. The WUP-based national envelope is a comparator, not an
+admissible lineage-clean covariate. Candidate models are restricted to registered built-form,
+terrain/constrained-land, accessibility and independent-height features available at the
+origin. VIIRS night lights is sensitivity-only. GHS-POP, WUP city population, and variables
+derived from either are excluded from the candidate covariate matrix.
+
+Evaluation holds out pilot cities and uses a stratified state/entidad cluster bootstrap within
+country. With only Mexico and the United States, inference is limited to pilot regions and
+cannot support country-generalized or global uncertainty claims. The primary paired contrast is
+relative RMSE improvement over the contemporaneous-country model. The model passes only when
+the lower bound of its registered 95% interval is at least 5% and its MAE is no worse on
+identical rows.
+Otherwise the required conclusion is **“open-data density model not supported.”** Favourable
+and adverse model rows remain in the same registered result table.
+
+A caller boolean does not register an outcome. Before fitting, the code verifies the direct-count
+outcome's expected-output manifest, checksum, metric id, census vintage and enumerated spatial
+support. Adding a covariate after outcomes are inspected requires a new dated registration and
+cannot revise the original test.
+
 ## Module B model and estimator hierarchy
 
 The general retrospective template is:
@@ -130,8 +201,9 @@ a fixed pool” are prohibited without separate identification.
 
 Code must fail on duplicate keys, nonpositive population, future leakage, endpoint-derived tier
 membership, cumulative travel-time bands, unresolved census geography, absent census endpoints,
-empty ILR cells represented as zero, and lineage-undisclosed form variables. Every exclusion
-receives a machine-readable reason.
+empty ILR cells represented as zero, lineage-undisclosed form variables, primary use of a
+`lineage_entangled` density metric, pre-availability C3 features, and claims of vertical change
+from snapshot-height-scaled surface epochs. Every exclusion receives a machine-readable reason.
 
 ## Feasibility register
 
@@ -148,6 +220,7 @@ receives a machine-readable reason.
 | O9 | Forecastable national envelope | Separate forecast-module specification |
 | O10 | India census scope | Test 2001–2011 as historical-only; defer modern validation until Census 2027 locality outputs and crosswave concordances exist |
 | O11 | U.S. Census place pipeline | Validate code on direct 2010/2020 enumerations and official one-to-one boundary relationships; does not close O1–O3 |
+| O12 | Density and vertical-form extension | Complete #145: register a direct-count density outcome, acquire an independent multi-date height source, and test origin-valid C3 improvement |
 
 No shrinkage model can manufacture missing within-country information. The recovered
 country-period effect diagnostic excludes cells with fewer than three eligible cities and

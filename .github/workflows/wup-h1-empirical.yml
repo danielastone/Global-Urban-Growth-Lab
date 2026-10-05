@@ -1,0 +1,57 @@
+name: WUP H1 incremental empirical run
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "run/h1-wup-empirical"
+
+permissions:
+  contents: read
+
+jobs:
+  h1-incremental:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        with:
+          version: "0.11.33"
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Acquire official WUP 2025 city tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p data/raw
+          base="https://population.un.org/wup/assets/Download/Cities"
+          for file in \
+            WUP2025-F21-DEGURBA-Cities_Pop.xlsx \
+            WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx \
+            WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx \
+            WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx
+          do
+            curl --fail --location --retry 3 --retry-delay 2 \
+              "$base/$file" --output "data/raw/$file"
+          done
+          grep -E '^[0-9a-f]{64}  ' results/wup_h1_incremental_source_sha256.txt \
+            | sed 's#  #  data/raw/#' \
+            | sha256sum --check --strict -
+      - name: Run corrected-lineage H1 diagnostic
+        run: >-
+          uv run --locked python scripts/run_wup_h1_incremental.py
+          --raw-dir data/raw
+          --output outputs/wup_h1_incremental_recent_growth_by_origin.csv
+      - name: Print empirical result
+        run: cat outputs/wup_h1_incremental_recent_growth_by_origin.csv
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: wup-h1-incremental-empirical
+          path: |
+            outputs/wup_h1_incremental_recent_growth_by_origin.csv
+            results/wup_h1_incremental_source_sha256.txt
+          if-no-files-found: error

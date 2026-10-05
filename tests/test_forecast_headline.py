@@ -201,3 +201,14 @@ def test_invalid_registered_policy_fails_closed(monkeypatch: pytest.MonkeyPatch)
     )
     with pytest.raises(SourceSchemaError, match="invalid minimum"):
         _evaluate()
+
+
+def test_headline_reconciles_custom_availability_column() -> None:
+    panel = _panel()
+    panel["custom_available"] = panel["point_in_time_available"]
+    panel.loc[0, "custom_available"] = False
+    with pytest.raises(SourceSchemaError, match="custom_available disagrees"):
+        evaluate_headline_point_in_time_persistence(
+            panel, [2005, 2010], _coverage(), coverage_policy_id=TEST_POLICY_ID,
+            availability_column="custom_available",
+        )

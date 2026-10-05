@@ -15,6 +15,7 @@ from urban_growth.forecast import (
     equal_origin_forecast_metrics,
     evaluate_rolling_baselines,
     evaluate_rolling_hierarchy_models,
+    evaluate_rolling_national_context_models,
     leave_one_cluster_out_paired_difference,
     locked_origin_model_evaluation,
     matched_boundary_forecast_panels,
@@ -413,6 +414,113 @@ def test_hierarchy_models_jointly_match_feature_missingness() -> None:
     assert result["candidate_test_n"].unique().tolist() == [3]
     assert result["matched_test_n"].unique().tolist() == [2]
     assert result["n"].unique().tolist() == [2]
+
+
+def national_context_forecast_panel() -> pd.DataFrame:
+    rows = []
+    for origin in [2000, 2005]:
+        for city_id, country_code in [(1, "A"), (2, "A"), (3, "B")]:
+            rows.append(
+                {
+                    "city_id": city_id,
+                    "country_code": country_code,
+                    "period_start": origin,
+                    "period_end": origin + 5,
+                    "future_growth": 0.002 * origin + 0.01 * city_id,
+                    "recent_growth": 0.005 * city_id,
+                    "log_national_population_loo_at_origin": 10 + 0.1 * city_id,
+                    "national_population_recent_growth_loo": 0.01 + 0.001 * city_id,
+                    "national_city_share_loo_at_origin": 0.4 + 0.01 * city_id,
+                    "national_town_share_loo_at_origin": 0.3 - 0.01 * city_id,
+                    "national_rural_share_loo_at_origin": 0.3,
+                    "national_context_loo_available": True,
+                    "national_context_leave_one_city_out": True,
+                    "national_context_uses_future_value": False,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def test_national_context_models_follow_locked_additive_ladder() -> None:
+    result = evaluate_rolling_national_context_models(
+        national_context_forecast_panel(), [2005]
+    )
+
+    assert set(result["model"]) == {
+        "country_loo_plus_recent_growth",
+        "national_scale_additive",
+        "national_settlement_additive",
+    }
+    assert result["n"].unique().tolist() == [3]
+    assert result["matched_train_n"].unique().tolist() == [3]
+    assert result["matched_test_n"].unique().tolist() == [3]
+    assert result["training_rows_identical_across_models"].all()
+    assert result["test_rows_identical_across_models"].all()
+    assert not result["features"].str.contains("rural").any()
+    settlement = result.loc[result["model"] == "national_settlement_additive", "features"].item()
+    assert "national_city_share_loo_at_origin" in settlement
+    assert "national_town_share_loo_at_origin" in settlement
+
+
+def test_national_context_models_report_common_sample_coverage() -> None:
+    panel = national_context_forecast_panel()
+    panel.loc[
+        panel["period_start"].eq(2000) & panel["city_id"].eq(3),
+        "national_context_loo_available",
+    ] = False
+    panel.loc[
+        panel["period_start"].eq(2005) & panel["city_id"].eq(2),
+        "national_town_share_loo_at_origin",
+    ] = np.nan
+
+    result = evaluate_rolling_national_context_models(panel, [2005])
+
+    assert result["candidate_train_n"].unique().tolist() == [3]
+    assert result["matched_train_n"].unique().tolist() == [2]
+    assert result["candidate_test_n"].unique().tolist() == [3]
+    assert result["matched_test_n"].unique().tolist() == [2]
+    assert result["n"].unique().tolist() == [2]
+    assert result["train_coverage"].unique().tolist() == pytest.approx([2 / 3])
+    assert result["test_coverage"].unique().tolist() == pytest.approx([2 / 3])
+
+
+@pytest.mark.parametrize(
+    ("column", "value", "message"),
+    [
+        ("national_context_uses_future_value", True, "future national values"),
+        ("national_context_leave_one_city_out", False, "leave-one-city-out"),
+    ],
+)
+def test_national_context_models_reject_invalid_semantics(
+    column: str, value: bool, message: str
+) -> None:
+    panel = national_context_forecast_panel()
+    panel.loc[0, column] = value
+
+    with pytest.raises(SourceSchemaError, match=message):
+        evaluate_rolling_national_context_models(panel, [2005])
+
+
+def test_national_context_models_reject_non_boolean_contract_flags() -> None:
+    panel = national_context_forecast_panel()
+    panel["national_context_uses_future_value"] = "False"
+
+    with pytest.raises(SourceSchemaError, match="must be boolean"):
+        evaluate_rolling_national_context_models(panel, [2005])
+
+
+def test_national_context_models_report_unseen_country_fallback() -> None:
+    panel = national_context_forecast_panel()
+    unseen = panel.loc[panel["period_start"].eq(2005)].iloc[[0]].copy()
+    unseen["city_id"] = 4
+    unseen["country_code"] = "C"
+    panel = pd.concat([panel, unseen], ignore_index=True)
+
+    result = evaluate_rolling_national_context_models(panel, [2005])
+
+    assert result["unseen_test_countries"].unique().tolist() == [1]
+    assert result["country_mean_fallback"].eq("global_training_mean").all()
+    assert result["n"].unique().tolist() == [4]
 
 
 def test_row_errors_support_paired_size_comparison() -> None:

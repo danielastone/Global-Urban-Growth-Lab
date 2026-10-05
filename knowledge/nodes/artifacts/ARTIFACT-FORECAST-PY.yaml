@@ -1,0 +1,7 @@
+id: ARTIFACT-FORECAST-PY
+type: artifact
+title: Forecast implementation
+canonical_name: forecast.py implementation
+aliases: []
+path: src/urban_growth/forecast.py
+relations: []

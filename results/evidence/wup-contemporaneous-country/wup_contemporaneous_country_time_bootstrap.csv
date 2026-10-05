@@ -1,0 +1,2 @@
+model_a,model_b,n,countries,time_clusters,country_cluster_preserves_nested_city_trajectories,time_resampling_scheme,adjacent_origin_blocks_preserved,observed_mean_difference,ci_lower,ci_upper,probability_model_a_better,repetitions,seed
+persistence,country_contemporaneous_recent_growth_leave_city_out,56510,188,7,True,exchangeable_origin_clusters,False,-0.0022823596562361213,-0.004471884196587968,-0.0001776698855172703,0.9785,2000,20260827

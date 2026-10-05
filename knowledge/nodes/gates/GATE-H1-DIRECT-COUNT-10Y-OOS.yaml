@@ -1,0 +1,15 @@
+id: GATE-H1-DIRECT-COUNT-10Y-OOS
+type: acceptance_gate
+title: H1 10-year direct-count external predictive improvement gate
+canonical_name: H1 direct-count 10-year OOS predictive gate
+aliases: []
+horizon_years: 10
+conditions:
+  - metric: relative_rmse_improvement
+    operator: ">="
+    threshold: 0.05
+  - metric: mae_difference
+    operator: "<="
+    threshold: 0.0
+failure_interpretation: falsifies_primary_claim
+relations: []

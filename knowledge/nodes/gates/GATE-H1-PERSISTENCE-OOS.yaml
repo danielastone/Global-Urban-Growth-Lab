@@ -1,0 +1,14 @@
+id: GATE-H1-PERSISTENCE-OOS
+type: acceptance_gate
+title: H1 predictive improvement gate
+canonical_name: H1 OOS predictive gate
+aliases: []
+conditions:
+  - metric: relative_rmse_improvement
+    operator: ">="
+    threshold: 0.05
+  - metric: mae_difference
+    operator: "<="
+    threshold: 0.0
+failure_interpretation: falsifies_primary_claim
+relations: []

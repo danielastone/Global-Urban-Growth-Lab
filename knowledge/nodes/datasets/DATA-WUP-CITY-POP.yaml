@@ -1,0 +1,10 @@
+id: DATA-WUP-CITY-POP
+type: dataset
+title: WUP city population panel used for registered H1 evaluation
+canonical_name: WUP city population panel
+aliases: [WUP city population]
+availability: ingested
+provenance: documented
+source: UN World Urbanization Prospects / project registered source lineage
+vintage: project-registered
+relations: []

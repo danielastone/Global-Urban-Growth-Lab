@@ -65,3 +65,44 @@ def test_recompute_rejects_inconsistent_origin_calendar_rule() -> None:
     frame = pd.concat([panel, extra], ignore_index=True)
     with pytest.raises(SourceSchemaError, match="one registered month-day rule"):
         recompute_point_in_time_evidence(frame)
+
+
+@pytest.mark.parametrize("column", ["predictor_available_date", "concordance_available_date"])
+def test_recompute_rejects_late_evidence(column: str) -> None:
+    panel = _panel()
+    panel.loc[0, column] = "2001-01-01"
+    with pytest.raises(SourceSchemaError, match="point_in_time_available disagrees"):
+        recompute_point_in_time_evidence(panel)
+
+
+def test_recompute_rejects_stale_false() -> None:
+    panel = _panel()
+    panel.loc[0, "point_in_time_available"] = False
+    with pytest.raises(SourceSchemaError, match="point_in_time_available disagrees"):
+        recompute_point_in_time_evidence(panel)
+
+
+@pytest.mark.parametrize("column", ["predictor_available_date", "concordance_available_date"])
+def test_recompute_rejects_unknown_date(column: str) -> None:
+    panel = _panel()
+    panel.loc[0, column] = None
+    with pytest.raises(SourceSchemaError, match="must be known"):
+        recompute_point_in_time_evidence(panel)
+
+
+def test_recompute_preserves_supplied_flags_and_version() -> None:
+    panel = _panel()
+    result = recompute_point_in_time_evidence(panel)
+    for column in (
+        "point_in_time_available", "availability_provenance_verified",
+        "forecast_origin_registration_verified",
+    ):
+        pd.testing.assert_series_equal(result[f"supplied_{column}"], panel[column], check_names=False)
+    assert result["point_in_time_derivation_version"].eq("recompute_point_in_time_evidence/v1").all()
+
+
+def test_recompute_rejects_supplied_registration_mismatch() -> None:
+    panel = _panel()
+    panel.loc[0, "forecast_origin_registration_verified"] = False
+    with pytest.raises(SourceSchemaError, match="forecast_origin_registration_verified disagrees"):
+        recompute_point_in_time_evidence(panel)

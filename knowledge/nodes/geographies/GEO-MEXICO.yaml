@@ -1,0 +1,11 @@
+id: GEO-MEXICO
+type: geography
+title: Mexico direct-count external validation geography
+canonical_name: Mexico
+aliases: [Mexico, MEX]
+iso3: MEX
+census_source: INEGI population census locality/city counts
+reliability_assessment: High-quality national statistical office direct-count source; boundary and locality concordance remain explicit validation requirements.
+wup_independence: pending
+independence_statement: WUP source-basis assessment is required by issue 220 before this geography can support a direct-count external result.
+relations: []

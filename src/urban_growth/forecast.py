@@ -754,6 +754,172 @@ def evaluate_rolling_hierarchy_models(
     return result.sort_values(["origin", "model"]).reset_index(drop=True)
 
 
+def evaluate_rolling_national_context_models(
+    panel: pd.DataFrame,
+    origins: list[int],
+    *,
+    outcome_column: str = "future_growth",
+) -> pd.DataFrame:
+    """Evaluate the locked additive national-context ladder on identical rows.
+
+    Inputs must come from the origin-available, leave-one-city-out national-context
+    constructor. This evaluator is predictive infrastructure; it does not identify a
+    causal effect of national population or settlement composition.
+    """
+    national_scale = [
+        "log_national_population_loo_at_origin",
+        "national_population_recent_growth_loo",
+    ]
+    settlement_composition = [
+        "national_city_share_loo_at_origin",
+        "national_town_share_loo_at_origin",
+    ]
+    specifications = {
+        "country_loo_plus_recent_growth": ["recent_growth"],
+        "national_scale_additive": ["recent_growth", *national_scale],
+        "national_settlement_additive": [
+            "recent_growth", *national_scale, *settlement_composition,
+        ],
+    }
+    required = {
+        "city_id",
+        "country_code",
+        "period_start",
+        "period_end",
+        outcome_column,
+        "national_context_loo_available",
+        "national_context_leave_one_city_out",
+        "national_context_uses_future_value",
+        *[feature for features in specifications.values() for feature in features],
+    }
+    require_columns(panel, required, source_name="national-context forecast panel")
+    reject_duplicate_keys(
+        panel,
+        ["city_id", "period_start", "period_end"],
+        source_name="national-context forecast panel",
+    )
+    contract_flags = panel[
+        [
+            "national_context_loo_available",
+            "national_context_leave_one_city_out",
+            "national_context_uses_future_value",
+        ]
+    ]
+    if contract_flags.isna().any().any():
+        raise SourceSchemaError("National-context contract flags cannot be missing")
+    if not all(pd.api.types.is_bool_dtype(contract_flags[column]) for column in contract_flags):
+        raise SourceSchemaError("National-context contract flags must be boolean")
+    if not panel["national_context_leave_one_city_out"].all():
+        raise SourceSchemaError("National-context models require leave-one-city-out features")
+    if panel["national_context_uses_future_value"].any():
+        raise SourceSchemaError("National-context models cannot use future national values")
+
+    joint_columns = list(
+        dict.fromkeys(
+            ["city_id", "country_code", "period_start", "period_end", outcome_column]
+            + [feature for features in specifications.values() for feature in features]
+        )
+    )
+    rows: list[dict[str, float | int | str | bool]] = []
+    for origin, train_index, test_index in rolling_origin_splits(panel, origins):
+        candidate_train = panel.loc[train_index]
+        candidate_test = panel.loc[test_index]
+        train = candidate_train.loc[
+            candidate_train["national_context_loo_available"]
+        ].dropna(subset=joint_columns)
+        test = candidate_test.loc[
+            candidate_test["national_context_loo_available"]
+        ].dropna(subset=joint_columns)
+        model_columns = list(
+            dict.fromkeys(
+                [outcome_column]
+                + [feature for features in specifications.values() for feature in features]
+            )
+        )
+        train_numeric = train[model_columns].apply(pd.to_numeric, errors="coerce")
+        test_numeric = test[model_columns].apply(pd.to_numeric, errors="coerce")
+        train_finite = train_numeric.notna().all(axis=1) & np.isfinite(train_numeric).all(axis=1)
+        test_finite = test_numeric.notna().all(axis=1) & np.isfinite(test_numeric).all(axis=1)
+        train = train.loc[train_finite].copy()
+        test = test.loc[test_finite].copy()
+        train.loc[:, model_columns] = train_numeric.loc[train_finite]
+        test.loc[:, model_columns] = test_numeric.loc[test_finite]
+        if train.empty or test.empty:
+            continue
+
+        baseline = baseline_predictions(train, test, outcome_column=outcome_column)
+        train_countries = set(train["country_code"])
+        unseen_test_countries = len(set(test["country_code"]) - train_countries)
+        for model, features in specifications.items():
+            fit_columns = ["country_code", outcome_column, *features]
+            fit = train[fit_columns]
+            country_means = fit.groupby("country_code")[[outcome_column, *features]].mean()
+            group_means = fit.groupby("country_code")[[outcome_column, *features]].transform(
+                "mean"
+            )
+            demeaned = fit[[outcome_column, *features]] - group_means
+            beta, *_ = np.linalg.lstsq(
+                demeaned[features].to_numpy(),
+                demeaned[outcome_column].to_numpy(),
+                rcond=None,
+            )
+            global_feature_means = fit[features].mean()
+            test_feature_means = pd.DataFrame(
+                {
+                    feature: test["country_code"]
+                    .map(country_means[feature])
+                    .fillna(global_feature_means[feature])
+                    for feature in features
+                },
+                index=test.index,
+            )
+            prediction = baseline["country_mean_leave_city_out"] + (
+                test[features] - test_feature_means
+            ).to_numpy() @ beta
+            metrics = score_forecast(
+                test[outcome_column], pd.Series(prediction, index=test.index)
+            )
+            if metrics.n != len(test):
+                raise SourceSchemaError(
+                    "National-context model lost rows after joint train/test matching"
+                )
+            rows.append(
+                {
+                    "origin": origin,
+                    "model": model,
+                    "features": "|".join(features),
+                    "n": metrics.n,
+                    "mae": metrics.mae,
+                    "rmse": metrics.rmse,
+                    "median_absolute_error": metrics.median_absolute_error,
+                    "bias": metrics.bias,
+                    "directional_accuracy": metrics.directional_accuracy,
+                    "candidate_train_n": len(candidate_train),
+                    "matched_train_n": len(train),
+                    "candidate_test_n": len(candidate_test),
+                    "matched_test_n": len(test),
+                    "train_coverage": len(train) / len(candidate_train),
+                    "test_coverage": len(test) / len(candidate_test),
+                    "unseen_test_countries": unseen_test_countries,
+                    "country_mean_fallback": "global_training_mean",
+                    "national_context_leave_one_city_out": True,
+                    "national_context_uses_future_value": False,
+                    "training_rows_identical_across_models": True,
+                    "test_rows_identical_across_models": True,
+                }
+            )
+    if not rows:
+        raise SourceSchemaError("No rolling national-context evaluations were produced")
+    result = pd.DataFrame(rows)
+    for count_column in ("matched_train_n", "matched_test_n", "n"):
+        counts = result.pivot(index="origin", columns="model", values=count_column)
+        if counts.nunique(axis=1).gt(1).any():
+            raise SourceSchemaError(
+                f"National-context models do not share identical {count_column} by origin"
+            )
+    return result.sort_values(["origin", "model"]).reset_index(drop=True)
+
+
 def rolling_baseline_errors(
     panel: pd.DataFrame,
     origins: list[int],

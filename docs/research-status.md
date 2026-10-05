@@ -43,6 +43,13 @@ relationships and vintage geometry determine acceptance. G2 remains open until t
 concordance and exclusion tables pass an approved coverage gate. See
 `docs/mexico-locality-concordance-feasibility.md`.
 
+This 2010–2020 run is also the first concordance pass for Mexico H1 external validation, but the
+two gates are not interchangeable. The G2 pilot uses the 25,000–100,000 threshold cohort. H1 PR
+A separately requires 2000/2010/2020 direct-count evidence, 50,000–250,000 origin coverage,
+historical-transition diagnostics, blind adequacy thresholds, and a frozen scoring-row hash.
+Extension to 2000 begins only after the 2010–2020 concordance passes its coverage and audit
+review; no forecast performance is exposed until the complete H1 PR-A package is accepted.
+
 ## Dynamic-estimator implementation gate
 
 The locked hierarchy now has a machine-readable registry and one common-sample constructor.
@@ -87,11 +94,13 @@ cells therefore fail for overcoverage: the interval is too conservative to be tr
 calibrated uncertainty. The pooled and uncorrected city-FE rows remain diagnostic and were
 ineligible for this gate; their coverage values are not additional gate failures.
 
-The combined 27-row output is registered in
-`results/dynamic_bootstrap_coverage_expected_manifest.csv`. The failed gate is a statistical
-result, not a workflow failure to retry. Thresholds were not changed and no claim should use
-the jackknife multiplier interval as validated uncertainty pending a separately specified
-estimator or interval redesign.
+The combined 27-row output is retained at
+`results/evidence/dynamic-bootstrap-coverage/dynamic_bootstrap_coverage.csv`, registered in the
+durable-evidence package `dynamic-bootstrap-coverage-2026-08-30`, and independently checked
+against `results/dynamic_bootstrap_coverage_expected_manifest.csv`. The failed gate is a
+statistical result, not a workflow failure to retry. Thresholds were not changed and no claim
+should use the jackknife multiplier interval as validated uncertainty pending a separately
+specified estimator or interval redesign.
 
 The empirical hierarchy runner now absorbs country-period and city fixed effects by weighted
 alternating projections rather than materializing a global city-dummy matrix. Small-panel tests
@@ -224,6 +233,30 @@ differences, and cross-border urban centres whose F21 population is not a valid
 component of the focal country's F01 total. The leave-city-out national comparator is
 undefined for those rows. The workflow now flags them, leaves that diagnostic missing,
 and scores every baseline on the common finite sample.
+
+The extent-by-density reconciliation is therefore implemented but not yet registered
+as an empirical result. The executable uses an exact fixed-polygon surface/density
+identity and carries the national-envelope discontinuity flags, but it fails closed on
+the interpretation of the residual. Issue #136 has not yet established F21's
+constant-membership semantics or a complete fixed-polygon/F21 crosswalk; existing
+cross-border and singleton failures show that the raw residual is not identified as
+reclassification. Until that dependency closes, the output field is
+`unidentified_composition_residual`, `net_reclassification_change` is missing, and no
+expected-output manifest or empirical three-way decomposition may be registered.
+The executable additionally requires independently validated origin-membership eligibility for
+every fixed polygon and a population-per-`GH_BUS_TOT` density denominator. Construction year
+alone is rejected as Cities-class membership evidence. This makes the current identification
+block explicit rather than allowing future-defined 2025 membership to manufacture a residual.
+
+The corrected timing registry also limits what the current primary density-change test can
+answer. The only available direct-count interval is 2010–2020, with origin 2010. At that origin,
+the admissible primary covariates are built-surface share, retrospectively backcast terrain slope
+as a time-invariant constraint, and GHSL land fraction. No independent height series begins
+before 2016. Vertical or height-change information therefore cannot enter the primary 2010–2020
+change test. The epic's vertical-form exit condition requires a later direct-count design: for
+example, a post-2016 census interval such as 2020–2030, or a separately preregistered
+cross-sectional design relating 2016–2020 Open Buildings change to 2020 census levels. It is not
+reachable from the currently available 2010 and 2020 census endpoints.
 
 At the 2020 origin this removes 25 of 10,709 city rows (0.23%) but 25 of 189 countries
 (13.2%). Pooled metrics therefore move little, while equal-country metrics move more.
@@ -590,6 +623,65 @@ fixed-boundary GHSL retains 90 of 120 and 630 of 840, respectively. The omitted
 quarter consists of early cells lacking the two required prior origins, sometimes
 also lacking 100 prior rows. These are availability exclusions, not observed misses.
 
+## Japan direct-count construction-smoothing benchmark
+
+Issue #124 now has a direct-count benchmark using official Japan Population Census DIDs for
+2000–2020 and 100 m GHS-POP R2023A on identical locality-period rows. The origin cohort is fixed at
+25,000–100,000 direct-count population before concordance. Multipart official DID features are
+dissolved by vintage DID identifier before any denominator or overlap calculation.
+
+Dynamic one-to-one identity resolves 874 of 1,034 three-wave forecast-origin rows (84.5%); the
+99.5%-overlap strict-stability rule resolves only 74 (7.2%). On the dynamic sample, direct-count
+persistence beta is 0.622 versus 0.513 for fixed-origin GHS-POP and 0.449 for dynamic-DID GHS-POP.
+On the strict sample, direct beta is 0.812 versus 0.721 and 0.711. GHS-POP is not consistently
+stronger on coefficient, MAE/RMSE improvement, or sign reversal, so the registered
+construction-smoothing pattern is not established.
+
+Direct counts improve both MAE and RMSE over zero growth at every origin (2005, 2010, 2015), which
+provides independent Japan-specific support for persistence. It does not establish universal H1:
+strict geographic coverage is narrow, the country set has size one, and the full hierarchy-model
+comparison is outside issue #124. See `docs/japan-ghsl-match-124-result.md` for the complete result
+and limits.
+
+## Japan direct-count H1 hierarchy
+
+Issue #191 extends the official DID panel to 1990 and 1995 so chronological evaluation has four
+independent test origins. On the strict 99.5%-overlap sample, raw persistence reduces RMSE by 39.4%
+versus the prior-origin mean and 40.3% versus size only. Two-way lineage/origin lower 95% bounds are
+19.8% and 18.4%, and MAE improves in both comparisons. All registered threshold-band exclusions
+also pass.
+
+That primary result covers only 122 of 1,706 forecast-origin rows (7.2%). The dynamic-identity
+diagnostic covers 82.9%, but persistence improves RMSE by only about 8% and its lower bounds cross
+zero; it does not pass. H1 therefore has direct-count support only for a highly selected,
+stable-geography Japanese subset. Universal H1 remains unsupported, and the geographic-selection
+conflict must accompany any use of the result. See `docs/japan-h1-191-result.md`.
+
+## Reliability-evidence missingness foundation
+
+Issue #169 implements the matrix-wide `scored`, `partially_observed`, and `unassessable`
+states as evidence-availability states scoped to country, dimension, use case, reference
+date, and source release. The derivation preserves missing source values, source noncoverage,
+staleness, invalid values, unresolved conflicts, and country-crosswalk failures as distinct
+reason codes. It never maps missingness to a low reliability value. The resulting records
+are population-share-ready but contain no composite score, tier, or country-quality claim.
+
+## World Bank SPI evidence vertical slice
+
+Issue #166 registers and ingests the December 2025 World Bank SPI release. Forty pillar 3–5
+indicators remain separate in long form with explicit missingness, release, observation year,
+and economy crosswalk status. A five-day pre-release comparison finds two revised cells among
+182,280 common cells. No overall SPI score or population-accuracy claim is produced. See
+`docs/spi-evidence-166-result.md`.
+
+## Vintage-qualified census evidence contract
+
+Issue #163 now has executable census-event and estimate-incorporation schemas with controlled
+vocabularies, chronology checks, explicit unknowns, separate conflicting assertions, and
+estimate-series/vintage-qualified incorporation. Empirical acquisition remains open because
+PES, undercount, adjustment, and incorporation evidence is fragmented across publisher and
+country documents. See `docs/census-evidence-163-status.md`.
+
 ## Reproduction
 
 With the registered raw files under `data/raw/`, run:
@@ -599,6 +691,8 @@ python scripts/run_wup_baselines.py
 python scripts/run_wup2018_vintage.py
 python scripts/run_ghsl_fixed_baselines.py
 python scripts/run_ghsl_boundary_sensitivity.py
+python scripts/run_japan_ghsl_match_124.py
+python scripts/run_japan_h1_191.py
 python scripts/run_national_envelope.py
 python scripts/run_wup_dynamic_hierarchy.py
 ```

@@ -37,7 +37,22 @@ from urban_growth.selection import (
     selection_summary,
     wup_forecast_selection_ledger,
 )
+from urban_growth.wup_lineage import classify_wup_city_population_lineage
 from urban_growth.wup_panel import build_wup_city_year_panel
+
+OBSERVED_PANEL_ORIGINS = list(range(1980, 2020, 5))
+OBSERVED_SCORING_ORIGINS = list(range(1985, 2020, 5))
+ALL_PUBLISHED_ORIGINS = list(range(1980, 2025, 5))
+
+
+def _label_projection_sensitivity(frame: pd.DataFrame) -> pd.DataFrame:
+    out = frame.copy()
+    out["outcome_empirical_lineage"] = "crisp_projection"
+    out["headline_eligible"] = False
+    out["interpretation"] = (
+        "2020-to-2025 WUP projection sensitivity; not an observed-outcome forecast test"
+    )
+    return out
 
 
 def main() -> None:
@@ -191,7 +206,9 @@ def main() -> None:
     national = read_f01_country_city_population(
         raw / "WUP2025-F01-Degree-of-Urbanization_Pop_by_category.xlsx"
     )
-    population = read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
+    population = classify_wup_city_population_lineage(
+        read_f21_city_population(raw / "WUP2025-F21-DEGURBA-Cities_Pop.xlsx")
+    )
     area = read_f25_city_land_area(raw / "WUP2025-F25-DEGURBA-Cities_AREA_km2.xlsx")
     built = read_f30_built_up_area_per_capita(
         raw / "WUP2025-F30-DEGURBA-Cities_BU_m2_per_capita.xlsx"
@@ -200,15 +217,18 @@ def main() -> None:
         raw / "WUP2025-F34-DEGURBA-Cities_Pop_density.xlsx"
     )
     city_year = build_wup_city_year_panel(population, area, built, density)
+
     selection_ledger = wup_forecast_selection_ledger(
-        population, city_year, list(range(1980, 2025, 5))
+        population, city_year, ALL_PUBLISHED_ORIGINS
     )
     selection_audit_summary = selection_summary(selection_ledger)
     attrition = outcome_attrition_summary(selection_ledger)
-    intervals = build_forecast_intervals(city_year, list(range(1980, 2025, 5)))
+
+    # Headline/observed path: 2025 is excluded because it is a CRISP projection.
+    intervals = build_forecast_intervals(city_year, OBSERVED_PANEL_ORIGINS)
     intervals = attach_national_city_category_baseline(intervals, national)
-    metrics = evaluate_rolling_baselines(intervals, list(range(1985, 2025, 5)))
-    errors = rolling_baseline_errors(intervals, list(range(1985, 2025, 5)))
+    metrics = evaluate_rolling_baselines(intervals, OBSERVED_SCORING_ORIGINS)
+    errors = rolling_baseline_errors(intervals, OBSERVED_SCORING_ORIGINS)
     paired = paired_error_comparison(errors)
     bootstrap = cluster_bootstrap_paired_difference(errors)
     pooled_paired = paired_error_comparison(errors, group_columns=["size_bin"])
@@ -216,22 +236,44 @@ def main() -> None:
         errors, group_columns=["size_bin"]
     )
     temporal = temporal_reversal_diagnostics(intervals)
-    country_influence = leave_one_cluster_out_paired_difference(errors, origin=2020)
-    city_influence = leave_one_cluster_out_paired_difference(
-        errors, origin=2020, cluster_columns=["country_code", "city_id", "city_name"]
+
+    # Preserve the former 2020 apparatus only as an explicitly non-headline
+    # projection sensitivity. It scores 2020->2025 against the CRISP endpoint.
+    projection_intervals = build_forecast_intervals(
+        city_year,
+        ALL_PUBLISHED_ORIGINS,
+        allowed_outcome_types={"estimate", "projection"},
     )
+    projection_intervals = attach_national_city_category_baseline(
+        projection_intervals, national
+    )
+    projection_errors = rolling_baseline_errors(projection_intervals, [2020])
+    country_influence = _label_projection_sensitivity(
+        leave_one_cluster_out_paired_difference(projection_errors, origin=2020)
+    )
+    city_influence = _label_projection_sensitivity(
+        leave_one_cluster_out_paired_difference(
+            projection_errors,
+            origin=2020,
+            cluster_columns=["country_code", "city_id", "city_name"],
+        )
+    )
+    locked_origin = _label_projection_sensitivity(
+        locked_origin_model_evaluation(projection_errors, locked_origin=2020)
+    )
+
     gapped_intervals = build_forecast_intervals(
-        city_year, list(range(1980, 2020, 5)), outcome_gap_years=5
+        city_year, OBSERVED_PANEL_ORIGINS, outcome_gap_years=5
     )
     gapped_intervals = attach_national_city_category_baseline(gapped_intervals, national)
     gapped_metrics = evaluate_rolling_baselines(
         gapped_intervals, list(range(1990, 2020, 5))
     )
     gapped_temporal = temporal_reversal_diagnostics(gapped_intervals)
-    hierarchy = evaluate_rolling_hierarchy_models(intervals, list(range(1985, 2025, 5)))
-    balanced = balanced_origin_cohort(intervals, list(range(1980, 2025, 5)))
-    balanced_metrics = evaluate_rolling_baselines(balanced, list(range(1985, 2025, 5)))
-    balanced_errors = rolling_baseline_errors(balanced, list(range(1985, 2025, 5)))
+    hierarchy = evaluate_rolling_hierarchy_models(intervals, OBSERVED_SCORING_ORIGINS)
+    balanced = balanced_origin_cohort(intervals, OBSERVED_PANEL_ORIGINS)
+    balanced_metrics = evaluate_rolling_baselines(balanced, OBSERVED_SCORING_ORIGINS)
+    balanced_errors = rolling_baseline_errors(balanced, OBSERVED_SCORING_ORIGINS)
     equal_country = equal_country_forecast_metrics(errors, group_columns=["origin"])
     balanced_equal_country = equal_country_forecast_metrics(
         balanced_errors, group_columns=["origin"]
@@ -240,12 +282,9 @@ def main() -> None:
     equal_origin = equal_origin_forecast_metrics(errors)
     equal_country_origin = equal_country_origin_forecast_metrics(errors)
     balanced_pooled_equal_country = equal_country_forecast_metrics(balanced_errors)
-    locked_origin = locked_origin_model_evaluation(errors, locked_origin=2020)
     interval_calibration = pd.concat(
         [
-            registered_sequential_interval_calibration(
-                errors, policy_id="overall_90_v1"
-            ),
+            registered_sequential_interval_calibration(errors, policy_id="overall_90_v1"),
             registered_sequential_interval_calibration(
                 errors, policy_id="overall_90_recent3_v1"
             ),
@@ -257,9 +296,7 @@ def main() -> None:
     )
     interval_calibration_by_size = pd.concat(
         [
-            registered_sequential_interval_calibration(
-                errors, policy_id="size_bin_90_v1"
-            ),
+            registered_sequential_interval_calibration(errors, policy_id="size_bin_90_v1"),
             registered_sequential_interval_calibration(
                 errors, policy_id="size_bin_90_recent3_v1"
             ),
@@ -301,101 +338,42 @@ def main() -> None:
         ],
         ignore_index=True,
     )
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    metrics.to_csv(args.output, index=False)
-    args.selection_ledger_output.parent.mkdir(parents=True, exist_ok=True)
-    selection_ledger.to_csv(args.selection_ledger_output, index=False)
-    args.selection_summary_output.parent.mkdir(parents=True, exist_ok=True)
-    selection_audit_summary.to_csv(args.selection_summary_output, index=False)
-    args.outcome_attrition_output.parent.mkdir(parents=True, exist_ok=True)
-    attrition.to_csv(args.outcome_attrition_output, index=False)
-    args.paired_output.parent.mkdir(parents=True, exist_ok=True)
-    paired.to_csv(args.paired_output, index=False)
-    args.bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
-    bootstrap.to_csv(args.bootstrap_output, index=False)
-    args.pooled_paired_output.parent.mkdir(parents=True, exist_ok=True)
-    pooled_paired.to_csv(args.pooled_paired_output, index=False)
-    args.pooled_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
-    pooled_bootstrap.to_csv(args.pooled_bootstrap_output, index=False)
-    args.temporal_output.parent.mkdir(parents=True, exist_ok=True)
-    temporal.to_csv(args.temporal_output, index=False)
-    args.country_influence_output.parent.mkdir(parents=True, exist_ok=True)
-    country_influence.to_csv(args.country_influence_output, index=False)
-    args.city_influence_output.parent.mkdir(parents=True, exist_ok=True)
-    city_influence.to_csv(args.city_influence_output, index=False)
-    args.gapped_metrics_output.parent.mkdir(parents=True, exist_ok=True)
-    gapped_metrics.to_csv(args.gapped_metrics_output, index=False)
-    args.gapped_temporal_output.parent.mkdir(parents=True, exist_ok=True)
-    gapped_temporal.to_csv(args.gapped_temporal_output, index=False)
-    args.hierarchy_output.parent.mkdir(parents=True, exist_ok=True)
-    hierarchy.to_csv(args.hierarchy_output, index=False)
-    args.balanced_metrics_output.parent.mkdir(parents=True, exist_ok=True)
-    balanced_metrics.to_csv(args.balanced_metrics_output, index=False)
-    args.equal_country_output.parent.mkdir(parents=True, exist_ok=True)
-    equal_country.to_csv(args.equal_country_output, index=False)
-    args.balanced_equal_country_output.parent.mkdir(parents=True, exist_ok=True)
-    balanced_equal_country.to_csv(args.balanced_equal_country_output, index=False)
-    args.pooled_equal_country_output.parent.mkdir(parents=True, exist_ok=True)
-    pooled_equal_country.to_csv(args.pooled_equal_country_output, index=False)
-    args.equal_origin_output.parent.mkdir(parents=True, exist_ok=True)
-    equal_origin.to_csv(args.equal_origin_output, index=False)
-    args.equal_country_origin_output.parent.mkdir(parents=True, exist_ok=True)
-    equal_country_origin.to_csv(args.equal_country_origin_output, index=False)
-    args.balanced_pooled_equal_country_output.parent.mkdir(parents=True, exist_ok=True)
-    balanced_pooled_equal_country.to_csv(
-        args.balanced_pooled_equal_country_output, index=False
-    )
-    args.locked_origin_output.parent.mkdir(parents=True, exist_ok=True)
-    locked_origin.to_csv(args.locked_origin_output, index=False)
-    args.interval_calibration_output.parent.mkdir(parents=True, exist_ok=True)
-    interval_calibration.to_csv(args.interval_calibration_output, index=False)
-    args.interval_calibration_by_size_output.parent.mkdir(parents=True, exist_ok=True)
-    interval_calibration_by_size.to_csv(
-        args.interval_calibration_by_size_output, index=False
-    )
-    args.country_time_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
-    country_time_bootstrap.to_csv(args.country_time_bootstrap_output, index=False)
-    args.country_time_size_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
-    country_time_size_bootstrap.to_csv(
-        args.country_time_size_bootstrap_output, index=False
-    )
-    args.balanced_country_time_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
-    balanced_country_time_bootstrap.to_csv(
-        args.balanced_country_time_bootstrap_output, index=False
-    )
-    args.aggregation_bootstrap_output.parent.mkdir(parents=True, exist_ok=True)
-    aggregation_bootstrap.to_csv(args.aggregation_bootstrap_output, index=False)
-    args.aggregation_country_time_output.parent.mkdir(parents=True, exist_ok=True)
-    aggregation_country_time.to_csv(args.aggregation_country_time_output, index=False)
-    print(args.output)
-    print(args.selection_ledger_output)
-    print(args.selection_summary_output)
-    print(args.outcome_attrition_output)
-    print(args.paired_output)
-    print(args.bootstrap_output)
-    print(args.pooled_paired_output)
-    print(args.pooled_bootstrap_output)
-    print(args.temporal_output)
-    print(args.country_influence_output)
-    print(args.city_influence_output)
-    print(args.gapped_metrics_output)
-    print(args.gapped_temporal_output)
-    print(args.hierarchy_output)
-    print(args.balanced_metrics_output)
-    print(args.equal_country_output)
-    print(args.balanced_equal_country_output)
-    print(args.pooled_equal_country_output)
-    print(args.equal_origin_output)
-    print(args.equal_country_origin_output)
-    print(args.balanced_pooled_equal_country_output)
-    print(args.locked_origin_output)
-    print(args.interval_calibration_output)
-    print(args.interval_calibration_by_size_output)
-    print(args.country_time_bootstrap_output)
-    print(args.country_time_size_bootstrap_output)
-    print(args.balanced_country_time_bootstrap_output)
-    print(args.aggregation_bootstrap_output)
-    print(args.aggregation_country_time_output)
+
+    outputs = [
+        (args.output, metrics),
+        (args.selection_ledger_output, selection_ledger),
+        (args.selection_summary_output, selection_audit_summary),
+        (args.outcome_attrition_output, attrition),
+        (args.paired_output, paired),
+        (args.bootstrap_output, bootstrap),
+        (args.pooled_paired_output, pooled_paired),
+        (args.pooled_bootstrap_output, pooled_bootstrap),
+        (args.temporal_output, temporal),
+        (args.country_influence_output, country_influence),
+        (args.city_influence_output, city_influence),
+        (args.gapped_metrics_output, gapped_metrics),
+        (args.gapped_temporal_output, gapped_temporal),
+        (args.hierarchy_output, hierarchy),
+        (args.balanced_metrics_output, balanced_metrics),
+        (args.equal_country_output, equal_country),
+        (args.balanced_equal_country_output, balanced_equal_country),
+        (args.pooled_equal_country_output, pooled_equal_country),
+        (args.equal_origin_output, equal_origin),
+        (args.equal_country_origin_output, equal_country_origin),
+        (args.balanced_pooled_equal_country_output, balanced_pooled_equal_country),
+        (args.locked_origin_output, locked_origin),
+        (args.interval_calibration_output, interval_calibration),
+        (args.interval_calibration_by_size_output, interval_calibration_by_size),
+        (args.country_time_bootstrap_output, country_time_bootstrap),
+        (args.country_time_size_bootstrap_output, country_time_size_bootstrap),
+        (args.balanced_country_time_bootstrap_output, balanced_country_time_bootstrap),
+        (args.aggregation_bootstrap_output, aggregation_bootstrap),
+        (args.aggregation_country_time_output, aggregation_country_time),
+    ]
+    for path, frame in outputs:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame.to_csv(path, index=False)
+        print(path)
 
 
 if __name__ == "__main__":

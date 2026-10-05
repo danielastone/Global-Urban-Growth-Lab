@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import gzip
 import hashlib
 import re
 from pathlib import Path
@@ -33,7 +34,11 @@ def file_sha256(path: Path) -> str:
 
 def csv_dimensions(path: Path) -> tuple[int, int]:
     """Return data-row and header-column counts for a generated CSV."""
-    with path.open(newline="", encoding="utf-8") as handle:
+    with (
+        gzip.open(path, mode="rt", newline="", encoding="utf-8")
+        if path.suffix == ".gz"
+        else path.open(newline="", encoding="utf-8")
+    ) as handle:
         reader = csv.reader(handle)
         try:
             header = next(reader)
@@ -83,8 +88,14 @@ def write_result_manifest(
         "generation_command": generation_command.strip(),
     }
     fieldnames = [
-        "path", "sha256", "canonical_sha256", "rows", "columns",
-        "code_commit", "environment_lock_sha256", "source_manifest_sha256",
+        "path",
+        "sha256",
+        "canonical_sha256",
+        "rows",
+        "columns",
+        "code_commit",
+        "environment_lock_sha256",
+        "source_manifest_sha256",
         "generation_command",
     ]
     rows: list[dict[str, str | int]] = []

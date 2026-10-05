@@ -1,0 +1,67 @@
+name: GHSL direct-count construction-smoothing gate
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/construction-smoothing-124.yml"
+      - "scripts/run_construction_smoothing_124.py"
+      - "src/urban_growth/construction_smoothing.py"
+      - "src/urban_growth/china_census_124.py"
+      - "src/urban_growth/india_census_124.py"
+      - "src/urban_growth/japan_census_124.py"
+      - "tests/test_construction_smoothing.py"
+      - "tests/test_china_census_124.py"
+      - "tests/test_india_census_124.py"
+      - "tests/test_japan_census_124.py"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark-gate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        with:
+          version: "0.11.33"
+      - run: uv sync --locked --extra dev
+      - run: >-
+          uv run --locked --extra dev pytest
+          tests/test_construction_smoothing.py tests/test_india_census_124.py
+          tests/test_china_census_124.py
+          tests/test_japan_census_124.py
+      - run: uv run --locked python scripts/run_construction_smoothing_124.py
+      - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot india
+      - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot china
+      - run: uv run --locked python scripts/run_construction_smoothing_124.py --pilot japan
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: construction-smoothing-124-status
+          path: outputs/construction_smoothing_124/benchmark_status.csv
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: construction-smoothing-124-japan-status
+          path: |
+            outputs/construction_smoothing_124/japan_source_qualification.csv
+            outputs/construction_smoothing_124/japan_benchmark_status.csv
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: construction-smoothing-124-china-status
+          path: |
+            outputs/construction_smoothing_124/china_source_qualification.csv
+            outputs/construction_smoothing_124/china_benchmark_status.csv
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: construction-smoothing-124-india-status
+          path: |
+            outputs/construction_smoothing_124/india_source_qualification.csv
+            outputs/construction_smoothing_124/india_benchmark_status.csv
+          if-no-files-found: error
