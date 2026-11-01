@@ -39,7 +39,7 @@ jobs:
           (cd data/raw/japan_ghsl_pop && sha256sum --check --strict ../../../results/japan_ghsl_pop_source_sha256.txt)
       - name: Run matched direct-count benchmark
         run: uv run python scripts/run_japan_ghsl_match_124.py
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: japan-ghsl-match-124
           path: outputs/japan_ghsl_match_124/*.csv
